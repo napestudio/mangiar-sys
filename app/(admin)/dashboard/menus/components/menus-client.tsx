@@ -11,9 +11,10 @@ import { Plus } from "lucide-react";
 interface MenusClientProps {
   initialMenus: SerializedMenu[];
   restaurantId: string;
+  branchId: string;
 }
 
-export function MenusClient({ initialMenus, restaurantId }: MenusClientProps) {
+export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClientProps) {
   const router = useRouter();
   const [menus, setMenus] = useState(initialMenus);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -139,6 +140,7 @@ export function MenusClient({ initialMenus, restaurantId }: MenusClientProps) {
         onOpenChange={setIsCreateDialogOpen}
         menu={null}
         restaurantId={restaurantId}
+        branchId={branchId}
         onMenuCreated={handleMenuCreated}
         onMenuUpdated={handleMenuUpdated}
         onClose={() => setIsCreateDialogOpen(false)}

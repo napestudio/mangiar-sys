@@ -25,7 +25,7 @@ export default async function MenusPage() {
           </p>
         </div>
 
-        <MenusClient initialMenus={menus} restaurantId={restaurantId} />
+        <MenusClient initialMenus={menus} restaurantId={restaurantId} branchId={branchId} />
       </main>
     </div>
   );

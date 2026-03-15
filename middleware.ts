@@ -26,11 +26,10 @@ export default auth(async (req) => {
   // Extract subdomain and forward it as a header for the public page
   const host = req.headers.get("host") ?? "";
   const hostname = host.split(":")[0]; // Strip port if present
-  const knownApexDomains = ["localhost", "mangiar.com", "www.mangiar.com"];
+  const knownApexDomains = ["localhost", "mangi.ar", "www.mangi.ar"];
   const isApex = knownApexDomains.some((d) => hostname === d);
-  const subdomain = !isApex && hostname.includes(".")
-    ? hostname.split(".")[0]
-    : null;
+  const subdomain =
+    !isApex && hostname.includes(".") ? hostname.split(".")[0] : null;
 
   // For local dev without a subdomain, fall back to BRANCH_ID env var
   const subdomainHeader = subdomain ?? process.env.BRANCH_SUBDOMAIN ?? "";
