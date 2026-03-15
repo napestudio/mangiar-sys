@@ -1,0 +1,1218 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [citext]
+}
+
+//
+// ENUMS
+//
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  WAITER
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKE_AWAY
+  DELIVERY
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  PAYMENT_LINK
+  QR_CODE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+enum PriceType {
+  DINE_IN
+  TAKE_AWAY
+  DELIVERY
+}
+
+enum TableShape {
+  SQUARE
+  RECTANGLE
+  CIRCLE
+  WIDE
+}
+
+enum TableStatus {
+  EMPTY
+  OCCUPIED
+  RESERVED
+  CLEANING
+  PAYING
+}
+
+enum UnitType {
+  UNIT // Unidades contables (ej: 5 botellas, 3 filetes)
+  WEIGHT // Peso (kg, g, lb, oz)
+  VOLUME // Volumen (L, ml, gal, oz)
+}
+
+enum WeightUnit {
+  KILOGRAM // Kilogramo
+  GRAM // Gramo
+  POUND // Libra
+  OUNCE // Onza
+}
+
+enum VolumeUnit {
+  LITER // Litro
+  MILLILITER // Mililitro
+  GALLON // Galón
+  FLUID_OUNCE // Onza líquida
+}
+
+//
+// CASH REGISTER (CAJAS)
+//
+enum CashRegisterStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  INCOME // Manual income (not from orders)
+  EXPENSE // Manual expense (payouts, purchases)
+  SALE // From completed orders
+  REFUND // Order refund
+  CORRECTION // Accounting correction (amount can be negative)
+}
+
+enum PaymentMethodExtended {
+  CASH
+  CARD_DEBIT
+  CARD_CREDIT
+  ACCOUNT // Current account / on account
+  TRANSFER
+  PAYMENT_LINK
+  QR_CODE
+}
+
+enum HomePageLinkType {
+  MENU        // Link to /carta/[slug]
+  TIMESLOT    // Link to /reservas with specific slot
+  RESERVATION // Link to /reservas (general)
+  PEDIDOS     // Link to /pedidos (orders)
+  CUSTOM      // Custom URL with custom label
+}
+
+enum ProductTag {
+  SPICY
+  SPICY_MEDIUM
+  SPICY_HIGH
+  VEGAN
+  VEGETARIAN
+  GLUTEN_FREE
+  DAIRY_FREE
+  NUT_FREE
+  NEW
+  POPULAR
+}
+
+enum PermissionGrant {
+  VIEW_STATISTICS
+  VIEW_INVOICES
+  VIEW_CASH_REGISTERS
+  VIEW_STOCK
+  MANAGE_MENU
+  MANAGE_PRODUCTS
+  MANAGE_CONFIG
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+//
+// NEXTAUTH MODELS
+//
+model User {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  email     String?   @unique
+  password  String?
+  name      String?
+  image     String?
+  accounts  Account[]
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+
+  userOnBranches   UserOnBranch[]
+  assignedOrders   Order[]             @relation("StaffAssignment")
+  permissionGrants UserPermissionGrant[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+//
+// ORGANIZACIÓN GENERAL
+//
+model Restaurant {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique @db.Citext
+  description String?
+  phone       String?
+  logoUrl     String?
+  isActive    Boolean @default(true)
+
+  // Address fields
+  address    String? // Full street address
+  city       String?
+  state      String?
+  postalCode String?
+  country    String? @default("Argentina")
+
+  // Social media links
+  websiteUrl   String?
+  facebookUrl  String?
+  instagramUrl String?
+  twitterUrl   String?
+  linkedinUrl  String?
+  tiktokUrl    String?
+  whatsappNumber String?
+
+  branches   Branch[]
+  /**
+   * Los menús/categorías quedan aislados por restaurante
+   */
+  categories          Category[]
+  products            Product[]
+  menus               Menu[]
+  fiscalConfiguration FiscalConfiguration?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model Branch {
+  id           String     @id @default(cuid())
+  name         String
+  address      String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  restaurantId String
+  createdAt    DateTime   @default(now())
+
+  /**
+   * OPCIONAL: slug por sucursal para futuro /[restaurantSlug]/[branchSlug]
+   */
+  slug String? @db.Citext
+
+  notificationEmail String? // Email address to receive reservation notifications
+  printerServerUrl  String? // wss:// URL of the gg-ez-print server on the local network (e.g. wss://192.168.1.100:8443/ws)
+
+  reservations   Reservation[]
+  orders         Order[]
+  sectors        Sector[]
+  tables         Table[]
+  timeSlots      TimeSlot[]
+  products       ProductOnBranch[]
+  userAccess     UserOnBranch[]
+  menus          Menu[]
+  cashRegisters  CashRegister[]
+  clients        Client[]
+  stations       Station[]
+  printers       Printer[]
+  deliveryConfig DeliveryConfig?
+  homePageLinks    HomePageLink[]
+  permissionGrants UserPermissionGrant[]
+
+  /**
+   * Evita duplicar nombres de sucursal dentro del mismo restaurante
+   */
+  @@unique([restaurantId, name])
+  /**
+   * Si usás slug por sucursal, garantiza unicidad dentro del restaurante
+   */
+  @@unique([restaurantId, slug])
+}
+
+model UserOnBranch {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  branchId  String
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  @@unique([userId, branchId])
+}
+
+model UserPermissionGrant {
+  id         String          @id @default(cuid())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  branch     Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId   String
+  permission PermissionGrant
+  granted    Boolean         @default(true) // true = allow, false = deny/revoke
+  grantedAt  DateTime        @default(now())
+  grantedBy  String?
+
+  @@unique([userId, branchId, permission])
+  @@index([userId])
+}
+
+//
+// MESAS Y RESERVAS
+//
+model Sector {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3b82f6") // Color hex para identificar visualmente el sector
+  order     Int      @default(0) // Para ordenar los sectores en la UI
+  width     Int      @default(1200) // Ancho del canvas del plano del sector
+  height    Int      @default(800) // Alto del canvas del plano del sector
+  isActive  Boolean  @default(true)
+  branch        Branch                @relation(fields: [branchId], references: [id])
+  branchId      String
+  tables        Table[]
+  // Many-to-many relation with cash registers
+  cashRegisters CashRegisterOnSector[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  /**
+   * Un nombre de sector no se repite dentro de la misma sucursal
+   */
+  @@unique([branchId, name])
+  @@index([branchId])
+}
+
+model Table {
+  id       String  @id @default(cuid())
+  number   Int
+  name     String?
+  capacity Int
+  isActive Boolean @default(true)
+  isShared Boolean @default(false)
+
+  // Floor plan
+  positionX Float?      @default(0)
+  positionY Float?      @default(0)
+  width     Float?      @default(100)
+  height    Float?      @default(100)
+  rotation  Float?      @default(0)
+  shape     TableShape? @default(SQUARE)
+
+  // Manual status override
+  status TableStatus?
+
+  branch       Branch             @relation(fields: [branchId], references: [id])
+  branchId     String
+  sector       Sector?            @relation(fields: [sectorId], references: [id])
+  sectorId     String?
+  reservations ReservationTable[]
+  timeSlots    TimeSlotTable[]
+  orders       Order[]
+
+  /**
+   * Un número de mesa no se repite dentro de la misma sucursal
+   */
+  @@unique([branchId, number])
+  @@index([sectorId])
+}
+
+model Reservation {
+  id                  String             @id @default(cuid())
+  branch              Branch             @relation(fields: [branchId], references: [id])
+  branchId            String
+  customerName        String
+  customerEmail       String
+  customerPhone       String?
+  date                DateTime
+  people              Int
+  timeSlot            TimeSlot?          @relation(fields: [timeSlotId], references: [id])
+  timeSlotId          String?
+  exactTime           DateTime? // Precise 15-min arrival time within the slot
+  status              ReservationStatus  @default(PENDING)
+  dietaryRestrictions String?
+  accessibilityNeeds  String?
+  notes               String?
+  createdAt           DateTime           @default(now())
+  createdBy           String?
+  updatedBy           String?
+  tables              ReservationTable[]
+
+  @@index([branchId, date, status])
+  @@index([date, timeSlotId])
+}
+
+model ReservationTable {
+  id            String      @id @default(cuid())
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  reservationId String
+  table         Table       @relation(fields: [tableId], references: [id])
+  tableId       String
+
+  @@unique([reservationId, tableId])
+  @@index([tableId])
+}
+
+model TimeSlot {
+  id             String   @id @default(cuid())
+  name           String
+  startTime      DateTime @db.Time
+  endTime        DateTime @db.Time
+  daysOfWeek     String[]
+  pricePerPerson Decimal? @default(0) @db.Decimal(10, 2)
+  customerLimit  Int?     // NULL = no limit (shared pool), >0 = manual limit with exclusive tables
+  capacity       Int      @default(0) // Auto-calculated from exclusive tables OR 0 if using shared pool
+  notes          String?
+  moreInfoUrl    String?
+  isActive       Boolean  @default(true)
+  branch         Branch   @relation(fields: [branchId], references: [id])
+  branchId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  reservations  Reservation[]
+  tables        TimeSlotTable[]
+  homePageLinks HomePageLink[]
+}
+
+model TimeSlotTable {
+  id          String   @id @default(cuid())
+  timeSlot    TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  timeSlotId  String
+  table       Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId     String
+  isExclusive Boolean  @default(true) // TRUE = removed from shared pool, only available to this slot
+  createdAt   DateTime @default(now())
+
+  @@unique([timeSlotId, tableId])
+  @@index([tableId])
+}
+
+//
+// CONFIGURACIÓN DE DELIVERY
+//
+model DeliveryConfig {
+  id        String   @id @default(cuid())
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId  String   @unique // One config per branch
+
+  // Menu selection - which menu to show customers for delivery
+  menu   Menu?   @relation(fields: [menuId], references: [id])
+  menuId String?
+
+  // Service configuration
+  isActive         Boolean  @default(true) // Master toggle for delivery service
+  allowDelivery    Boolean  @default(true)  // Whether customers can place delivery orders
+  allowTakeAway    Boolean  @default(false) // Whether customers can place take-away orders
+  minOrderAmount   Decimal? @default(0) @db.Decimal(10, 2) // Minimum order amount
+  deliveryFee      Decimal? @default(0) @db.Decimal(10, 2) // Delivery fee
+  estimatedMinutes Int?     @default(45) // Estimated delivery time in minutes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveryWindows DeliveryWindow[]
+
+  @@index([branchId])
+}
+
+model DeliveryWindow {
+  id               String         @id @default(cuid())
+  deliveryConfig   DeliveryConfig @relation(fields: [deliveryConfigId], references: [id], onDelete: Cascade)
+  deliveryConfigId String
+
+  name              String // "Lunch Delivery", "Dinner Delivery"
+  startTime         DateTime @db.Time // HH:mm - When customers can START ordering
+  deliveryStartTime DateTime @db.Time @default(now()) // HH:mm - When actual deliveries BEGIN
+  endTime           DateTime @db.Time // HH:mm - When ordering window closes
+  daysOfWeek        String[] // ["monday", "tuesday", etc.]
+  maxOrders         Int      @default(10) // Capacity per window
+  isActive          Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([deliveryConfigId])
+  @@index([deliveryConfigId, isActive]) // Performance: Query active windows for a config
+}
+
+//
+// HOME PAGE LINKS
+//
+model HomePageLink {
+  id       String           @id @default(cuid())
+  branch   Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId String
+
+  type     HomePageLinkType
+  label    String           // Button text shown to users
+  order    Int              @default(0) // For sorting links
+  isActive Boolean          @default(true)
+
+  // Conditional foreign keys based on type
+  menu       Menu?     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menuId     String?   // For MENU type
+  timeSlot   TimeSlot? @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  timeSlotId String?   // For TIMESLOT type
+
+  // For CUSTOM type
+  customUrl String? // External or internal URL
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId, isActive, order])
+  @@index([branchId])
+}
+
+//
+// PRODUCTOS Y MENÚ (aislados por restaurante)
+//
+model Category {
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
+
+  /**
+   * NUEVO: categoría pertenece a un restaurante
+   */
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  products          Product[]
+  stationCategories StationCategory[]
+
+  @@unique([restaurantId, name]) // mismo nombre no se repite dentro del restaurante
+  @@index([restaurantId])
+}
+
+//
+// MENÚS PÚBLICOS (para clientes)
+//
+model Menu {
+  id          String  @id @default(cuid())
+  name        String // "Breakfast Menu", "Weekend Special", etc.
+  description String?
+  slug        String  @db.Citext
+  isActive    Boolean   @default(true)
+  priceType   PriceType @default(DINE_IN) // Price type to use for products in this menu
+  showPrices  Boolean   @default(true) // Whether to display prices on the public menu
+
+  // Scheduling - cuando está disponible este menú
+  availableFrom  DateTime? @db.Time // e.g., 08:00
+  availableUntil DateTime? @db.Time // e.g., 11:30
+  daysOfWeek     String[] // ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+  // Scoping
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId     String // Menus are branch-specific
+
+  // Organization
+  menuSections MenuSection[]
+
+  // Delivery configuration
+  deliveryConfigs DeliveryConfig[]
+
+  // Home page links
+  homePageLinks HomePageLink[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId, isActive])
+  @@index([branchId])
+}
+
+model MenuSection {
+  id          String  @id @default(cuid())
+  name        String // "Appetizers", "Main Courses", "Desserts"
+  description String?
+  order       Int     @default(0) // Para ordenar las secciones dentro del menú
+
+  menu   Menu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menuId String
+
+  menuItems      MenuItem[]
+  menuItemGroups MenuItemGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([menuId, order])
+}
+
+model MenuItemGroup {
+  id          String  @id @default(cuid())
+  name        String // "Gyozas", "Ramen", etc.
+  description String?
+  order       Int     @default(0) // Para ordenar los grupos dentro de la sección
+
+  menuSection   MenuSection @relation(fields: [menuSectionId], references: [id], onDelete: Cascade)
+  menuSectionId String
+
+  menuItems MenuItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([menuSectionId, order])
+}
+
+model MenuItem {
+  id String @id @default(cuid())
+
+  menuSection   MenuSection @relation(fields: [menuSectionId], references: [id], onDelete: Cascade)
+  menuSectionId String
+
+  // Optional group within the section (null = ungrouped item directly in section)
+  menuItemGroup   MenuItemGroup? @relation(fields: [menuItemGroupId], references: [id], onDelete: SetNull)
+  menuItemGroupId String?
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+
+  order       Int      @default(0) // Orden dentro de la sección o grupo
+  isAvailable Boolean  @default(true) // Override de disponibilidad del producto
+  isFeatured  Boolean  @default(false) // Destacar en el menú (chef's special, etc.)
+  customPrice Decimal? // Override de precio (opcional, para promociones)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([menuSectionId, productId])
+  @@index([menuSectionId, order])
+  @@index([menuItemGroupId, order])
+  @@index([productId])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String? // URL de la imagen del producto
+  sku         String? // Código SKU único
+
+  // Configuración de unidades de medida
+  unitType   UnitType    @default(UNIT)
+  weightUnit WeightUnit? // Solo si unitType = WEIGHT
+  volumeUnit VolumeUnit? // Solo si unitType = VOLUME
+
+  // Alertas de stock
+  minStockAlert Decimal? @db.Decimal(10, 2) // Alerta cuando el stock esté por debajo de este valor
+  trackStock    Boolean  @default(true) // Si es false, el producto siempre estará disponible sin importar el stock
+  tags          ProductTag[] // Etiquetas dietéticas/alérgenos (picante, vegano, sin TACC, etc.)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  /**
+   * NUEVO: producto pertenece a un restaurante
+   */
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  branches   ProductOnBranch[]
+  orderItems OrderItem[]
+  menuItems  MenuItem[]
+
+  @@unique([restaurantId, name]) // evita duplicar nombres de producto dentro del restaurante
+  @@unique([restaurantId, sku]) // SKU único por restaurante
+  @@index([restaurantId])
+}
+
+model ProductOnBranch {
+  id        String  @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  branch    Branch  @relation(fields: [branchId], references: [id])
+  branchId  String
+
+  // Stock con soporte para decimales (peso/volumen)
+  stock         Decimal   @default(0) @db.Decimal(10, 2)
+  minStock      Decimal?  @db.Decimal(10, 2) // Stock mínimo para esta sucursal
+  maxStock      Decimal?  @db.Decimal(10, 2) // Stock máximo recomendado
+  lastRestocked DateTime? // Última vez que se reabastació
+
+  isActive       Boolean         @default(true)
+  prices         ProductPrice[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
+
+  @@unique([productId, branchId])
+  @@index([branchId])
+  @@index([productId])
+  @@index([branchId, isActive]) // Performance: Filter active products by branch
+}
+
+model ProductPrice {
+  id                String          @id @default(cuid())
+  productOnBranch   ProductOnBranch @relation(fields: [productOnBranchId], references: [id])
+  productOnBranchId String
+  type              PriceType
+  price             Decimal @db.Decimal(10, 2)
+
+  @@unique([productOnBranchId, type])
+}
+
+model StockMovement {
+  id                String          @id @default(cuid())
+  productOnBranch   ProductOnBranch @relation(fields: [productOnBranchId], references: [id])
+  productOnBranchId String
+
+  // Movimiento de stock
+  quantity      Decimal @db.Decimal(10, 2) // Positivo = entrada, Negativo = salida
+  previousStock Decimal @db.Decimal(10, 2) // Stock anterior al movimiento
+  newStock      Decimal @db.Decimal(10, 2) // Stock después del movimiento
+
+  // Información del movimiento
+  reason    String // "Compra", "Venta", "Merma", "Ajuste", "Devolución", etc.
+  notes     String?
+  reference String? // Número de factura, pedido, etc.
+
+  createdAt DateTime @default(now())
+  createdBy String? // ID del usuario que hizo el movimiento
+
+  @@index([productOnBranchId])
+  @@index([createdAt])
+}
+
+//
+// CLIENTES
+//
+model Client {
+  id       String @id @default(cuid())
+  branch   Branch @relation(fields: [branchId], references: [id])
+  branchId String
+
+  // Basic info
+  name  String
+  phone String?
+  email String?
+
+  // Additional info
+  birthDate DateTime?
+  taxId     String? // CUIT/DNI number
+  taxIdType Int?    // 80=CUIT, 96=DNI, null=not specified
+  notes     String?
+
+  // Address
+  addressStreet     String?
+  addressNumber     String?
+  addressApartment  String?
+  addressCity       String?
+
+  // Preferences
+  discountPercentage    Decimal?              @default(0) @db.Decimal(5, 2)
+  discountType          DiscountType          @default(PERCENTAGE)
+  preferredPaymentMethod PaymentMethod?
+  hasCurrentAccount     Boolean               @default(false)
+
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId])
+  @@index([name])
+  @@index([phone])
+  @@index([branchId, email]) // Performance: Fast email lookup for delivery checkout
+}
+
+//
+// PEDIDOS
+//
+model Order {
+  id       String @id @default(cuid())
+  branch   Branch @relation(fields: [branchId], references: [id])
+  branchId String
+
+  // For DINE_IN orders
+  table     Table?  @relation(fields: [tableId], references: [id])
+  tableId   String?
+  partySize Int?
+
+  // Client association
+  client   Client? @relation(fields: [clientId], references: [id])
+  clientId String?
+
+  // Delivery window (for DELIVERY orders)
+  deliveryWindow   DeliveryWindow? @relation(fields: [deliveryWindowId], references: [id])
+  deliveryWindowId String?
+
+  // Optional delivery address (if different from client address)
+  deliveryAddressStreet    String?
+  deliveryAddressNumber    String?
+  deliveryAddressApartment String?
+  deliveryAddressCity      String?
+  deliveryPhone            String?
+
+  customerName  String?
+  customerEmail String?
+  type          OrderType
+  description   String?
+  courierName   String?
+  publicCode    String    @unique
+
+  // Payment and billing
+  paymentMethod      PaymentMethod @default(CASH)
+  discountPercentage Decimal       @default(0) @db.Decimal(5, 2) // Max 999.99%
+  discountType       DiscountType  @default(PERCENTAGE)
+  deliveryFee        Decimal       @default(0) @db.Decimal(10, 2) // Delivery fee for DELIVERY orders
+  needsInvoice       Boolean       @default(false)
+
+  // Staff assignment
+  assignedTo   User?   @relation("StaffAssignment", fields: [assignedToId], references: [id])
+  assignedToId String?
+
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  createdBy String?
+  updatedBy String?
+
+  items         OrderItem[]
+  invoices      Invoice[]
+  cashMovements CashMovement[]
+  printJobs     PrintJob[]
+
+  @@index([tableId])
+  @@index([assignedToId])
+  @@index([clientId])
+  @@index([deliveryWindowId]) // Performance: Query orders by delivery window
+  @@index([branchId, status])
+  @@index([branchId, createdAt])
+  @@index([branchId, type]) // Performance: Filter orders by branch and type
+  @@index([type, status]) // Performance: Filter delivery orders by status
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  order         Order    @relation(fields: [orderId], references: [id])
+  orderId       String
+  product       Product? @relation(fields: [productId], references: [id])
+  productId     String?
+  itemName      String
+  quantity      Int
+  price         Decimal @db.Decimal(10, 2) // Current price (can be modified)
+  originalPrice Decimal? @db.Decimal(10, 2) // Original price from product
+  notes         String? // Special instructions (e.g., "no sugar", "extra spicy")
+
+  @@index([orderId])
+}
+
+//
+// FACTURAS
+//
+model Invoice {
+  id      String  @id @default(cuid())
+  order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String?
+
+  // Customer information
+  customerName      String // Business or person name
+  customerDocType   Int    // 80=CUIT, 86=CUIL, 96=DNI, 99=Consumidor Final
+  customerDocNumber String // Document number ("0" for Consumidor Final)
+
+  // ARCA invoice details
+  invoiceType   Int      // 1=Factura A, 6=Factura B, 11=Factura C
+  ptoVta        Int      // Sales point from ARCA_PTO_VTA
+  invoiceNumber Int      // Sequential number from ARCA
+  invoiceDate   DateTime // Invoice emission date
+
+  // Amounts (denormalized for queries)
+  subtotal    Decimal @db.Decimal(12, 2) // Net taxable amount
+  vatAmount   Decimal @db.Decimal(12, 2) // Total VAT
+  totalAmount Decimal @db.Decimal(12, 2) // Final total
+
+  // VAT breakdown stored as JSON
+  vatBreakdown Json? // [{rate: 21, base: 1000, amount: 210}]
+
+  // ARCA authorization
+  cae          String? // CAE authorization (14 digits)
+  caeFchVto    String? // CAE expiration (YYYYMMDD)
+  afipResponse Json?   // Full ARCA response for audit
+
+  // Status
+  status InvoiceStatus @default(PENDING)
+
+  // QR code
+  qrUrl String? // ARCA verification URL
+
+  // Audit
+  createdAt DateTime @default(now())
+  createdBy String? // User ID
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([orderId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([ptoVta, invoiceType, invoiceNumber])
+}
+
+enum InvoiceStatus {
+  PENDING   // Created but not sent to ARCA
+  EMITTED   // Authorized by ARCA (has CAE)
+  CANCELLED // Cancelled (requires credit note)
+  FAILED    // ARCA rejected
+}
+
+//
+// FISCAL CONFIGURATION (ARCA)
+//
+
+model FiscalConfiguration {
+  id           String     @id @default(cuid())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String     @unique
+
+  // ========== FISCAL IDENTITY ==========
+  businessName      String    // Razón social
+  cuit              String    // 11-digit CUIT (tax ID)
+  address           String?   // Fiscal address
+  activityStartDate DateTime? // Inicio de actividad
+  grossIncome       String?   // Ingresos brutos (province registration)
+  taxStatus         String?   // e.g. "Responsable Inscripto", "Monotributo", "Exento"
+
+  // ========== ARCA CREDENTIALS ==========
+  environment          String    @default("test") // "test" or "production"
+  certificatePath      String?   // Path to .crt file (NOT contents)
+  privateKeyPath       String?   // Path to .key file (NOT contents)
+  certificateExpiresAt DateTime? // Track expiration for alerts
+
+  // ========== SALES POINTS ==========
+  defaultPtoVta   Int       @default(1) // Default Punto de Venta
+  availablePtoVta Json?     // Array of available sales points from ARCA, e.g. [1, 2, 3]
+  lastSyncedAt    DateTime? // When sales points were last synced with ARCA
+
+  // ========== INVOICE BEHAVIOR ==========
+  defaultInvoiceType Int     @default(6) // 1=Factura A, 6=Factura B, 11=Factura C
+  autoIssue          Boolean @default(false) // Auto-generate invoice on order complete
+
+  // ========== STATUS & HEALTH ==========
+  isEnabled       Boolean   @default(false) // Master switch
+  lastTestedAt    DateTime? // Last connection test timestamp
+  lastTestSuccess Boolean?  // Whether last test succeeded
+  lastTestError   String?   // Error message from last test
+
+  // ========== AUDIT TRAIL ==========
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  // User ID who created config
+  updatedBy String?  // User ID who last updated config
+
+  @@index([restaurantId])
+  @@index([cuit])
+}
+
+//
+// PRINTERS & STATIONS
+//
+
+enum PrinterStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+}
+
+enum PrinterConnectionType {
+  NETWORK // TCP/IP connection (ipAddress:port)
+  USB     // USB/Serial connection (COM port)
+}
+
+enum PrintJobStatus {
+  PENDING
+  SENT
+  CONFIRMED
+  FAILED
+  CANCELED
+}
+
+// How a printer handles order printing
+enum PrintMode {
+  STATION_ITEMS   // Only prints items matching station categories (kitchen ticket)
+  FULL_ORDER      // Prints the complete order (control ticket/receipt)
+  BOTH            // Prints both station items AND full order
+}
+
+// Stations define areas where orders are prepared (kitchen, bar, etc.)
+model Station {
+  id          String  @id @default(cuid())
+  name        String // "Kitchen", "Bar", "Desserts", "Grill"
+  description String?
+  color       String  @default("#6366f1") // Hex color for UI identification
+  order       Int     @default(0) // Display order in UI
+  isActive    Boolean @default(true)
+
+  branch   Branch @relation(fields: [branchId], references: [id])
+  branchId String
+
+  // Stations can have printers assigned to them
+  printers           Printer[]
+  // Categories can be assigned to stations for auto-routing
+  stationCategories  StationCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, name])
+  @@index([branchId])
+}
+
+// Many-to-many: Categories can be assigned to stations for auto-routing
+model StationCategory {
+  id         String   @id @default(cuid())
+  station    Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId  String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([stationId, categoryId])
+  @@index([categoryId])
+}
+
+// Physical thermal printers
+model Printer {
+  id          String        @id @default(cuid())
+  name        String // User-friendly name: "Kitchen Printer 1", "Bar Printer"
+  description String?
+
+  // System identifier used by gg-ez-print
+  systemName  String @default("NEEDS_RECONFIGURATION") // Windows printer name (USB) or IP address (Network)
+
+  // Connection configuration
+  connectionType PrinterConnectionType @default(NETWORK)
+
+  // Printer details
+  model    String? // "Epson TM-T88VI", "Star TSP143III", etc.
+  status   PrinterStatus @default(OFFLINE)
+
+  // Settings
+  isActive        Boolean   @default(true)
+  autoPrint       Boolean   @default(true) // Auto-print orders when items added
+  printMode       PrintMode @default(STATION_ITEMS) // What type of tickets to print
+  printCopies     Int       @default(1) // Number of copies to print
+  paperWidth      Int       @default(80) // Paper width in mm (58, 80)
+  charactersPerLine Int     @default(48) // Characters per line based on paper width
+
+  // Ticket customization
+  ticketHeader     String? // Custom header text for tickets
+  ticketHeaderSize Int     @default(2) // 0=small, 1=normal, 2=double height, 3=double width+height
+  ticketFooter     String? // Custom footer text for tickets
+  ticketFooterSize Int     @default(1) // 0=small, 1=normal, 2=double height, 3=double width+height
+
+  // Control ticket formatting (for FULL_ORDER and BOTH modes)
+  controlTicketFontSize Int @default(1) // 0=small, 1=normal, 2=big
+  controlTicketSpacing  Int @default(1) // 0=small, 1=normal, 2=big
+
+  // Assignment
+  station   Station? @relation(fields: [stationId], references: [id])
+  stationId String?
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  branchId  String
+
+  // Track print jobs
+  printJobs PrintJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, name])
+  @@index([branchId])
+  @@index([stationId])
+  @@index([connectionType])
+}
+
+// Track all print jobs for debugging and audit
+model PrintJob {
+  id        String   @id @default(cuid())
+  printer   Printer  @relation(fields: [printerId], references: [id], onDelete: Cascade)
+  printerId String
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String?
+
+  // Content and metadata
+  content     String // JSON representation of what was printed
+  jobType     String @default("ORDER") // ORDER, RECEIPT, TEST
+  status      PrintJobStatus @default(PENDING)
+  error       String? // Error message if failed
+  attempts    Int     @default(0) // Number of retry attempts
+
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime? // When the print command was sent
+  confirmedAt DateTime? // When printer confirmed (if supported)
+
+  @@index([printerId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+//
+// Slugs reservados para rutas del sistema (admin, api, auth, etc.)
+//
+model ReservedSlug {
+  slug      String   @id @default(cuid()) @db.Citext
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+//
+// CAJAS (CASH REGISTERS)
+//
+
+// Physical cash register configuration (the "Caja" entity)
+model CashRegister {
+  id       String  @id @default(cuid())
+  name     String // "Caja Principal", "Caja Barra"
+  isActive Boolean @default(true)
+
+  branch   Branch @relation(fields: [branchId], references: [id])
+  branchId String
+
+  // Many-to-many relation with sectors (one cash register can serve multiple sectors)
+  sectors CashRegisterOnSector[]
+
+  sessions CashRegisterSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, name])
+  @@index([branchId])
+}
+
+// Junction table for CashRegister <-> Sector many-to-many relationship
+model CashRegisterOnSector {
+  id             String       @id @default(cuid())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+  cashRegisterId String
+  sector         Sector       @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  sectorId       String
+
+  createdAt DateTime @default(now())
+
+  @@unique([cashRegisterId, sectorId])
+  @@index([sectorId])
+}
+
+// A session represents an open/close cycle
+model CashRegisterSession {
+  id             String       @id @default(cuid())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id])
+  cashRegisterId String
+
+  status CashRegisterStatus @default(OPEN)
+
+  // Opening
+  openedAt      DateTime @default(now())
+  openedBy      String // User ID
+  openingAmount Decimal  @default(0) @db.Decimal(10, 2) // Initial cash in drawer
+
+  // Closing (nullable until closed)
+  closedAt     DateTime?
+  closedBy     String?
+  expectedCash Decimal? @db.Decimal(10, 2) // System-calculated expected cash
+  countedCash  Decimal? @db.Decimal(10, 2) // Actual counted cash
+  variance     Decimal? @db.Decimal(10, 2) // countedCash - expectedCash
+  closingNotes String?
+
+  // Re-opening audit trail (nullable until re-opened)
+  reopenedAt  DateTime?
+  reopenedBy  String? // User ID
+  reopenNotes String?
+
+  movements CashMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cashRegisterId])
+  @@index([status])
+  @@index([openedAt])
+}
+
+// Individual money movements within a session
+model CashMovement {
+  id        String              @id @default(cuid())
+  session   CashRegisterSession @relation(fields: [sessionId], references: [id])
+  sessionId String
+
+  type          CashMovementType
+  paymentMethod PaymentMethodExtended
+  amount        Decimal @db.Decimal(10, 2) // Always positive; type determines direction
+  description   String?
+
+  // Link to order (for SALE/REFUND types)
+  order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String?
+
+  // Audit
+  createdAt DateTime @default(now())
+  createdBy String // User ID
+
+  @@index([sessionId])
+  @@index([type])
+  @@index([orderId])
+}

@@ -1,0 +1,450 @@
+"use client";
+
+import type { ReservationFilterType } from "@/actions/Reservation";
+import type { SerializedReservation } from "@/app/(admin)/dashboard/reservations/lib/reservations";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  formatDateAR,
+  formatTimeAR,
+  formatTimestampDateAR,
+} from "@/lib/date-utils";
+import {
+  CalendarDays,
+  ChevronDown,
+  Clock,
+  Eye,
+  Filter,
+  History,
+  Loader2,
+  Trash2,
+  UserCheck,
+} from "lucide-react";
+
+interface ReservationsTableProps {
+  reservations: SerializedReservation[];
+  filterType: ReservationFilterType;
+  statusFilter: string;
+  dateFrom: string;
+  dateTo: string;
+  pagination: {
+    nextCursor: string | null;
+    hasMore: boolean;
+    totalCount: number;
+  };
+  isPending: boolean;
+  onFilterTypeChange: (
+    type: ReservationFilterType,
+    dateFrom?: string,
+    dateTo?: string,
+  ) => void;
+  onStatusFilterChange: (status: string) => void;
+  onDateRangeChange: (dateFrom: string, dateTo: string) => void;
+  onStatusUpdate: (id: string, status: string) => void;
+  onSeatingRequested: (reservation: SerializedReservation) => void;
+  seatingReservationId: string | null;
+  onView: (reservation: SerializedReservation) => void;
+  onDelete: (id: string) => void;
+  onLoadMore: () => void;
+}
+
+export function ReservationsTable({
+  reservations,
+  filterType,
+  statusFilter,
+  dateFrom,
+  dateTo,
+  pagination,
+  isPending,
+  onFilterTypeChange,
+  onStatusFilterChange,
+  onDateRangeChange,
+  onStatusUpdate,
+  onSeatingRequested,
+  seatingReservationId,
+  onView,
+  onDelete,
+  onLoadMore,
+}: ReservationsTableProps) {
+  const handleSetToday = () => {
+    onFilterTypeChange("today");
+  };
+
+  const handleSetPast = () => {
+    onFilterTypeChange("past");
+  };
+
+  const handleDateFromChange = (value: string) => {
+    onDateRangeChange(value, dateTo);
+  };
+
+  const handleDateToChange = (value: string) => {
+    onDateRangeChange(dateFrom, value);
+  };
+
+  const handleClearFilters = () => {
+    onFilterTypeChange("today", "", "");
+  };
+
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case "today":
+        return "Hoy";
+      case "past":
+        return "Historial";
+      case "dateRange":
+        return "Rango de fechas";
+      default:
+        return "Hoy";
+    }
+  };
+
+  return (
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
+      <div className="flex flex-col space-y-1.5 p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold leading-none tracking-tight flex items-center gap-2">
+                Gestión de Reservas
+                {/* <Badge variant="secondary" className="ml-2">
+                  {pagination.totalCount} total
+                </Badge> */}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {filterType === "today" && "Mostrando reservas de hoy"}
+                {filterType === "past" && "Mostrando reservas pasadas"}
+                {filterType === "dateRange" &&
+                  "Mostrando rango de fechas seleccionado"}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all" className="bg-white">
+                    Todas
+                  </SelectItem>
+                  <SelectItem value="pending" className="bg-white">
+                    Pendientes
+                  </SelectItem>
+                  <SelectItem value="confirmed" className="bg-white">
+                    Confirmadas
+                  </SelectItem>
+
+                  <SelectItem value="canceled" className="bg-white">
+                    Canceladas
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Date Filter Tabs */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Período:</span>
+            </div>
+
+            {/* Filter Type Buttons */}
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+              <Button
+                variant={filterType === "today" ? "default" : "ghost"}
+                size="sm"
+                onClick={handleSetToday}
+                className={
+                  filterType === "today" ? "bg-red-600 hover:bg-red-700" : ""
+                }
+                disabled={isPending}
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Hoy
+              </Button>
+              <Button
+                variant={filterType === "past" ? "default" : "ghost"}
+                size="sm"
+                onClick={handleSetPast}
+                className={
+                  filterType === "past" ? "bg-red-600 hover:bg-red-700" : ""
+                }
+                disabled={isPending}
+              >
+                <History className="h-4 w-4 mr-1" />
+                Historial
+              </Button>
+              <Button
+                variant={filterType === "dateRange" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onFilterTypeChange("dateRange")}
+                className={
+                  filterType === "dateRange"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : ""
+                }
+                disabled={isPending}
+              >
+                <CalendarDays className="h-4 w-4 mr-1" />
+                Rango
+              </Button>
+            </div>
+
+            {/* Date Range Inputs - Only show when dateRange is selected */}
+            {filterType === "dateRange" && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => handleDateFromChange(e.target.value)}
+                  className="w-40"
+                  placeholder="Desde"
+                  disabled={isPending}
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => handleDateToChange(e.target.value)}
+                  className="w-40"
+                  placeholder="Hasta"
+                  disabled={isPending}
+                />
+              </div>
+            )}
+
+            {/* Clear Filters */}
+            {(filterType !== "today" || statusFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-muted-foreground hover:text-foreground"
+                disabled={isPending}
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="p-6 pt-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Contacto</TableHead>
+              <TableHead>Fecha y hora</TableHead>
+              <TableHead>Personas</TableHead>
+              <TableHead>Mesa</TableHead>
+              <TableHead>Creada</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {reservations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-2">
+                    <CalendarDays className="h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground font-medium">
+                      No se encontraron reservas
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {filterType === "today" && "No hay reservas para hoy"}
+                      {filterType === "past" &&
+                        "No hay reservas en el historial"}
+                      {filterType === "dateRange" &&
+                        "Selecciona un rango de fechas"}
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              reservations.map((reservation) => (
+                <TableRow key={reservation.id}>
+                  <TableCell className="font-mono text-sm">
+                    {reservation.id.slice(0, 8)}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {reservation.customerName}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div>{reservation.customerEmail}</div>
+                      <div className="text-muted-foreground">
+                        {reservation.customerPhone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">
+                        {formatDateAR(reservation.date)}
+                      </div>
+                      <div className="text-muted-foreground">
+                        LLegada{" "}
+                        {reservation.exactTime
+                          ? formatTimeAR(reservation.exactTime)
+                          : reservation.timeSlot
+                            ? `${reservation.timeSlot.startTime.slice(11, 16)} - ${reservation.timeSlot.endTime.slice(11, 16)}`
+                            : "Sin turno"}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-bold">
+                      {reservation.people}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {reservation.tables && reservation.tables.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {reservation.tables.map((rt) => (
+                          <Link
+                            key={rt.tableId}
+                            href={`/dashboard/tables?tableId=${rt.tableId}`}
+                          >
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-semibold cursor-pointer hover:bg-accent"
+                            >
+                              {rt.table.name ?? `Mesa ${rt.table.number}`}
+                            </Badge>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">
+                        Sin asignar
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    <div>{formatTimestampDateAR(reservation.createdAt)}</div>
+                    <div>{formatTimeAR(reservation.createdAt)}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={reservation.status.toLowerCase()}
+                      onValueChange={(value) =>
+                        onStatusUpdate(reservation.id, value)
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendiente</SelectItem>
+                        <SelectItem value="confirmed">Confirmada</SelectItem>
+                        <SelectItem value="seated" disabled>
+                          Sentada
+                        </SelectItem>
+                        <SelectItem
+                          value="completed"
+                          disabled={reservation.status === "SEATED"}
+                        >
+                          Completada
+                        </SelectItem>
+                        <SelectItem value="canceled">Cancelada</SelectItem>
+                        <SelectItem value="no_show">No se presentó</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      {reservation.status.toUpperCase() === "CONFIRMED" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => onSeatingRequested(reservation)}
+                          disabled={seatingReservationId === reservation.id}
+                          title="Marcar como Sentada"
+                        >
+                          {seatingReservationId === reservation.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <UserCheck className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onView(reservation)}
+                        title="Ver Detalles"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => onDelete(reservation.id)}
+                        title="Eliminar Reserva"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+
+        {/* Pagination / Load More */}
+        {pagination.hasMore && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="outline"
+              onClick={onLoadMore}
+              disabled={isPending}
+              className="min-w-50"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cargando...
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4 mr-2" />
+                  Cargar más ({reservations.length} de {pagination.totalCount})
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Show count when all loaded */}
+        {!pagination.hasMore && reservations.length > 0 && (
+          <div className="text-center mt-4 text-sm text-muted-foreground">
+            Mostrando {reservations.length} de {pagination.totalCount} reservas
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

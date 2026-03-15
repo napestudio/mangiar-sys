@@ -1,0 +1,56 @@
+import type { Reservation as PrismaReservation, TimeSlot as PrismaTimeSlot, ReservationTable, ReservationStatus } from "@/app/generated/prisma";
+
+// Narrow table shape returned by getFilteredReservations
+export type ReservationTableSummary = {
+  id: string;
+  name: string | null;
+  number: number;
+  capacity: number;
+};
+
+// Reservation type from database with includes
+export type ReservationWithRelations = PrismaReservation & {
+  timeSlot: PrismaTimeSlot | null;
+  tables: (ReservationTable & {
+    table: ReservationTableSummary;
+  })[];
+};
+
+// Serialized version for client components (Dates as strings, Decimals as numbers)
+export type SerializedReservation = {
+  id: string;
+  branchId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
+  date: string; // ISO string
+  people: number;
+  timeSlotId: string | null;
+  exactTime: string | null; // ISO string - precise 15-min arrival time
+  status: ReservationStatus;
+  dietaryRestrictions: string | null;
+  accessibilityNeeds: string | null;
+  notes: string | null;
+  createdAt: string; // ISO string
+  createdBy: string | null;
+  updatedBy: string | null;
+  timeSlot: {
+    id: string;
+    startTime: string; // ISO string
+    endTime: string; // ISO string
+    daysOfWeek: string[];
+    pricePerPerson: number;
+    notes: string | null;
+    isActive: boolean;
+    branchId: string;
+    createdAt: string; // ISO string
+    updatedAt: string; // ISO string
+  } | null;
+  tables: (ReservationTable & {
+    table: ReservationTableSummary;
+  })[];
+};
+
+// Time slot type for UI
+export type { TimeSlot } from "@/types/time-slot";
+

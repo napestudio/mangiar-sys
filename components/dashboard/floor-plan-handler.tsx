@@ -1,0 +1,642 @@
+"use client";
+
+import { createTable } from "@/actions/Table";
+import { tableHasActiveOrders } from "@/actions/Order";
+import type { TableShapeType } from "@/types/table";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { TableWithReservations } from "@/lib/floor-plan-utils";
+import { shapeDefaults } from "@/lib/floor-plan-utils";
+import { GRID_SIZE } from "@/lib/floor-plan-constants";
+import { useFloorPlanState } from "@/hooks/use-floor-plan-state";
+import { useFloorPlanActions } from "@/hooks/use-floor-plan-actions";
+import { AddTableDialog } from "./floor-plan/add-table-dialog";
+import { FloorPlanCanvas } from "./floor-plan/floor-plan-canvas";
+import { FloorPlanActions } from "./floor-plan/floor-plan-actions";
+import { FloorPlanStats } from "./floor-plan/floor-plan-stats";
+import { TablePropertiesPanel } from "./floor-plan/table-properties-panel";
+import { SectorSelector } from "./floor-plan/sector-selector";
+import type { Sector } from "@/types/tables-client";
+import { TableOrderSidebar } from "./table-order-sidebar";
+import { TableEditSidebar } from "./floor-plan/table-edit-sidebar";
+
+// Default canvas dimensions - can be overridden by sector dimensions
+const DEFAULT_CANVAS_WIDTH = 1200;
+const DEFAULT_CANVAS_HEIGHT = 800;
+
+interface FloorPlanPageProps {
+  branchId: string;
+  tables: TableWithReservations[];
+  setTables: React.Dispatch<React.SetStateAction<TableWithReservations[]>>;
+  selectedSector?: string | null;
+  setSelectedSector?: (sectorId: string | null) => void;
+  sectors?: Sector[];
+  onAddSector?: () => void;
+  onEditSector?: (sector: Sector) => void;
+  onRefreshTables?: () => Promise<void>;
+  onRefreshSingleTable?: (tableId: string) => Promise<void>;
+  editModeOnly?: boolean;
+  isLoading?: boolean;
+  initialTableId?: string;
+  initialPartySize?: number;
+  initialCustomerEmail?: string;
+}
+
+export default function FloorPlanHandler({
+  branchId,
+  tables: dbTables,
+  setTables: setDbTables,
+  selectedSector: externalSelectedSector,
+  setSelectedSector: externalSetSelectedSector,
+  sectors: externalSectors = [],
+  onAddSector,
+  onEditSector,
+  onRefreshTables,
+  onRefreshSingleTable,
+  editModeOnly = false,
+  isLoading = false,
+  initialTableId,
+  initialPartySize,
+  initialCustomerEmail,
+}: FloorPlanPageProps) {
+  // 1. Derived values from props (no hooks) - needed by useState initialization
+  const sectors = externalSectors;
+  const selectedSector = externalSelectedSector ?? null;
+
+  // 2. ALL useState hooks - must be called before any early returns
+  const [zoom, setZoom] = useState(1);
+  const [showGrid, setShowGrid] = useState(editModeOnly);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number }>({
+    x: 50,
+    y: 50,
+  });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [selectedTableForOrder, setSelectedTableForOrder] = useState<
+    string | null
+  >(initialTableId ?? null);
+  const [selectedTableHasOrders, setSelectedTableHasOrders] = useState(false);
+  const [tableEditSidebarOpen, setTableEditSidebarOpen] = useState(false);
+  const [selectedTableForEdit, setSelectedTableForEdit] = useState<
+    string | null
+  >(null);
+  const [hasDragged, setHasDragged] = useState(false);
+
+  const [newTable, setNewTable] = useState({
+    number: "",
+    name: "",
+    shape: "SQUARE" as TableShapeType,
+    capacity: "2",
+    isShared: false,
+    sectorId: selectedSector || "",
+  });
+
+  // 3. ALL useRef hooks
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // 4. useMemo for canvas dimensions
+  const { canvasWidth, canvasHeight } = useMemo(() => {
+    const currentSector = selectedSector
+      ? sectors.find((s) => s.id === selectedSector)
+      : null;
+    return {
+      canvasWidth: currentSector?.width ?? DEFAULT_CANVAS_WIDTH,
+      canvasHeight: currentSector?.height ?? DEFAULT_CANVAS_HEIGHT,
+    };
+  }, [selectedSector, sectors]);
+
+  // 5. Custom hooks - use floor plan state and actions
+  const {
+    tables,
+    setTables,
+    filteredTables,
+    selectedTable,
+    setSelectedTable,
+    selectedTableData,
+    draggedTable,
+    setDraggedTable,
+    setDragOffset,
+    handleTableDrag,
+  } = useFloorPlanState({
+    dbTables,
+    selectedSector: selectedSector ?? null,
+    canvasWidth,
+    canvasHeight,
+    zoom,
+    initialSelectedTable: editModeOnly ? undefined : initialTableId,
+  });
+
+  const {
+    deleteTable,
+    rotateTable,
+    updateTableStatus,
+    updateTableCapacity,
+    updateTableShape,
+    updateTableIsShared,
+    updateTableSize,
+    saveFloorPlanChanges,
+  } = useFloorPlanActions({
+    tables,
+    setTables,
+    setDbTables,
+    setSelectedTable,
+    setHasUnsavedChanges,
+  });
+
+  // 6. ALL useEffect hooks
+  // Check if selected table has active orders
+  useEffect(() => {
+    const checkActiveOrders = async () => {
+      if (selectedTable) {
+        const result = await tableHasActiveOrders(selectedTable);
+        if (result.success) {
+          setSelectedTableHasOrders(result.hasActiveOrders);
+        } else {
+          setSelectedTableHasOrders(false);
+        }
+      } else {
+        setSelectedTableHasOrders(false);
+      }
+    };
+
+    checkActiveOrders();
+  }, [selectedTable]);
+
+  // Handle mouse move and mouse up for dragging
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggedTable) return;
+
+      setHasDragged(true);
+      const svg = svgRef.current;
+      if (!svg) return;
+
+      const rect = svg.getBoundingClientRect();
+      handleTableDrag(e.clientX, e.clientY, rect);
+    };
+
+    const handleMouseUp = () => {
+      if (!draggedTable) return;
+
+      // If we dragged, mark as having unsaved changes
+      if (hasDragged) {
+        setHasUnsavedChanges(true);
+      } else if (editModeOnly) {
+        // If no drag occurred and in editModeOnly, open the sidebar
+        setSelectedTableForEdit(draggedTable);
+        setTableEditSidebarOpen(true);
+      }
+
+      setDraggedTable(null);
+      setHasDragged(false);
+    };
+
+    if (draggedTable) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [
+    draggedTable,
+    handleTableDrag,
+    setDraggedTable,
+    hasDragged,
+    editModeOnly,
+  ]);
+
+  // Set initial zoom to 85% on mobile (runs once after hydration)
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 1024px)").matches) setZoom(0.85);
+  }, []);
+
+  // Autosave with debounce (1.5s after last change)
+  useEffect(() => {
+    if (!editModeOnly || !hasUnsavedChanges) return;
+
+    // Clear any existing timeout
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    // Set new timeout for autosave
+    autosaveTimeoutRef.current = setTimeout(() => {
+      if (!hasUnsavedChanges || isSaving) return;
+
+      setIsSaving(true);
+      saveFloorPlanChanges(
+        setIsSaving,
+        setHasUnsavedChanges,
+        () => {}, // Don't exit edit mode on autosave
+      )
+        .then(() => {
+          // Show saved indicator
+          setShowSavedIndicator(true);
+          setTimeout(() => setShowSavedIndicator(false), 2000);
+        })
+        .catch((error) => {
+          console.error("Error in autosave:", error);
+        });
+    }, 1500);
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [editModeOnly, hasUnsavedChanges, saveFloorPlanChanges, isSaving]);
+
+  // 7. ALL useCallback hooks
+  // Handle table mouse down - memoized
+  // Note: table.x and table.y are CENTER coordinates
+  const handleTableMouseDown = useCallback(
+    (e: React.MouseEvent, tableId: string) => {
+      e.stopPropagation();
+
+      // In edit mode (only available in editModeOnly pages), allow dragging
+      if (editModeOnly) {
+        setSelectedTable(tableId);
+
+        const table = tables.find((t) => t.id === tableId);
+        if (!table) return;
+
+        const svg = svgRef.current;
+        if (!svg) return;
+
+        const rect = svg.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top) / zoom;
+
+        setDraggedTable(tableId);
+        // dragOffset is relative to center (table.x and table.y are center coords)
+        setDragOffset({
+          x: x - table.x,
+          y: y - table.y,
+        });
+      } else {
+        // In view mode, open order sidebar and select table for visual feedback
+        setSelectedTable(tableId);
+        setSelectedTableForOrder(tableId);
+      }
+    },
+    [
+      editModeOnly,
+      tables,
+      zoom,
+      setSelectedTable,
+      setDraggedTable,
+      setDragOffset,
+    ],
+  );
+
+  // Add table handler - memoized
+  // Note: FloorTable uses center coordinates, DB uses top-left
+  const addTable = useCallback(async () => {
+    if (!newTable.number) {
+      return;
+    }
+
+    const defaults = shapeDefaults[newTable.shape];
+
+    // Calculate center position (clickPosition is top-left of grid cell)
+    const centerX = clickPosition.x + GRID_SIZE / 2;
+    const centerY = clickPosition.y + GRID_SIZE / 2;
+
+    // Convert to top-left for database storage
+    const dbPositionX = centerX - defaults.width / 2;
+    const dbPositionY = centerY - defaults.height / 2;
+
+    const result = await createTable({
+      branchId,
+      number: Number.parseInt(newTable.number),
+      name: newTable.name || undefined,
+      capacity: Number.parseInt(newTable.capacity),
+      sectorId: newTable.sectorId || undefined,
+      positionX: dbPositionX,
+      positionY: dbPositionY,
+      width: defaults.width,
+      height: defaults.height,
+      rotation: 0,
+      shape: newTable.shape,
+      isActive: true,
+      isShared: newTable.isShared,
+    });
+
+    if (result.success && result.data) {
+      // Add the new table to local floor plan state (using center coordinates)
+      const width = result.data.width ?? defaults.width;
+      const height = result.data.height ?? defaults.height;
+      const dbX = result.data.positionX ?? dbPositionX;
+      const dbY = result.data.positionY ?? dbPositionY;
+
+      const newFloorTable = {
+        id: result.data.id,
+        number: result.data.number,
+        // Convert DB top-left to center for FloorTable
+        x: dbX + width / 2,
+        y: dbY + height / 2,
+        width,
+        height,
+        rotation: result.data.rotation ?? 0,
+        shape: (result.data.shape ?? newTable.shape) as TableShapeType,
+        capacity: result.data.capacity,
+        status: "empty" as const,
+        currentGuests: 0,
+        isShared: result.data.isShared ?? false,
+      };
+
+      setTables((prevTables) => [...prevTables, newFloorTable]);
+
+      // Also update parent state for simple view (DB format with top-left)
+      const newDbTable: TableWithReservations = {
+        id: result.data.id,
+        number: result.data.number,
+        capacity: result.data.capacity,
+        positionX: dbX,
+        positionY: dbY,
+        width,
+        height,
+        rotation: result.data.rotation ?? 0,
+        shape: result.data.shape ?? newTable.shape,
+        status: null,
+        isActive: result.data.isActive ?? true,
+        isShared: result.data.isShared ?? false,
+        sectorId: result.data.sectorId ?? null,
+        reservations: [],
+      };
+
+      setDbTables((prevTables) => [...prevTables, newDbTable]);
+      setNewTable({
+        number: "",
+        name: "",
+        shape: "SQUARE",
+        capacity: "2",
+        isShared: false,
+        sectorId: selectedSector || "",
+      });
+      setAddDialogOpen(false);
+    }
+  }, [
+    newTable,
+    branchId,
+    setTables,
+    setDbTables,
+    clickPosition,
+    selectedSector,
+  ]);
+
+  // Zoom handlers - memoized
+  const handleZoomIn = useCallback(() => {
+    setZoom((prev) => Math.min(1, prev + 0.05));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((prev) => Math.max(0.5, prev - 0.05));
+  }, []);
+
+  // Toggle handlers - memoized
+  const handleToggleGrid = useCallback(() => {
+    setShowGrid((prev) => !prev);
+  }, []);
+
+  const handleOrderUpdated = useCallback(
+    async (tableId: string) => {
+      // Refresh only the specific table that was updated (more efficient)
+      if (onRefreshSingleTable) {
+        await onRefreshSingleTable(tableId);
+      } else if (onRefreshTables) {
+        // Fallback to full refresh if single table refresh not available
+        await onRefreshTables();
+      }
+    },
+    [onRefreshSingleTable, onRefreshTables],
+  );
+
+  const handleCloseSidebar = useCallback(() => {
+    setSelectedTableForOrder(null);
+  }, []);
+
+  const handleTableChange = useCallback(
+    (newTableId: string) => {
+      setSelectedTableForOrder(newTableId);
+      setSelectedTable(newTableId);
+    },
+    [setSelectedTable],
+  );
+
+  // Edit sidebar handlers (for editModeOnly)
+  const handleCloseEditSidebar = useCallback(() => {
+    setTableEditSidebarOpen(false);
+    setTimeout(() => setSelectedTableForEdit(null), 300); // Clear after animation
+  }, []);
+
+  // Handle canvas click to add table
+  const handleCanvasClick = useCallback(
+    (x: number, y: number) => {
+      setClickPosition({ x, y });
+
+      // Calculate next available table number
+      const existingNumbers = dbTables.map((t) => t.number);
+      const maxNumber =
+        existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const nextNumber = maxNumber + 1;
+
+      setNewTable((prev) => ({
+        ...prev,
+        number: nextNumber.toString(),
+        sectorId: selectedSector || "",
+      }));
+
+      setAddDialogOpen(true);
+    },
+    [dbTables, selectedSector],
+  );
+
+  // 8. Additional useMemo for derived values
+  // Get table data for edit sidebar
+  const selectedTableForEditData = useMemo(() => {
+    if (!selectedTableForEdit) return null;
+    return tables.find((t) => t.id === selectedTableForEdit) || null;
+  }, [selectedTableForEdit, tables]);
+
+  // Get additional table info for properties panel - memoized
+  const selectedDbTable = useMemo(() => {
+    return selectedTable
+      ? dbTables.find((t) => t.id === selectedTable)
+      : undefined;
+  }, [selectedTable, dbTables]);
+
+  const selectedTableSector = useMemo(() => {
+    return selectedDbTable?.sectorId
+      ? sectors.find((s) => s.id === selectedDbTable.sectorId)
+      : undefined;
+  }, [selectedDbTable?.sectorId, sectors]);
+
+  // Memoize table data for order sidebar to avoid multiple .find() calls on every render
+  const selectedTableForOrderData = useMemo(() => {
+    if (!selectedTableForOrder) return null;
+    return dbTables.find((t) => t.id === selectedTableForOrder) ?? null;
+  }, [selectedTableForOrder, dbTables]);
+
+  // 9. Early return for loading state (after ALL hooks to comply with Rules of Hooks)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Cargando plano...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4 px-2 py-2 bg-neutral-50">
+        <SectorSelector
+          sectors={sectors}
+          selectedSector={selectedSector ?? null}
+          onSelectSector={(sectorId) => externalSetSelectedSector?.(sectorId)}
+          onAddSector={editModeOnly ? onAddSector : undefined}
+          onEditSector={editModeOnly ? onEditSector : undefined}
+        />
+
+        {/* Live status legend — only in operational view */}
+        {!editModeOnly && <FloorPlanStats tables={filteredTables} />}
+
+        {/* Only show FloorPlanActions in editModeOnly (config page) */}
+        {editModeOnly && (
+          <FloorPlanActions
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
+            showSavedIndicator={showSavedIndicator}
+          />
+        )}
+      </div>
+
+      <div
+        className={`grid grid-cols-1 ${
+          editModeOnly ? "" : "lg:grid-cols-6"
+        } gap-0 shadow-md h-[calc(100svh-7rem)]`}
+      >
+        {/* Floor Plan Canvas */}
+        <div
+          className={`${
+            editModeOnly ? "" : "lg:col-span-4"
+          } relative h-full overflow-hidden`}
+        >
+          <FloorPlanCanvas
+            tables={filteredTables}
+            selectedTable={selectedTable}
+            draggedTable={draggedTable}
+            zoom={zoom}
+            showGrid={showGrid}
+            svgRef={svgRef}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            isEditMode={editModeOnly}
+            editModeOnly={editModeOnly}
+            onTableMouseDown={handleTableMouseDown}
+            onCanvasClick={editModeOnly ? handleCanvasClick : undefined}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onToggleGrid={handleToggleGrid}
+            onRotateTable={rotateTable}
+            onResizeTable={updateTableSize}
+          />
+        </div>
+
+        {/* Unified panel:
+            mobile  → fixed fullscreen overlay (slides from right, z-50)
+            desktop → static grid column (lg:col-span-2) */}
+        {!editModeOnly && (
+          <div
+            className={`fixed top-0 right-0 h-full w-full z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:col-span-2 lg:h-full lg:z-auto lg:translate-x-0 lg:transform-none lg:transition-none lg:overflow-hidden ${
+              selectedTableForOrder ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
+            {selectedTableForOrder && !editModeOnly ? (
+              <TableOrderSidebar
+                tableId={selectedTableForOrder}
+                tableNumber={selectedTableForOrderData?.number ?? null}
+                tableIsShared={selectedTableForOrderData?.isShared ?? false}
+                tableSectorId={selectedTableForOrderData?.sectorId ?? null}
+                branchId={branchId}
+                onClose={handleCloseSidebar}
+                onTableChange={handleTableChange}
+                onOrderUpdated={handleOrderUpdated}
+                initialPartySize={initialPartySize}
+                initialCustomerEmail={initialCustomerEmail}
+              />
+            ) : (
+              <TablePropertiesPanel
+                selectedTable={selectedTableData}
+                sectorName={selectedTableSector?.name}
+                sectorColor={selectedTableSector?.color}
+                onUpdateShape={updateTableShape}
+                onUpdateCapacity={updateTableCapacity}
+                onUpdateStatus={updateTableStatus}
+                onUpdateIsShared={updateTableIsShared}
+                onUpdateSize={updateTableSize}
+                onRotate={rotateTable}
+                onDelete={deleteTable}
+                isEditMode={editModeOnly}
+                hasActiveOrders={selectedTableHasOrders}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Backdrop — mobile only (lg:hidden), fades with selectedTableForOrder */}
+      {!editModeOnly && (
+        <div
+          className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity ${
+            selectedTableForOrder
+              ? "opacity-100"
+              : "opacity-0 pointer-events-none"
+          }`}
+          onClick={handleCloseSidebar}
+        />
+      )}
+
+      {/* Edit sidebar for editModeOnly */}
+      {editModeOnly && (
+        <TableEditSidebar
+          table={selectedTableForEditData}
+          open={tableEditSidebarOpen}
+          onClose={handleCloseEditSidebar}
+          onUpdateCapacity={updateTableCapacity}
+          onUpdateShape={updateTableShape}
+          onUpdateIsShared={updateTableIsShared}
+          onDelete={deleteTable}
+        />
+      )}
+
+      <AddTableDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        tableNumber={newTable.number}
+        tableShape={newTable.shape}
+        tableCapacity={newTable.capacity}
+        isShared={newTable.isShared}
+        onTableNumberChange={(value) =>
+          setNewTable({ ...newTable, number: value })
+        }
+        onTableShapeChange={(value) =>
+          setNewTable({ ...newTable, shape: value })
+        }
+        onTableCapacityChange={(value) =>
+          setNewTable({ ...newTable, capacity: value })
+        }
+        onIsSharedChange={(value) =>
+          setNewTable({ ...newTable, isShared: value })
+        }
+        onAddTable={addTable}
+      />
+    </div>
+  );
+}

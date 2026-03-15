@@ -1,0 +1,785 @@
+"use server";
+
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { OrderStatus, ReservationStatus } from "@/app/generated/prisma";
+import {
+  findAvailableTables,
+  recalculateTableStatus,
+  setTablesReserved,
+  updateTableStatusForReservation,
+} from "./Table";
+import { sendReservationNotificationEmail } from "@/lib/send-reservation-email";
+
+/**
+ * Helper function to serialize reservation data for client components
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeReservation(reservation: any) {
+  return {
+    ...reservation,
+    date: reservation.date.toISOString(),
+    exactTime: reservation.exactTime
+      ? reservation.exactTime.toISOString()
+      : null,
+    createdAt: reservation.createdAt.toISOString(),
+    timeSlot: reservation.timeSlot
+      ? {
+          ...reservation.timeSlot,
+          startTime: reservation.timeSlot.startTime.toISOString(),
+          endTime: reservation.timeSlot.endTime.toISOString(),
+          pricePerPerson: reservation.timeSlot.pricePerPerson?.toNumber() || 0,
+          createdAt: reservation.timeSlot.createdAt.toISOString(),
+          updatedAt: reservation.timeSlot.updatedAt.toISOString(),
+        }
+      : null,
+    tables: reservation.tables
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        reservation.tables.map((rt: any) => ({
+          ...rt,
+          table: rt.table,
+        }))
+      : undefined,
+  };
+}
+
+/**
+ * Create a new reservation with automatic table assignment
+ */
+export async function createReservation(data: {
+  branchId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  date: string; // ISO date string
+  time: string; // Time slot value "HH:mm-HH:mm"
+  guests: number;
+  timeSlotId?: string;
+  exactTime?: string; // ISO string for precise arrival time
+  dietaryRestrictions?: string;
+  accessibilityNeeds?: string;
+  notes?: string;
+  status?: ReservationStatus;
+  createdBy?: string;
+  autoAssignTables?: boolean; // Option to enable/disable auto-assignment
+}) {
+  // console.log("creating reservation", data);
+  try {
+    // Parse the date
+    const reservationDate = new Date(data.date);
+
+    // Validate that we have a time slot for table assignment
+    if (!data.timeSlotId) {
+      return {
+        success: false,
+        error: "Time slot is required for reservations",
+      };
+    }
+
+    // Step 1: Create the reservation with PENDING status initially
+    const reservation = await prisma.reservation.create({
+      data: {
+        branchId: data.branchId,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        date: reservationDate,
+        people: data.guests,
+        timeSlotId: data.timeSlotId,
+        exactTime: data.exactTime ? new Date(data.exactTime) : null,
+        dietaryRestrictions: data.dietaryRestrictions,
+        accessibilityNeeds: data.accessibilityNeeds,
+        notes: data.notes,
+        status: ReservationStatus.PENDING,
+        createdBy: data.createdBy || "ANON",
+      },
+      include: {
+        timeSlot: true,
+        branch: true,
+      },
+    });
+
+    // Step 2: Determine status based on payment — free reservations confirm immediately.
+    // Capacity was already validated upstream in getAvailableTimeSlotsForDate(),
+    // so table assignment success/failure does not gate confirmation for free slots.
+    const isPaidReservation =
+      reservation.timeSlot &&
+      (reservation.timeSlot.pricePerPerson?.toNumber() ?? 0) > 0;
+
+    let finalStatus: ReservationStatus = ReservationStatus.PENDING;
+
+    if (!isPaidReservation) {
+      await prisma.reservation.update({
+        where: { id: reservation.id },
+        data: { status: ReservationStatus.CONFIRMED },
+      });
+      finalStatus = ReservationStatus.CONFIRMED;
+    }
+
+    // Step 3: Try to auto-assign tables (independent of confirmation status)
+    const shouldAutoAssign = data.autoAssignTables !== false;
+    let assignmentResult = null;
+
+    if (shouldAutoAssign) {
+      assignmentResult = await findAvailableTables(
+        data.branchId,
+        reservationDate,
+        data.timeSlotId,
+        data.guests
+      );
+
+      if (assignmentResult.success && assignmentResult.data) {
+        try {
+          await prisma.reservationTable.createMany({
+            data: assignmentResult.data.tableIds.map((tableId) => ({
+              reservationId: reservation.id,
+              tableId,
+            })),
+          });
+
+          // Mark tables as RESERVED only for confirmed (free) reservations
+          if (!isPaidReservation) {
+            await setTablesReserved(assignmentResult.data.tableIds);
+          }
+        } catch (assignError) {
+          // Table assignment failure is non-blocking — reservation status is already set
+          console.error("Error assigning tables:", assignError);
+        }
+      }
+    }
+
+    // Fetch the final reservation with all relations
+    const finalReservation = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      include: {
+        timeSlot: true,
+        branch: true,
+        tables: {
+          include: {
+            table: true,
+          },
+        },
+      },
+    });
+
+    // Send email notification (only for web reservations)
+    if (data.createdBy === "WEB" && finalReservation) {
+      try {
+        const assignedTableNames =
+          finalReservation.tables
+            ?.map((rt) => rt.table.name)
+            .filter((name): name is string => name !== null) || [];
+
+        await sendReservationNotificationEmail({
+          customerName: finalReservation.customerName,
+          customerEmail: finalReservation.customerEmail,
+          customerPhone: finalReservation.customerPhone || undefined,
+          date: finalReservation.date,
+          time: data.time,
+          guests: finalReservation.people,
+          branchName: finalReservation.branch.name,
+          notificationEmail: finalReservation.branch.notificationEmail,
+          timeSlotName: finalReservation.timeSlot?.name,
+          exactTime: finalReservation.exactTime || undefined,
+          dietaryRestrictions:
+            finalReservation.dietaryRestrictions || undefined,
+          accessibilityNeeds: finalReservation.accessibilityNeeds || undefined,
+          notes: finalReservation.notes || undefined,
+          status: finalStatus,
+          autoAssigned: finalStatus === ReservationStatus.CONFIRMED,
+          assignedTables: assignedTableNames,
+          pricePerPerson:
+            finalReservation.timeSlot?.pricePerPerson?.toNumber() || 0,
+        });
+      } catch (emailError) {
+        // Log the error but don't fail the reservation
+        console.error("Failed to send email notification:", emailError);
+      }
+    }
+
+    revalidatePath("/dashboard/reservations");
+
+    return {
+      success: true,
+      data: serializeReservation(finalReservation),
+      message:
+        finalStatus === ReservationStatus.CONFIRMED
+          ? "Reservation confirmed with table assignment"
+          : "Reservation created - pending table assignment",
+      autoAssigned: finalStatus === ReservationStatus.CONFIRMED,
+      assignmentType: assignmentResult?.data?.assignmentType, // NEW
+      isSharedTableOnly: assignmentResult?.data?.isSharedTableOnly ?? false, // NEW
+    };
+  } catch (error) {
+    console.error("Error creating reservation:", error);
+    return { success: false, error: "Failed to create reservation" };
+  }
+}
+
+/**
+ * Get all reservations for a branch
+ */
+export async function getReservations(branchId: string) {
+  try {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        branchId,
+      },
+      include: {
+        timeSlot: true,
+        tables: {
+          include: {
+            table: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: reservations.map((r: any) => serializeReservation(r)),
+    };
+  } catch (error) {
+    console.error("Error fetching reservations:", error);
+    return { success: false, error: "Failed to fetch reservations" };
+  }
+}
+
+/**
+ * Get a single reservation by ID
+ */
+export async function getReservationById(id: string) {
+  try {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: {
+        timeSlot: true,
+        branch: true,
+        tables: {
+          include: {
+            table: true,
+          },
+        },
+      },
+    });
+
+    if (!reservation) {
+      return { success: false, error: "Reservation not found" };
+    }
+
+    return { success: true, data: serializeReservation(reservation) };
+  } catch (error) {
+    console.error("Error fetching reservation:", error);
+    return { success: false, error: "Failed to fetch reservation" };
+  }
+}
+
+/**
+ * Update an existing reservation
+ */
+export async function updateReservation(
+  id: string,
+  data: {
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    date?: string;
+    people?: number;
+    timeSlotId?: string;
+    dietaryRestrictions?: string;
+    accessibilityNeeds?: string;
+    notes?: string;
+    status?: ReservationStatus;
+  }
+) {
+  try {
+    const updateData: {
+      customerName?: string;
+      customerEmail?: string;
+      customerPhone?: string;
+      date?: Date;
+      people?: number;
+      timeSlotId?: string;
+      dietaryRestrictions?: string;
+      accessibilityNeeds?: string;
+      notes?: string;
+      status?: ReservationStatus;
+    } = {};
+
+    if (data.customerName !== undefined) {
+      updateData.customerName = data.customerName;
+    }
+    if (data.customerEmail !== undefined) {
+      updateData.customerEmail = data.customerEmail;
+    }
+    if (data.customerPhone !== undefined) {
+      updateData.customerPhone = data.customerPhone;
+    }
+    if (data.date !== undefined) {
+      updateData.date = new Date(data.date);
+    }
+    if (data.people !== undefined) {
+      updateData.people = data.people;
+    }
+    if (data.timeSlotId !== undefined) {
+      updateData.timeSlotId = data.timeSlotId;
+    }
+    if (data.dietaryRestrictions !== undefined) {
+      updateData.dietaryRestrictions = data.dietaryRestrictions;
+    }
+    if (data.accessibilityNeeds !== undefined) {
+      updateData.accessibilityNeeds = data.accessibilityNeeds;
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+
+    const reservation = await prisma.reservation.update({
+      where: { id },
+      data: updateData,
+      include: {
+        timeSlot: true,
+        branch: true,
+      },
+    });
+
+    revalidatePath("/dashboard/reservations");
+    return { success: true, data: serializeReservation(reservation) };
+  } catch (error) {
+    console.error("Error updating reservation:", error);
+    return { success: false, error: "Failed to update reservation" };
+  }
+}
+
+/**
+ * Update reservation status
+ */
+export async function updateReservationStatus(
+  id: string,
+  status: ReservationStatus
+) {
+  try {
+    // SEATED must go through the SeatReservationDialog (seatReservationWithTable)
+    // which creates the order atomically. Direct dropdown change leaves the table
+    // OCCUPIED with no order, blocking both the floor plan and other reservations.
+    if (status === ReservationStatus.SEATED) {
+      return {
+        success: false,
+        error:
+          "Para sentar una reserva usá el botón 'Sentar'. Esto garantiza que la mesa quede correctamente asignada.",
+      };
+    }
+
+    // Block COMPLETED if the reservation's tables have active orders
+    if (status === ReservationStatus.COMPLETED) {
+      const reservationTables = await prisma.reservationTable.findMany({
+        where: { reservationId: id },
+        select: { tableId: true },
+      });
+      const tableIds = reservationTables.map((rt) => rt.tableId);
+
+      if (tableIds.length > 0) {
+        const activeOrderCount = await prisma.order.count({
+          where: {
+            tableId: { in: tableIds },
+            status: { in: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS] },
+          },
+        });
+
+        if (activeOrderCount > 0) {
+          return {
+            success: false,
+            error:
+              "La mesa tiene pedidos activos. Cerrá la mesa desde la vista de mesas para cobrar antes de completar la reserva.",
+          };
+        }
+      }
+    }
+
+    const reservation = await prisma.reservation.update({
+      where: { id },
+      data: { status },
+      include: {
+        timeSlot: true,
+        branch: true,
+      },
+    });
+
+    // Automatically update table status based on reservation status
+    await updateTableStatusForReservation(id, status);
+
+    revalidatePath("/dashboard/reservations");
+    return { success: true, data: serializeReservation(reservation) };
+  } catch (error) {
+    console.error("Error updating reservation status:", error);
+    return { success: false, error: "Failed to update reservation status" };
+  }
+}
+
+/**
+ * Delete a reservation (cancel)
+ */
+export async function deleteReservation(id: string) {
+  try {
+    // First, delete any related ReservationTable entries
+    await prisma.reservationTable.deleteMany({
+      where: {
+        reservationId: id,
+      },
+    });
+
+    // Then delete the reservation
+    await prisma.reservation.delete({
+      where: { id },
+    });
+
+    revalidatePath("/dashboard/reservations");
+    return { success: true, data: null };
+  } catch (error) {
+    console.error("Error deleting reservation:", error);
+    return { success: false, error: "Failed to delete reservation" };
+  }
+}
+
+/**
+ * Cancel a reservation (soft delete - update status to CANCELED)
+ */
+export async function cancelReservation(id: string) {
+  try {
+    const reservation = await prisma.reservation.update({
+      where: { id },
+      data: {
+        status: ReservationStatus.CANCELED,
+      },
+      include: {
+        timeSlot: true,
+        branch: true,
+      },
+    });
+
+    await updateTableStatusForReservation(id, ReservationStatus.CANCELED);
+
+    revalidatePath("/dashboard/reservations");
+    return { success: true, data: serializeReservation(reservation) };
+  } catch (error) {
+    console.error("Error canceling reservation:", error);
+    return { success: false, error: "Failed to cancel reservation" };
+  }
+}
+
+/**
+ * Get reservations by date range
+ */
+export async function getReservationsByDateRange(
+  branchId: string,
+  startDate: Date,
+  endDate: Date
+) {
+  try {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        branchId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        timeSlot: true,
+        tables: {
+          include: {
+            table: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "asc",
+      },
+    });
+
+    return {
+      success: true,
+      data: reservations.map((r) => serializeReservation(r)),
+    };
+  } catch (error) {
+    console.error("Error fetching reservations by date range:", error);
+    return {
+      success: false,
+      error: "Failed to fetch reservations by date range",
+    };
+  }
+}
+
+/**
+ * Get reservations by status
+ */
+export async function getReservationsByStatus(
+  branchId: string,
+  status: ReservationStatus
+) {
+  try {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        branchId,
+        status,
+      },
+      include: {
+        timeSlot: true,
+        tables: {
+          include: {
+            table: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      data: reservations.map((r) => serializeReservation(r)),
+    };
+  } catch (error) {
+    console.error("Error fetching reservations by status:", error);
+    return {
+      success: false,
+      error: "Failed to fetch reservations by status",
+    };
+  }
+}
+
+/**
+ * Filter types for reservations
+ */
+import type { ReservationFilterType, ReservationFilters, PaginatedReservationsResult } from "@/types/reservation";
+export type { ReservationFilterType, ReservationFilters, PaginatedReservationsResult };
+
+/**
+ * Get reservations with filters and pagination
+ * Optimized for the common case: loading today's reservations first
+ */
+export async function getFilteredReservations(
+  branchId: string,
+  filters: ReservationFilters
+): Promise<{
+  success: boolean;
+  data?: PaginatedReservationsResult;
+  error?: string;
+}> {
+  try {
+    const limit = filters.limit || 10;
+    const now = new Date();
+    // Compute today's date in Argentina (UTC-3) to match how reservation.date is stored
+    // (stored as YYYY-MM-DDT00:00:00Z where YYYY-MM-DD is the Argentina local date)
+    const ARGENTINA_OFFSET_MS = -3 * 60 * 60 * 1000;
+    const argNow = new Date(now.getTime() + ARGENTINA_OFFSET_MS);
+    const todayStart = new Date(Date.UTC(argNow.getUTCFullYear(), argNow.getUTCMonth(), argNow.getUTCDate()));
+    const todayEnd = new Date(Date.UTC(argNow.getUTCFullYear(), argNow.getUTCMonth(), argNow.getUTCDate() + 1));
+
+    // Build the where clause based on filter type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { branchId };
+
+    switch (filters.type) {
+      case "today":
+        whereClause.date = {
+          gte: todayStart,
+          lt: todayEnd,
+        };
+        break;
+      case "past":
+        whereClause.date = {
+          lt: todayStart,
+        };
+        break;
+      case "dateRange":
+        if (filters.dateFrom || filters.dateTo) {
+          whereClause.date = {};
+          if (filters.dateFrom) {
+            whereClause.date.gte = new Date(filters.dateFrom);
+          }
+          if (filters.dateTo) {
+            const endDate = new Date(filters.dateTo);
+            endDate.setDate(endDate.getDate() + 1);
+            whereClause.date.lt = endDate;
+          }
+        }
+        break;
+    }
+
+    // Add status filter if provided
+    // When no status filter is specified, exclude canceled reservations by default
+    if (filters.status) {
+      whereClause.status = filters.status;
+    } else {
+      whereClause.status = {
+        not: ReservationStatus.CANCELED,
+      };
+    }
+
+    // Batch count and data fetch in a single transaction
+    const [totalCount, reservations] = await prisma.$transaction([
+      prisma.reservation.count({ where: whereClause }),
+      prisma.reservation.findMany({
+        where: whereClause,
+        include: {
+          timeSlot: true,
+          tables: {
+            include: {
+              table: {
+                select: {
+                  id: true,
+                  name: true,
+                  number: true,
+                  capacity: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          { date: filters.type === "past" ? "desc" : "asc" },
+          { createdAt: "desc" },
+        ],
+        take: limit + 1, // Take one extra to check if there are more
+        ...(filters.cursor ? { cursor: { id: filters.cursor }, skip: 1 } : {}),
+      }),
+    ]);
+
+    // Check if there are more results
+    const hasMore = reservations.length > limit;
+    const resultReservations = hasMore ? reservations.slice(0, limit) : reservations;
+    const nextCursor = hasMore ? resultReservations[resultReservations.length - 1].id : null;
+
+    return {
+      success: true,
+      data: {
+        reservations: resultReservations.map((r) => serializeReservation(r)),
+        nextCursor,
+        hasMore,
+        totalCount,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching filtered reservations:", error);
+    return { success: false, error: "Failed to fetch reservations" };
+  }
+}
+
+/**
+ * Assign tables to a reservation
+ */
+export async function assignTablesToReservation(
+  reservationId: string,
+  tableIds: string[]
+) {
+  try {
+    // First, remove existing table assignments
+    await prisma.reservationTable.deleteMany({
+      where: {
+        reservationId,
+      },
+    });
+
+    // Then create new assignments
+    const assignments = await prisma.reservationTable.createMany({
+      data: tableIds.map((tableId) => ({
+        reservationId,
+        tableId,
+      })),
+    });
+
+    // Get reservation status to set appropriate table status
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { status: true },
+    });
+
+    if (reservation) {
+      // Update table status based on reservation status
+      await updateTableStatusForReservation(reservationId, reservation.status);
+    }
+
+    revalidatePath("/dashboard/reservations");
+    return { success: true, data: assignments };
+  } catch (error) {
+    console.error("Error assigning tables to reservation:", error);
+    return {
+      success: false,
+      error: "Failed to assign tables to reservation",
+    };
+  }
+}
+
+/**
+ * Atomically seat a reservation: update status, reassign tables if changed, and
+ * update table statuses — all in a single transaction to prevent partial failures.
+ */
+export async function seatReservationWithTable(
+  reservationId: string,
+  selectedTableIds: string[]
+): Promise<{
+  success: boolean;
+  data?: { tableId: string; tableNumber: number };
+  error?: string;
+}> {
+  try {
+    // Fetch old table assignments before the transaction
+    const oldAssignments = await prisma.reservationTable.findMany({
+      where: { reservationId },
+      select: { tableId: true },
+    });
+    const oldTableIds = oldAssignments.map((a) => a.tableId);
+
+    const freedTableIds = oldTableIds.filter(
+      (id) => !selectedTableIds.includes(id)
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.reservation.update({
+        where: { id: reservationId },
+        data: { status: "SEATED" },
+      });
+      await tx.reservationTable.deleteMany({ where: { reservationId } });
+      await tx.reservationTable.createMany({
+        data: selectedTableIds.map((tableId) => ({ reservationId, tableId })),
+      });
+      await tx.table.updateMany({
+        where: { id: { in: selectedTableIds } },
+        data: { status: "OCCUPIED" },
+      });
+    });
+
+    // Free previously-assigned tables using recalculation so active orders are respected
+    if (freedTableIds.length > 0) {
+      await recalculateTableStatus(freedTableIds);
+    }
+
+    // Fetch the first selected table number for navigation
+    const primaryTable = await prisma.table.findUnique({
+      where: { id: selectedTableIds[0] },
+      select: { id: true, number: true },
+    });
+
+    revalidatePath("/dashboard/reservations");
+
+    return {
+      success: true,
+      data: {
+        tableId: primaryTable?.id ?? selectedTableIds[0],
+        tableNumber: primaryTable?.number ?? 0,
+      },
+    };
+  } catch (error) {
+    console.error("Error seating reservation:", error);
+    return { success: false, error: "Error al sentar la reserva" };
+  }
+}

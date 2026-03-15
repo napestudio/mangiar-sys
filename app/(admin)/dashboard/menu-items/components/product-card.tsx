@@ -1,0 +1,223 @@
+"use client";
+
+import {
+  Edit,
+  AlertTriangle,
+  Trash2,
+  Copy,
+  Image as ImageIcon,
+} from "lucide-react";
+import type {
+  UnitType,
+  WeightUnit,
+  VolumeUnit,
+  PriceType,
+  ProductTag,
+} from "@/app/generated/prisma";
+import { getUnitLabel } from "../lib/units";
+import Image from "next/image";
+import { ProductTagIcons } from "@/components/ui/product-tag-icons";
+
+// Serialized types for client components
+type SerializedProductPrice = {
+  id: string;
+  productOnBranchId: string;
+  type: PriceType;
+  price: number;
+};
+
+type SerializedProductOnBranch = {
+  id: string;
+  productId: string;
+  branchId: string;
+  stock: number;
+  minStock: number | null;
+  maxStock: number | null;
+  lastRestocked: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  prices: SerializedProductPrice[];
+};
+
+type SerializedCategory = {
+  id: string;
+  name: string;
+  order: number;
+  restaurantId: string;
+};
+
+type MenuItemWithRelations = {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  sku: string | null;
+  unitType: UnitType;
+  weightUnit: WeightUnit | null;
+  volumeUnit: VolumeUnit | null;
+  minStockAlert: number | null;
+  trackStock: boolean;
+  tags: ProductTag[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  restaurantId: string;
+  categoryId: string | null;
+  category: SerializedCategory | null;
+  branches: SerializedProductOnBranch[];
+};
+
+type ProductProps = {
+  item: MenuItemWithRelations;
+  branchId: string;
+  onEdit: (item: MenuItemWithRelations) => void;
+  onDelete: (item: MenuItemWithRelations) => void;
+  onDuplicate: (item: MenuItemWithRelations) => void;
+};
+
+export function ProductCard({
+  item,
+  branchId,
+  onEdit,
+  onDelete,
+  onDuplicate,
+}: ProductProps) {
+  // Obtener datos de la sucursal actual
+  const branchData = item.branches.find((b) => b.branchId === branchId);
+  const stock = branchData ? branchData.stock : 0;
+  const dineInPrice = branchData?.prices.find((p) => p.type === "DINE_IN");
+
+  // Verificar si hay alerta de stock bajo (solo para productos con trackStock = true)
+  const hasLowStock =
+    item.trackStock && item.minStockAlert && stock < item.minStockAlert;
+  const isOutOfStock = item.trackStock && stock === 0;
+  const isAlwaysAvailable = !item.trackStock;
+
+  return (
+    <div className="p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-4">
+        {/* Product Image */}
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl.replace(
+              "/upload/",
+              "/upload/w_64,h_64,c_fill,q_auto,f_auto/",
+            )}
+            alt={item.name}
+            className="w-16 h-16 object-cover rounded-lg shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+            <ImageIcon className="w-8 h-8 text-gray-400" />
+          </div>
+        )}
+
+        {/* Información principal */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="font-semibold text-gray-900 text-base truncate">
+              {item.name}
+            </h3>
+
+            {/* Badges de estado */}
+            {isAlwaysAvailable && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                Siempre Disponible
+              </span>
+            )}
+            {!isAlwaysAvailable && isOutOfStock && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                Sin Stock
+              </span>
+            )}
+            {!isAlwaysAvailable && !isOutOfStock && hasLowStock && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                <AlertTriangle className="w-3 h-3" />
+                Stock Bajo
+              </span>
+            )}
+          </div>
+
+          {item.category && (
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span className="inline-flex items-center">
+                {item.category.name}
+              </span>
+            </div>
+          )}
+
+          {item.description && (
+            <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+              {item.description}
+            </p>
+          )}
+          {item.tags.length > 0 && (
+            <div className="mt-1.5">
+              <ProductTagIcons tags={item.tags} size={14} showLabel />
+            </div>
+          )}
+        </div>
+
+        {/* Stock */}
+        <div className="text-right min-w-25">
+          <div className="text-xs text-gray-500 mb-0.5">Stock</div>
+          {isAlwaysAvailable ? (
+            <div className="font-semibold text-sm text-green-600">N/A</div>
+          ) : (
+            <div
+              className={`font-semibold text-sm ${
+                isOutOfStock
+                  ? "text-red-600"
+                  : hasLowStock
+                    ? "text-yellow-600"
+                    : "text-gray-900"
+              }`}
+            >
+              {stock}{" "}
+              {getUnitLabel(item.unitType, item.weightUnit, item.volumeUnit)}
+            </div>
+          )}
+        </div>
+
+        {/* Precio */}
+        {dineInPrice && (
+          <div className="text-right min-w-25">
+            <div className="text-xs text-gray-500 mb-0.5">Precio</div>
+            <div className="font-semibold text-sm text-green-600">
+              ${dineInPrice.price.toFixed(2)}
+            </div>
+          </div>
+        )}
+
+        {/* Botón editar */}
+        <button
+          onClick={() => onEdit(item)}
+          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          title="Editar producto"
+        >
+          <Edit className="w-5 h-5" />
+        </button>
+
+        {/* Botón duplicar */}
+        <button
+          onClick={() => onDuplicate(item)}
+          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+          title="Duplicar producto"
+        >
+          <Copy className="w-5 h-5" />
+        </button>
+
+        {/* Botón eliminar */}
+        <button
+          onClick={() => onDelete(item)}
+          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Eliminar producto"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}

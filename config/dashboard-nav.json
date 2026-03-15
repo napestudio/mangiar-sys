@@ -1,0 +1,66 @@
+{
+  "items": [
+    {
+      "label": "Inicio",
+      "href": "/dashboard",
+      "minimumRole": "WAITER"
+    },
+    {
+      "label": "Mesas",
+      "href": "/dashboard/tables",
+      "minimumRole": "WAITER"
+    },
+    {
+      "label": "Ordenes",
+      "href": "/dashboard/orders",
+      "minimumRole": "WAITER"
+    },
+    {
+      "label": "Reservas",
+      "href": "/dashboard/reservations",
+      "minimumRole": "WAITER"
+    },
+    {
+      "label": "Arqueos",
+      "href": "/dashboard/cash-registers",
+      "minimumRole": "MANAGER",
+      "permissionGrant": "VIEW_CASH_REGISTERS"
+    },
+    {
+      "label": "Estadísticas",
+      "href": "/dashboard/stats",
+      "minimumRole": "MANAGER",
+      "permissionGrant": "VIEW_STATISTICS"
+    },
+    {
+      "label": "Cartas",
+      "href": "/dashboard/menus",
+      "minimumRole": "ADMIN",
+      "permissionGrant": "MANAGE_MENU"
+    },
+    {
+      "label": "Productos",
+      "href": "/dashboard/menu-items",
+      "minimumRole": "ADMIN",
+      "permissionGrant": "MANAGE_PRODUCTS"
+    },
+    {
+      "label": "Stock",
+      "href": "/dashboard/stock",
+      "minimumRole": "MANAGER",
+      "permissionGrant": "VIEW_STOCK"
+    },
+    {
+      "label": "Facturas",
+      "href": "/dashboard/invoices",
+      "minimumRole": "MANAGER",
+      "permissionGrant": "VIEW_INVOICES"
+    },
+    {
+      "label": "Configuración",
+      "href": "/dashboard/config/restaurant",
+      "minimumRole": "ADMIN",
+      "permissionGrant": "MANAGE_CONFIG"
+    }
+  ]
+}
