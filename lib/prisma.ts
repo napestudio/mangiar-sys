@@ -1,5 +1,6 @@
 import { PrismaClient } from "@/app/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import "server-only";
 
 declare global {
@@ -8,7 +9,8 @@ declare global {
 }
 
 if (!global.prisma) {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
   global.prisma = new PrismaClient({ adapter });
 }
 

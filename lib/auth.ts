@@ -5,8 +5,25 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 
+const useSecureCookies = process.env.NODE_ENV === "production";
+const cookieDomain = process.env.COOKIE_DOMAIN;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  cookies: {
+    sessionToken: {
+      name: useSecureCookies
+        ? "__Secure-authjs.session-token"
+        : "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      },
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -22,8 +39,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username as string },
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { username: credentials.username as string },
+              { email: credentials.username as string },
+            ],
+          },
           select: {
             id: true,
             email: true,

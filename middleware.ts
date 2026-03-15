@@ -8,13 +8,18 @@ export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  // Redirect logged-in users away from login page
+  // Redirect logged-in users away from /login to the post-login callback
   if (pathname === "/login" && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(new URL("/auth/callback", req.url));
   }
 
   // Protect dashboard routes
   if (pathname.startsWith("/dashboard") && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Protect the callback page — requires an authenticated session
+  if (pathname === "/auth/callback" && !isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -37,5 +42,5 @@ export default auth(async (req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/"],
+  matcher: ["/dashboard/:path*", "/login", "/auth/callback", "/"],
 };

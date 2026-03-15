@@ -25,9 +25,10 @@ import { MenuSectionsEditor } from "../../components/menu-sections-editor";
 interface MenuEditorClientProps {
   menu: SerializedMenu | null;
   branchId: string;
+  restaurantId: string;
 }
 
-export function MenuEditorClient({ menu: initialMenu, branchId }: MenuEditorClientProps) {
+export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: MenuEditorClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -98,9 +99,6 @@ export function MenuEditorClient({ menu: initialMenu, branchId }: MenuEditorClie
           });
         }
       } else {
-        // Create new menu - we need restaurant ID
-        const restaurantId = process.env.NEXT_PUBLIC_RESTAURANT_ID || "";
-
         const result = await createMenu({
           restaurantId,
           name: name.trim(),
@@ -368,7 +366,7 @@ export function MenuEditorClient({ menu: initialMenu, branchId }: MenuEditorClie
                 ) : (
                   <MenuSectionsEditor
                     menu={menu}
-                    restaurantId={menu.restaurantId}
+                    restaurantId={restaurantId}
                     onUpdate={handleMenuSectionsUpdated}
                   />
                 )}
