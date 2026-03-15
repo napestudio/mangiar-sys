@@ -53,8 +53,8 @@ export function OrderTypesChart({ data }: OrderTypesChartProps) {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number | undefined) => {
-                  const v = value ?? 0;
+                formatter={(value) => {
+                  const v = (value as number) ?? 0;
                   return [
                     `${v} (${((v / total) * 100).toFixed(1)}%)`,
                     "Órdenes",

@@ -69,7 +69,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 }
               />
               <Tooltip
-                formatter={(value: number | undefined) => [formatCurrency(value ?? 0, { maximumFractionDigits: 0 }), "Ingresos"]}
+                formatter={(value) => [formatCurrency((value as number) ?? 0, { maximumFractionDigits: 0 }), "Ingresos"]}
                 labelStyle={{ color: "#374151", fontWeight: 600 }}
                 contentStyle={{
                   borderRadius: 8,

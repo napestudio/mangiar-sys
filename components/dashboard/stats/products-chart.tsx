@@ -62,11 +62,12 @@ export function ProductsChart({ data }: ProductsChartProps) {
                 width={140}
               />
               <Tooltip
-                formatter={(value: number | undefined, name: string | undefined) => {
-                  const v = value ?? 0;
+                formatter={(value, name) => {
+                  const v = (value as number) ?? 0;
+                  const n = name as string;
                   return [
-                    name === "units" ? `${v} uds.` : formatCurrency(v, { maximumFractionDigits: 0 }),
-                    name === "units" ? "Unidades" : "Ingresos",
+                    n === "units" ? `${v} uds.` : formatCurrency(v, { maximumFractionDigits: 0 }),
+                    n === "units" ? "Unidades" : "Ingresos",
                   ];
                 }}
                 labelFormatter={(label) => {
