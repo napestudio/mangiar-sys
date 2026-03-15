@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kiku Sushi",
-  description: "Kiku Sushi - Rosario, Argentina",
+  title: "Mangi.ar",
+  description: "Mangi.ar sistema de gestión para restaurantes",
   // manifest: "/manifest.json",
   icons: {
     icon: [

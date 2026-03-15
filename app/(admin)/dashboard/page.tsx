@@ -1,4 +1,3 @@
-import { BRANCH_ID } from "@/lib/constants";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 import { getOrders, getActiveOrderCounts } from "@/actions/Order";
@@ -8,9 +7,7 @@ import { getTablesWithStatus } from "@/actions/Table";
 import { DashboardHome } from "@/components/dashboard/dashboard-home";
 
 export default async function DashboardPage() {
-  await requireRole(UserRole.WAITER);
-
-  const branchId = BRANCH_ID || "";
+  const { branchId } = await requireRole(UserRole.WAITER);
 
   const [ordersResult, reservationsResult, stockAlertsResult, orderCounts, tablesResult] =
     await Promise.all([

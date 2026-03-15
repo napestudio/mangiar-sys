@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Avatar from "@/components/avatar";
 import { ReservationWizard } from "@/components/home/reservation-wizard";
-import { BRANCH_ID } from "@/lib/constants";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getPublicBranchId } from "@/lib/public-branch";
 
 export const metadata: Metadata = {
   title: "Reservas",
@@ -15,8 +15,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ReservationPage() {
-  if (!BRANCH_ID) {
+export default async function ReservationPage() {
+  const branchId = await getPublicBranchId();
+
+  if (!branchId) {
     return <p>Error: Branch ID no está configurado.</p>;
   }
   return (
@@ -26,7 +28,7 @@ export default function ReservationPage() {
           <Avatar />
           <h1 className="text-4xl text-white leading-none">Reservá tu mesa</h1>
           <div className="bg-white rounded-md w-full py-6 px-2">
-            <ReservationWizard branchId={BRANCH_ID} />
+            <ReservationWizard branchId={branchId} />
           </div>
           <div>
             <Link href="/" className="text-neutral-200 font-semibold">

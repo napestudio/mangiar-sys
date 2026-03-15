@@ -2,6 +2,7 @@ import { getMenuItemsPaginated, getCategories } from "@/actions/Products";
 import { ProductsClient } from "./components/product-client";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
+import { getBranch } from "@/actions/Branch";
 
 type SearchParams = {
   page?: string;
@@ -17,14 +18,16 @@ export default async function MenuItemsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN);
 
   // Await searchParams (Next.js 15 requirement)
   const params = await searchParams;
 
-  // TODO: Get restaurantId and branchId from user session/context
-  const restaurantId = process.env.RESTAURANT_ID || "";
-  const branchId = process.env.BRANCH_ID || "";
+  const branchResult = await getBranch(branchId);
+  const restaurantId =
+    branchResult.success && branchResult.data
+      ? branchResult.data.restaurantId
+      : "";
 
   // Parse filters from URL
   const page = parseInt(params.page || "1");
@@ -66,7 +69,7 @@ export default async function MenuItemsPage({
   // Data is already serialized by the server action
   return (
     <div className="min-h-svh bg-gray-50">
-      <main className="px-4 sm:px-6 lg:px-8 py-16">
+      <main className="px-4 sm:px-6 lg:px-8 pt-20">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Productos</h1>
           <p className="mt-2 text-sm text-gray-600">

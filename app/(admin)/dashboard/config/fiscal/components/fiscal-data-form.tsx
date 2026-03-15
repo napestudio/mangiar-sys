@@ -106,7 +106,7 @@ export function FiscalDataForm({
           onChange={(e) =>
             setFormData({ ...formData, businessName: e.target.value })
           }
-          placeholder="Ej: KIKU SUSHI S.R.L."
+          placeholder="Ej: Mangiar S.R.L."
           required
         />
       </div>

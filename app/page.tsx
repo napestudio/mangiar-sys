@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { getRestaurant } from "@/actions/Restaurant";
 import { getActiveHomePageLinks } from "@/actions/HomePageLinks";
 import Avatar from "@/components/avatar";
 import WhatsappIcon from "@/components/ui/icons/Whatsapp";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
 import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
+import { headers } from "next/headers";
+import prisma from "@/lib/prisma";
 
 export const metadata: Metadata = {
   openGraph: {
@@ -14,10 +15,10 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const restaurantId = process.env.RESTAURANT_ID || "";
-  const branchId = process.env.BRANCH_ID || "";
+  const headersList = await headers();
+  const subdomain = headersList.get("x-subdomain") ?? "";
 
-  if (!restaurantId || !branchId) {
+  if (!subdomain) {
     return (
       <div className="min-h-svh flex items-center justify-center bg-black text-white">
         <p className="text-lg">El restaurante no está configurado.</p>
@@ -25,10 +26,22 @@ export default async function Home() {
     );
   }
 
-  const [restaurant, linksResult] = await Promise.all([
-    getRestaurant(restaurantId),
-    getActiveHomePageLinks(branchId),
-  ]);
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { slug: subdomain },
+    include: { branches: { take: 1 } },
+  });
+
+  const branch = restaurant?.branches[0];
+
+  if (!restaurant || !branch) {
+    return (
+      <div className="min-h-svh flex items-center justify-center bg-black text-white">
+        <p className="text-lg">El restaurante no está configurado.</p>
+      </div>
+    );
+  }
+
+  const linksResult = await getActiveHomePageLinks(branch.id);
 
   const generateLinkUrl = (link: SerializedHomePageLink): string => {
     switch (link.type) {
@@ -48,8 +61,6 @@ export default async function Home() {
   };
 
   const links = linksResult.success && linksResult.data ? linksResult.data : [];
-
-  // Default link if no links configured
   const hasLinks = links.length > 0;
 
   return (
@@ -79,31 +90,29 @@ export default async function Home() {
         </div>
       </div>
       <div>
-        {restaurant.success && restaurant.data && (
-          <div className="text-center mt-8">
-            <p className="text-lg">
-              {restaurant.data.description || "Disfruta de nuestra comida"}
-            </p>
-            <p className="text-sm text-gray-400 mt-2">
-              <MapPin className="inline-block mr-1 w-4 h-4" />
-              {restaurant.data.address}, {restaurant.data.city},{" "}
-              {restaurant.data.state}
-            </p>
-            <p className="text-sm text-gray-400 mt-1">
-              {restaurant.data.phone && (
-                <Link
-                  href={`https://api.whatsapp.com/send/?phone=${restaurant.data.phone}&text=Hola!+Quisiera+hacer+una+consulta.&app_absent=0`}
-                  className="flex items-center self-center justify-center"
-                >
-                  <span className="inline-block mr-1 w-4 h-4">
-                    <WhatsappIcon />
-                  </span>
-                  {restaurant.data.phone}
-                </Link>
-              )}
-            </p>
-          </div>
-        )}
+        <div className="text-center mt-8">
+          <p className="text-lg">
+            {restaurant.description || "Disfruta de nuestra comida"}
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
+            <MapPin className="inline-block mr-1 w-4 h-4" />
+            {restaurant.address}, {restaurant.city},{" "}
+            {restaurant.state}
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
+            {restaurant.phone && (
+              <Link
+                href={`https://api.whatsapp.com/send/?phone=${restaurant.phone}&text=Hola!+Quisiera+hacer+una+consulta.&app_absent=0`}
+                className="flex items-center self-center justify-center"
+              >
+                <span className="inline-block mr-1 w-4 h-4">
+                  <WhatsappIcon />
+                </span>
+                {restaurant.phone}
+              </Link>
+            )}
+          </p>
+        </div>
       </div>
     </div>
   );

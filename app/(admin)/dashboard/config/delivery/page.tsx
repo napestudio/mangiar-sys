@@ -4,13 +4,7 @@ import { UserRole } from "@/app/generated/prisma";
 import DeliveryConfigClient from "./delivery-config-client";
 
 export default async function DeliveryConfigPage() {
-  await requireRole(UserRole.ADMIN);
-
-  const branchId = process.env.BRANCH_ID || "";
-
-  if (!branchId) {
-    return <p className="p-4 text-red-500">Error: Branch ID no configurado</p>;
-  }
+  const { branchId } = await requireRole(UserRole.ADMIN);
 
   // Fetch delivery config and available menus
   const [configResult, menusResult] = await Promise.all([
@@ -24,7 +18,7 @@ export default async function DeliveryConfigPage() {
 
   return (
     <div className="bg-gray-50 w-full min-h-svh">
-      <div className="px-4 sm:px-6 lg:px-8 py-16 w-full">
+      <div className="px-4 sm:px-6 lg:px-8 pt-20 w-full">
         <DeliveryConfigClient
           branchId={branchId}
           initialConfig={config}

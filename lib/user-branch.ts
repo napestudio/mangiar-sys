@@ -2,23 +2,18 @@
 
 import { auth } from "@/lib/auth";
 import { getUserBranchesByRole } from "@/lib/permissions";
-import { BRANCH_ID } from "@/lib/constants";
 
 /**
- * Get the current user's primary branch ID
- * Falls back to BRANCH_ID env var for backward compatibility
+ * Get the current user's primary branch ID.
+ * Returns null if the user is not logged in or has no branches assigned.
  */
 export async function getCurrentUserBranchId(): Promise<string | null> {
   const session = await auth();
-  if (!session?.user?.id) return BRANCH_ID;
+  if (!session?.user?.id) return null;
 
-  // Get user's branches
   const userBranches = await getUserBranchesByRole(session.user.id);
 
-  if (userBranches.length === 0) {
-    // No branches assigned - fallback to env var
-    return BRANCH_ID;
-  }
+  if (userBranches.length === 0) return null;
 
   // Return first branch (primary)
   // TODO: In future, support branch switching

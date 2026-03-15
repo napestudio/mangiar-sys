@@ -10,9 +10,9 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Kiku Sushi - Panel de Administración",
+  title: "Mangi.ar - Panel de Administración",
   description:
-    "Panel de administración para gestionar el restaurante Kiku Sushi.",
+    "Panel de administración de Mangi.ar para gestionar tu restaurante de manera eficiente",
   // manifest: "/manifest.json",
   icons: {
     icon: [
@@ -47,7 +47,9 @@ export default async function DashboardLayout({
   // Check if branch has printers and get printer server URL (for conditional loading of gg-ez-print)
   const [hasPrinters, branchResult] = await Promise.all([
     branchId ? hasBranchPrinters(branchId) : Promise.resolve(false),
-    branchId ? getBranch(branchId) : Promise.resolve({ success: false, data: null }),
+    branchId
+      ? getBranch(branchId)
+      : Promise.resolve({ success: false, data: null }),
   ]);
   const printerServerUrl =
     branchResult.success && branchResult.data?.printerServerUrl
@@ -55,7 +57,10 @@ export default async function DashboardLayout({
       : undefined;
 
   return (
-    <ConditionalGgEzPrintProvider hasPrinters={hasPrinters} wsUrl={printerServerUrl}>
+    <ConditionalGgEzPrintProvider
+      hasPrinters={hasPrinters}
+      wsUrl={printerServerUrl}
+    >
       <div className="min-h-svh bg-gray-50 w-full">
         <DashboardNav
           userName={session.user.name || session.user.email || ""}

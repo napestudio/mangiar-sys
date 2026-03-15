@@ -18,9 +18,24 @@ export default auth(async (req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  return NextResponse.next();
+  // Extract subdomain and forward it as a header for the public page
+  const host = req.headers.get("host") ?? "";
+  const hostname = host.split(":")[0]; // Strip port if present
+  const knownApexDomains = ["localhost", "mangiar.com", "www.mangiar.com"];
+  const isApex = knownApexDomains.some((d) => hostname === d);
+  const subdomain = !isApex && hostname.includes(".")
+    ? hostname.split(".")[0]
+    : null;
+
+  // For local dev without a subdomain, fall back to BRANCH_ID env var
+  const subdomainHeader = subdomain ?? process.env.BRANCH_SUBDOMAIN ?? "";
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-subdomain", subdomainHeader);
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/login", "/"],
 };

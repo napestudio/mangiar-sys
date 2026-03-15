@@ -24,9 +24,10 @@ import { MenuSectionsEditor } from "../../components/menu-sections-editor";
 
 interface MenuEditorClientProps {
   menu: SerializedMenu | null;
+  branchId: string;
 }
 
-export function MenuEditorClient({ menu: initialMenu }: MenuEditorClientProps) {
+export function MenuEditorClient({ menu: initialMenu, branchId }: MenuEditorClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -105,6 +106,7 @@ export function MenuEditorClient({ menu: initialMenu }: MenuEditorClientProps) {
           name: name.trim(),
           slug: slug.trim(),
           description: description.trim() || undefined,
+          branchId,
           isActive,
           priceType,
         });
@@ -153,7 +155,7 @@ export function MenuEditorClient({ menu: initialMenu }: MenuEditorClientProps) {
   return (
     <div className="min-h-svh bg-gray-50">
       {/* Main Content - Dashboard Style */}
-      <div className="px-4 sm:px-6 lg:px-8 py-16">
+      <div className="px-4 sm:px-6 lg:px-8 pt-20">
         {/* Main Editor Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Settings */}

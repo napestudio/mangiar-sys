@@ -26,18 +26,18 @@ export function DashboardNav({ userName, userRole, navItems }: DashboardNavProps
   const currentPath = usePathname();
 
   return (
-    <nav className="bg-white shadow-sm border-b fixed w-full z-10">
+    <nav className="bg-white fixed w-full z-10">
       <div className="mx-auto px-4 sm:px-4 lg:px-4">
         <div className="flex items-center justify-between py-2">
           {/* Left: Logo/Title */}
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">Administración</h1>
+            <h1 className="text-xl font-bold text-gray-900">Mangi.ar</h1>
           </div>
 
-          {/* Center: Desktop Nav Items */}
-          <DashBoardNavItems navItems={navItems} />
+          <div className="hidden sm:flex items-center gap-4 py-3 px-5 border border-black/1 shadow-md rounded-full">
+            <DashBoardNavItems navItems={navItems} />
+          </div>
 
-          {/* Right: gg-ez-print Status, User Dropdown & Mobile Menu Button */}
           <div className="flex items-center gap-2">
             <UserDropdown userName={userName} userRole={userRole} />
 
