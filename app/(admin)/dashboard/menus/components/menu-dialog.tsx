@@ -23,6 +23,7 @@ interface MenuDialogProps {
   onOpenChange: (open: boolean) => void;
   menu: SerializedMenu | null;
   restaurantId: string;
+  branchId: string;
   onMenuCreated: (menu: SerializedMenu) => void;
   onMenuUpdated: (menu: SerializedMenu) => void;
   onClose: () => void;
@@ -43,6 +44,7 @@ export function MenuDialog({
   onOpenChange,
   menu,
   restaurantId,
+  branchId,
   onMenuCreated,
   onMenuUpdated,
   onClose,
@@ -191,6 +193,7 @@ export function MenuDialog({
 
         const result = await createMenu({
           restaurantId,
+          branchId,
           name: name.trim(),
           slug: uniqueSlug,
           isActive: true, // Always active by default
