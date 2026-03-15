@@ -3,7 +3,7 @@ import CanvasExperience from "@/components/experience/canvas";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Kiku Sushi - Página no encontrada",
+  title: "Mangi.ar - Página no encontrada",
   description: "404 - Página no encontrada",
   // manifest: "/manifest.json",
 };

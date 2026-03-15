@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     description: "Realizá tu pedido para delivery o takeaway",
     images: [
       {
-        url: "https://res.cloudinary.com/dujkztmkx/image/upload/v1764695269/LOGO_sbz1rh.svg",
+        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
       },
     ],
   },
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 import { getProductsForDeliveryMenu } from "@/actions/Order";
 import { getRestaurantByBranchId } from "@/actions/Restaurant";
 import { OrderType } from "@/app/generated/prisma";
-import { BRANCH_ID } from "@/lib/constants";
+import { getPublicBranchId } from "@/lib/public-branch";
 import { notFound } from "next/navigation";
 import DeliveryPage from "./components/delivery-page-client";
 import DeliveryClosedPage from "./components/delivery-closed-page";
@@ -28,7 +28,9 @@ import DeliveryClosedPage from "./components/delivery-closed-page";
 export const dynamic = "force-dynamic";
 
 export default async function PedidosPage() {
-  if (!BRANCH_ID) {
+  const branchId = await getPublicBranchId();
+
+  if (!branchId) {
     return (
       <div className="min-h-svh bg-black text-white flex items-center justify-center p-4">
         <p className="text-red-500">Error: Branch ID no configurado</p>
@@ -37,7 +39,7 @@ export default async function PedidosPage() {
   }
 
   // Fetch delivery config
-  const configResult = await getDeliveryConfig(BRANCH_ID);
+  const configResult = await getDeliveryConfig(branchId);
 
   if (!configResult.success || !configResult.data) {
     notFound();
@@ -46,7 +48,7 @@ export default async function PedidosPage() {
   const config = configResult.data;
 
   // Check real-time availability (service active + current time within a window)
-  const availability = await isDeliveryAvailable(BRANCH_ID, new Date());
+  const availability = await isDeliveryAvailable(branchId, new Date());
 
   if (!availability.available) {
     return (
@@ -79,13 +81,9 @@ export default async function PedidosPage() {
     if (allowDelivery && allowTakeAway) {
       // Fetch both price sets in parallel
       const [deliveryResult, takeawayResult] = await Promise.all([
+        getProductsForDeliveryMenu(branchId, config.menuId, OrderType.DELIVERY),
         getProductsForDeliveryMenu(
-          BRANCH_ID,
-          config.menuId,
-          OrderType.DELIVERY,
-        ),
-        getProductsForDeliveryMenu(
-          BRANCH_ID,
+          branchId,
           config.menuId,
           OrderType.TAKE_AWAY,
         ),
@@ -96,7 +94,7 @@ export default async function PedidosPage() {
       takeawaySections = takeawayResult.sections;
     } else if (allowTakeAway) {
       const result = await getProductsForDeliveryMenu(
-        BRANCH_ID,
+        branchId,
         config.menuId,
         OrderType.TAKE_AWAY,
       );
@@ -105,7 +103,7 @@ export default async function PedidosPage() {
     } else {
       // Default: delivery only
       const result = await getProductsForDeliveryMenu(
-        BRANCH_ID,
+        branchId,
         config.menuId,
         OrderType.DELIVERY,
       );
@@ -114,7 +112,7 @@ export default async function PedidosPage() {
     }
   }
 
-  const restaurant = await getRestaurantByBranchId(BRANCH_ID);
+  const restaurant = await getRestaurantByBranchId(branchId);
   const phoneNumber = restaurant?.whatsappNumber || restaurant?.phone;
   const whatsappUrl = phoneNumber
     ? `https://api.whatsapp.com/send/?phone=${phoneNumber}&app_absent=0`
@@ -122,7 +120,7 @@ export default async function PedidosPage() {
 
   return (
     <DeliveryPage
-      branchId={BRANCH_ID}
+      branchId={branchId}
       config={config}
       products={products}
       sections={sections}

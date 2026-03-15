@@ -22,8 +22,18 @@ import type {
 // TYPES
 // ============================================================================
 
-import type { PrinterTarget, PrintJobData, PreparedPrintResult, AfipInvoicePrintParams } from "@/types/printer-actions";
-export type { PrinterTarget, PrintJobData, PreparedPrintResult, AfipInvoicePrintParams };
+import type {
+  PrinterTarget,
+  PrintJobData,
+  PreparedPrintResult,
+  AfipInvoicePrintParams,
+} from "@/types/printer-actions";
+export type {
+  PrinterTarget,
+  PrintJobData,
+  PreparedPrintResult,
+  AfipInvoicePrintParams,
+};
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -139,7 +149,6 @@ export async function prepareTestPrint(
 // ============================================================================
 // PREPARE ORDER ITEMS PRINT (COMANDAS)
 // ============================================================================
-
 
 /**
  * Prepare print jobs for order items (station comandas)
@@ -284,7 +293,6 @@ export async function prepareOrderItemsPrint(
 // ============================================================================
 // PREPARE CONTROL TICKET PRINT
 // ============================================================================
-
 
 /**
  * Prepare print jobs for control ticket (full order with prices)
@@ -468,7 +476,10 @@ export async function preparePreOrderTicketPrint(
     return { success: true, jobs, printJobIds };
   } catch (error) {
     console.error("Error preparing pre-order ticket print:", error);
-    return { success: false, error: "Error al preparar la impresión de comanda" };
+    return {
+      success: false,
+      error: "Error al preparar la impresión de comanda",
+    };
   }
 }
 
@@ -722,7 +733,7 @@ export async function prepareInvoicePrint(
     }
 
     // Get the branch ID from the order
-    const branchId = invoice.order.branchId || process.env.BRANCH_ID || "";
+    const branchId = invoice.order.branchId ?? "";
 
     // Get first online network printer from the branch (for invoices we typically use one printer)
     const printer = await prisma.printer.findFirst({
@@ -753,7 +764,7 @@ export async function prepareInvoicePrint(
     const businessName =
       fiscalConfig?.isEnabled && fiscalConfig.businessName
         ? fiscalConfig.businessName
-        : process.env.BUSINESS_NAME || "Kiku Sushi";
+        : process.env.BUSINESS_NAME || "Mangi.ar";
     const businessCuit =
       fiscalConfig?.isEnabled && fiscalConfig.cuit
         ? fiscalConfig.cuit

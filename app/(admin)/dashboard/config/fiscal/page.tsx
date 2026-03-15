@@ -2,19 +2,24 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 import { getFiscalConfig } from "@/actions/FiscalConfig";
 import { FiscalConfigClient } from "./fiscal-config-client";
+import { getBranch } from "@/actions/Branch";
 
 export default async function FiscalConfigPage() {
   // Only admins can access fiscal config
-  await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN);
 
-  const restaurantId = process.env.RESTAURANT_ID || "";
+  const branchResult = await getBranch(branchId);
+  const restaurantId =
+    branchResult.success && branchResult.data
+      ? branchResult.data.restaurantId
+      : "";
 
   // Fetch current fiscal configuration
   const result = await getFiscalConfig(restaurantId);
 
   return (
     <div className="min-h-svh bg-gray-50">
-      <div className="px-4 sm:px-6 lg:px-8 py-16">
+      <div className="px-4 sm:px-6 lg:px-8 pt-20">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Configuración Fiscal

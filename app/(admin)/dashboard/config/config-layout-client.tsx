@@ -12,7 +12,7 @@ export default function ConfigLayoutClient({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-svh bg-gray-50 w-full flex pt-11">
+    <div className="min-h-svh bg-white w-full flex pt-18">
       {/* Mobile menu button */}
       <button
         onClick={() => setIsSidebarOpen(true)}
@@ -29,7 +29,7 @@ export default function ConfigLayoutClient({
       />
 
       {/* Main content */}
-      <main className="mx-auto w-full lg:ml-0">{children}</main>
+      <main className="w-full lg:ml-72 min-h-[calc(100svh-4.5rem)]">{children}</main>
     </div>
   );
 }

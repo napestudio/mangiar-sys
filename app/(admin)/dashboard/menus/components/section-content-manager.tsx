@@ -101,8 +101,11 @@ export function SectionContentManager({
     return elements.sort((a, b) => a.data.order - b.data.order);
   }, [section]);
 
-  const [elements, setElements] = useState<SectionElement[]>(buildSortedElements);
-  const [activeElement, setActiveElement] = useState<SectionElement | null>(null);
+  const [elements, setElements] =
+    useState<SectionElement[]>(buildSortedElements);
+  const [activeElement, setActiveElement] = useState<SectionElement | null>(
+    null,
+  );
 
   // Sync elements when section changes (skip during optimistic updates)
   useEffect(() => {
@@ -144,7 +147,7 @@ export function SectionContentManager({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Get all product IDs already in this section
@@ -198,7 +201,10 @@ export function SectionContentManager({
     // Save the new order
     startTransition(async () => {
       const items = newElements
-        .filter((el): el is { type: "item"; data: SerializedMenuItem } => el.type === "item")
+        .filter(
+          (el): el is { type: "item"; data: SerializedMenuItem } =>
+            el.type === "item",
+        )
         .map((el, index) => ({
           id: el.data.id,
           order: index,
@@ -206,7 +212,10 @@ export function SectionContentManager({
         }));
 
       const groups = newElements
-        .filter((el): el is { type: "group"; data: SerializedMenuItemGroup } => el.type === "group")
+        .filter(
+          (el): el is { type: "group"; data: SerializedMenuItemGroup } =>
+            el.type === "group",
+        )
         .map((el) => ({
           id: el.data.id,
           order: newElements.findIndex((e) => e === el),
@@ -226,7 +235,9 @@ export function SectionContentManager({
       return;
     }
 
-    const selectedProduct = availableProducts.find((p) => p.id === selectedProductId);
+    const selectedProduct = availableProducts.find(
+      (p) => p.id === selectedProductId,
+    );
     if (!selectedProduct) return;
 
     // Close dialog immediately
@@ -304,8 +315,8 @@ export function SectionContentManager({
           prev.map((el) =>
             el.type === "item" && el.data.id === tempId
               ? { type: "item", data: confirmedItem }
-              : el
-          )
+              : el,
+          ),
         );
         isOptimisticPending.current = false;
       } else {
@@ -361,8 +372,8 @@ export function SectionContentManager({
           prev.map((el) =>
             el.type === "group" && el.data.id === tempId
               ? { type: "group", data: result.group as SerializedMenuItemGroup }
-              : el
-          )
+              : el,
+          ),
         );
         isOptimisticPending.current = false;
       } else {
@@ -391,7 +402,7 @@ export function SectionContentManager({
   const filteredProducts = availableProducts.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      product.category?.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -408,61 +419,61 @@ export function SectionContentManager({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-        <SortableContext
-          items={elements.map(getElementId)}
-          strategy={verticalListSortingStrategy}
-        >
-          {elements.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-lg">
-              <p>No hay contenido en esta seccion</p>
-              <p className="text-xs mt-1">
-                Agrega productos o grupos usando los botones de abajo
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {elements.map((element) =>
-                element.type === "item" ? (
-                  <SortableItem
-                    key={getElementId(element)}
-                    id={getElementId(element)}
-                    item={element.data}
-                    onUpdate={onUpdate}
-                    isPending={isPending}
-                  />
-                ) : (
-                  <SortableGroup
-                    key={getElementId(element)}
-                    id={getElementId(element)}
-                    group={element.data}
-                    section={section}
-                    restaurantId={restaurantId}
-                    onUpdate={onUpdate}
-                    onDelete={() => setDeletingGroupId(element.data.id)}
-                    isPending={isPending}
-                  />
-                )
-              )}
-            </div>
-          )}
-        </SortableContext>
+          <SortableContext
+            items={elements.map(getElementId)}
+            strategy={verticalListSortingStrategy}
+          >
+            {elements.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-lg">
+                <p>No hay contenido en esta seccion</p>
+                <p className="text-xs mt-1">
+                  Agrega productos o grupos usando los botones de abajo
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {elements.map((element) =>
+                  element.type === "item" ? (
+                    <SortableItem
+                      key={getElementId(element)}
+                      id={getElementId(element)}
+                      item={element.data}
+                      onUpdate={onUpdate}
+                      isPending={isPending}
+                    />
+                  ) : (
+                    <SortableGroup
+                      key={getElementId(element)}
+                      id={getElementId(element)}
+                      group={element.data}
+                      section={section}
+                      restaurantId={restaurantId}
+                      onUpdate={onUpdate}
+                      onDelete={() => setDeletingGroupId(element.data.id)}
+                      isPending={isPending}
+                    />
+                  ),
+                )}
+              </div>
+            )}
+          </SortableContext>
 
-        {/* Drag overlay */}
-        <DragOverlay>
-          {activeElement ? (
-            <div className="bg-white shadow-lg rounded-lg border-2 border-blue-500 opacity-90">
-              {activeElement.type === "item" ? (
-                <div className="p-3 text-sm font-medium">
-                  {activeElement.data.product?.name || "Producto"}
-                </div>
-              ) : (
-                <div className="p-3 text-sm font-medium text-purple-700">
-                  {activeElement.data.name}
-                </div>
-              )}
-            </div>
-          ) : null}
-        </DragOverlay>
+          {/* Drag overlay */}
+          <DragOverlay>
+            {activeElement ? (
+              <div className="bg-white shadow-lg rounded-lg border-2 border-blue-500 opacity-90">
+                {activeElement.type === "item" ? (
+                  <div className="p-3 text-sm font-medium">
+                    {activeElement.data.product?.name || "Producto"}
+                  </div>
+                ) : (
+                  <div className="p-3 text-sm font-medium text-red-700">
+                    {activeElement.data.name}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
 
@@ -481,7 +492,7 @@ export function SectionContentManager({
           variant="outline"
           size="sm"
           onClick={() => setIsAddGroupDialogOpen(true)}
-          className="flex-1 border-purple-600 text-purple-700 hover:bg-purple-50"
+          className="flex-1 border-red-600 text-red-700 hover:bg-red-50"
         >
           <FolderPlus className="mr-2 h-4 w-4" />
           Agregar Grupo
@@ -514,7 +525,9 @@ export function SectionContentManager({
                     setSelectedProductId("");
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={() =>
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }
                   placeholder="Buscar producto..."
                   autoComplete="off"
                 />
@@ -538,7 +551,9 @@ export function SectionContentManager({
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="font-medium text-sm">{product.name}</div>
+                          <div className="font-medium text-sm">
+                            {product.name}
+                          </div>
                           {product.category && (
                             <div className="text-xs text-gray-500">
                               {product.category.name}
@@ -556,7 +571,9 @@ export function SectionContentManager({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customPrice">Precio Personalizado (opcional)</Label>
+              <Label htmlFor="customPrice">
+                Precio Personalizado (opcional)
+              </Label>
               <NumberInput
                 id="customPrice"
                 step="0.01"
@@ -599,12 +616,16 @@ export function SectionContentManager({
       </Dialog>
 
       {/* Add Group Dialog */}
-      <Dialog open={isAddGroupDialogOpen} onOpenChange={setIsAddGroupDialogOpen}>
+      <Dialog
+        open={isAddGroupDialogOpen}
+        onOpenChange={setIsAddGroupDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Crear Grupo de Productos</DialogTitle>
             <DialogDescription>
-              Los grupos permiten organizar productos relacionados dentro de una seccion
+              Los grupos permiten organizar productos relacionados dentro de una
+              seccion
             </DialogDescription>
           </DialogHeader>
 
@@ -653,7 +674,10 @@ export function SectionContentManager({
       </Dialog>
 
       {/* Delete Group Confirmation */}
-      <AlertDialog open={!!deletingGroupId} onOpenChange={() => setDeletingGroupId(null)}>
+      <AlertDialog
+        open={!!deletingGroupId}
+        onOpenChange={() => setDeletingGroupId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar grupo?</AlertDialogTitle>

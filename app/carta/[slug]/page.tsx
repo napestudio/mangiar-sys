@@ -12,7 +12,9 @@ interface CartaPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: CartaPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: CartaPageProps): Promise<Metadata> {
   const { slug } = await params;
   const data = await getMenuBySlug(slug);
   const title = data ? data.menu.name : "Carta";
@@ -24,7 +26,11 @@ export async function generateMetadata({ params }: CartaPageProps): Promise<Meta
     openGraph: {
       title,
       description,
-      images: [{ url: "https://res.cloudinary.com/dujkztmkx/image/upload/v1764695269/LOGO_sbz1rh.svg" }],
+      images: [
+        {
+          url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
+        },
+      ],
     },
   };
 }

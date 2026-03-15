@@ -1,14 +1,11 @@
 import { getCashRegistersByBranch } from "@/actions/CashRegister";
-import { BRANCH_ID } from "@/lib/constants";
 import { CashRegistersClient } from "./cash-registers-client";
 import prisma from "@/lib/prisma";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 
 export default async function CashRegistersPage() {
-  const { userRole } = await requireRole(UserRole.MANAGER);
-
-  const branchId = BRANCH_ID || "";
+  const { userRole, branchId } = await requireRole(UserRole.MANAGER);
 
   // Fetch cash registers with their current session status
   const cashRegistersResult = await getCashRegistersByBranch(branchId);
@@ -84,7 +81,7 @@ export default async function CashRegistersPage() {
 
   return (
     <div className="min-h-svh bg-gray-50">
-      <main className="px-4 sm:px-6 lg:px-8 py-16">
+      <main className="px-4 sm:px-6 lg:px-8 pt-20">
         <CashRegistersClient
           branchId={branchId}
           cashRegisters={registersWithStatus}

@@ -1,7 +1,4 @@
-import {
-  getOrders,
-  getActiveOrderCounts,
-} from "@/actions/Order";
+import { getOrders, getActiveOrderCounts } from "@/actions/Order";
 import { OrdersClient } from "./orders-client";
 import prisma from "@/lib/prisma";
 import { ProductsProvider } from "@/contexts/products-context";
@@ -24,11 +21,9 @@ export default async function OrdersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { userRole } = await requireRole(UserRole.WAITER);
+  const { userRole, branchId } = await requireRole(UserRole.WAITER);
 
   const params = await searchParams;
-  // TODO: Get branchId from user session/context
-  const branchId = process.env.BRANCH_ID || "";
 
   // Parse search params
   const typeParam = params.type;
@@ -116,7 +111,7 @@ export default async function OrdersPage({
 
   return (
     <div className="min-h-svh bg-gray-50">
-      <main className="px-4 sm:px-6 lg:px-8 py-16">
+      <main className="px-4 sm:px-6 lg:px-8 pt-20">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Ordenes</h1>
         </div>

@@ -9,13 +9,15 @@ export default async function UsersPage() {
   const usersResult = await getUsers();
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-16">
+    <div className="px-4 sm:px-6 lg:px-8 pt-20">
       <UsersClient
         initialUsers={usersResult.data || []}
         currentUserId={userId}
         branchId={branchId}
         isSuperAdmin={userRole === UserRole.SUPERADMIN}
-        isAdminOrHigher={userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN}
+        isAdminOrHigher={
+          userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN
+        }
       />
     </div>
   );

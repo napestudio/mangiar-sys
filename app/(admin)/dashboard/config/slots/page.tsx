@@ -6,10 +6,7 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 
 export default async function TimeSlotsPage() {
-  await requireRole(UserRole.ADMIN);
-
-  // TODO: Get branchId from user session/context
-  const branchId = process.env.BRANCH_ID || ""; // Replace with actual branchId from auth
+  const { branchId } = await requireRole(UserRole.ADMIN);
 
   // Fetch time slots and branch data in parallel
   const [result, branchResult] = await Promise.all([
@@ -20,13 +17,14 @@ export default async function TimeSlotsPage() {
   const timeSlots = result.success && result.data ? result.data : [];
   if (!timeSlots) return;
 
-  const notificationEmail = branchResult.success && branchResult.data
-    ? branchResult.data.notificationEmail
-    : null;
+  const notificationEmail =
+    branchResult.success && branchResult.data
+      ? branchResult.data.notificationEmail
+      : null;
 
   return (
     <div className="bg-gray-50 w-full">
-      <div className="px-4 sm:px-6 lg:px-8 py-16 w-full ">
+      <div className="px-4 sm:px-6 lg:px-8 pt-20 w-full ">
         <BranchNotificationEmailForm
           branchId={branchId}
           initialEmail={notificationEmail}

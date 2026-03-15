@@ -4,10 +4,7 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 
 export default async function ReservationsPage() {
-  await requireRole(UserRole.WAITER);
-
-  // TODO: Get branchId from user session/context
-  const branchId = process.env.BRANCH_ID || "";
+  const { branchId } = await requireRole(UserRole.WAITER);
 
   // Time slots are NOT fetched here — they load lazily when the Create Reservation dialog opens
   const reservationsResult = await getFilteredReservations(branchId, {
@@ -30,7 +27,7 @@ export default async function ReservationsPage() {
       : { nextCursor: null, hasMore: false, totalCount: 0 };
   return (
     <div className="min-h-svh bg-gray-50">
-      <main className="px-4 sm:px-6 lg:px-8 py-16">
+      <main className="px-4 sm:px-6 lg:px-8 pt-20">
         <ReservationsManager
           initialReservations={reservations}
           initialPagination={pagination}

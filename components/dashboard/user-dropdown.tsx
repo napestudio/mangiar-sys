@@ -1,15 +1,17 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { LogOut, ChevronDown } from "lucide-react";
-import StarIcon from "../ui/star-icon";
+import { LogOut, User } from "lucide-react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { UserRole } from "@/app/generated/prisma";
 import { isAdminOrHigher } from "@/lib/permissions/role-utils";
 
@@ -31,16 +33,27 @@ export default function UserDropdown({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-gray-700 hover:text-gray-900 focus:outline-none cursor-pointer">
-        {hasAdminRole && (
-          <span className="text-red-500">
-            <StarIcon />
-          </span>
-        )}
-        {userName}
-        <ChevronDown className="size-4" />
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger className="focus:outline-none cursor-pointer">
+            <div
+              className={`flex items-center justify-center size-9 rounded-full bg-yellow-300 border-2 ${
+                hasAdminRole
+                  ? "shadow shadow-red-500 border border-red-400"
+                  : "border-gray-300"
+              }`}
+            >
+              <User className="size-5 text-gray-600" />
+            </div>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{userName}</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+          {userName}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleLogout}
           variant="destructive"

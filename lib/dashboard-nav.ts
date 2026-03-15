@@ -6,6 +6,7 @@ import { getUserPermissionGrants } from "@/lib/permissions/grant-utils";
 export interface NavItem {
   label: string;
   href: string;
+  icon?: string;
   minimumRole?: string;
   permissionGrant?: string;
 }

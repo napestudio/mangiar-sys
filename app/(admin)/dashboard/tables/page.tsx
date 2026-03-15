@@ -1,21 +1,21 @@
 import { getTablesWithStatus } from "@/actions/Table";
 import { getSectorsByBranch } from "@/actions/Sector";
 import { TablesClientWrapper } from "@/components/dashboard/tables-client-wrapper";
-import { BRANCH_ID } from "@/lib/constants";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 
 export default async function TablesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tableId?: string; partySize?: string; customerEmail?: string }>;
+  searchParams: Promise<{
+    tableId?: string;
+    partySize?: string;
+    customerEmail?: string;
+  }>;
 }) {
-  await requireRole(UserRole.WAITER);
+  const { branchId } = await requireRole(UserRole.WAITER);
 
   const { tableId, partySize, customerEmail } = await searchParams;
-
-  // TODO: Get branchId from user session/context
-  const branchId = BRANCH_ID || "";
 
   // Fetch tables and sectors in parallel
   const [tablesResult, sectorsResult] = await Promise.all([
@@ -52,7 +52,7 @@ export default async function TablesPage({
   }));
 
   return (
-    <div className="bg-neutral-50 min-h-svh pt-15">
+    <div className="bg-neutral-50 min-h-svh pt-20">
       {/* <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Mesas</h1>
         <p className="mt-2 text-sm text-gray-600">

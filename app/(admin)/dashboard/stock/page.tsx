@@ -4,10 +4,7 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 
 export default async function StockPage() {
-  await requireRole(UserRole.MANAGER);
-
-  // TODO: Get branchId from user session/context
-  const branchId = process.env.BRANCH_ID || "";
+  const { branchId } = await requireRole(UserRole.MANAGER);
 
   // Fetch stock summary and low stock alerts
   const [summaryResult, alertsResult] = await Promise.all([
@@ -23,7 +20,7 @@ export default async function StockPage() {
   // Data is already serialized by the server actions
   return (
     <div className="min-h-svh bg-gray-50">
-      <main className="px-4 sm:px-6 lg:px-8 py-16">
+      <main className="px-4 sm:px-6 lg:px-8 pt-20">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Stock</h1>
           <p className="mt-2 text-sm text-gray-600">

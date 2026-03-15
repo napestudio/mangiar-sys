@@ -92,7 +92,7 @@ function InvoiceTypeBadge({ type }: { type: number }) {
     6: { label: "B", color: "bg-green-100 text-green-800 border-green-200" },
     11: {
       label: "C",
-      color: "bg-purple-100 text-purple-800 border-purple-200",
+      color: "bg-red-100 text-red-800 border-red-200",
     },
     // Credit notes
     3: {

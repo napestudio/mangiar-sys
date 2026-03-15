@@ -169,10 +169,10 @@ export default function DeliveryPage({
               <div className="grid gap-4">
                 <button
                   onClick={() => selectOrderType("DELIVERY")}
-                  className="flex items-center gap-4 p-6 rounded-xl border-2 border-gray-200 hover:border-purple-700 hover:bg-purple-50 transition-all text-left group"
+                  className="flex items-center gap-4 p-6 rounded-xl border-2 border-gray-200 hover:border-red-700 hover:bg-red-50 transition-all text-left group"
                 >
-                  <div className="p-3 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                    <Car className="h-7 w-7 text-purple-700" />
+                  <div className="p-3 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                    <Car className="h-7 w-7 text-red-700" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-neutral-900">
@@ -191,10 +191,10 @@ export default function DeliveryPage({
 
                 <button
                   onClick={() => selectOrderType("TAKE_AWAY")}
-                  className="flex items-center gap-4 p-6 rounded-xl border-2 border-gray-200 hover:border-purple-700 hover:bg-purple-50 transition-all text-left group"
+                  className="flex items-center gap-4 p-6 rounded-xl border-2 border-gray-200 hover:border-red-700 hover:bg-red-50 transition-all text-left group"
                 >
-                  <div className="p-3 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                    <ShoppingBag className="h-7 w-7 text-purple-700" />
+                  <div className="p-3 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                    <ShoppingBag className="h-7 w-7 text-red-700" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-neutral-900">

@@ -212,23 +212,18 @@ export async function createMenu(data: {
   name: string;
   slug: string;
   description?: string;
-  branchId?: string; // Optional - will use BRANCH_ID from env if not provided
+  branchId: string;
   isActive?: boolean;
   priceType?: PriceType;
 }) {
   try {
-    const branchId = data.branchId || process.env.BRANCH_ID;
-    if (!branchId) {
-      return { success: false, error: "Branch ID is required" };
-    }
-
     const menu = await prisma.menu.create({
       data: {
         restaurantId: data.restaurantId,
         name: data.name,
         slug: data.slug.toLowerCase(),
         description: data.description,
-        branchId,
+        branchId: data.branchId,
         isActive: data.isActive ?? true,
         priceType: data.priceType ?? "DINE_IN",
         // Available 24/7 by default - no time or day restrictions

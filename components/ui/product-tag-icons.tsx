@@ -61,7 +61,7 @@ const TAG_CONFIG: Record<
   NEW: {
     label: "Nuevo",
     icon: NewIcon,
-    color: "text-purple-500",
+    color: "text-red-500",
   },
   POPULAR: {
     label: "Popular",

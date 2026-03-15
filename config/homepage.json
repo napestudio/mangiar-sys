@@ -1,10 +1,10 @@
 {
   "navbar": {
-    "logo": "Kiku Sushi",
+    "logo": "Mangi.ar",
     "loginButton": "Ingresar"
   },
   "hero": {
-    "title": "Kiku Sushi",
+    "title": "Mangi.ar",
     "subtitle": "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
     "ctaButton": "Reservá una mesa",
     "secondaryButton": "Ver menú",
