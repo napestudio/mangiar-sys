@@ -61,8 +61,8 @@ export function PaymentChart({ data }: PaymentChartProps) {
                 }
               />
               <Tooltip
-                formatter={(value: number | undefined) => [
-                  formatCurrency(value ?? 0, { maximumFractionDigits: 0 }),
+                formatter={(value) => [
+                  formatCurrency((value as number) ?? 0, { maximumFractionDigits: 0 }),
                   "Total",
                 ]}
                 contentStyle={{
