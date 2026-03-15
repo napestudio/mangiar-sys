@@ -10,7 +10,11 @@ import prisma from "@/lib/prisma";
 
 export const metadata: Metadata = {
   openGraph: {
-    images: [{ url: "https://res.cloudinary.com/dujkztmkx/image/upload/v1764695269/LOGO_sbz1rh.svg" }],
+    images: [
+      {
+        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
+      },
+    ],
   },
 };
 
@@ -74,9 +78,9 @@ export default async function Home() {
                 key={link.id}
                 href={generateLinkUrl(link)}
                 prefetch={true}
-                className="bg-black border-2 border-purple-900 group relative transition-colors rounded-full py-2 text-xl text-center font-bold uppercase w-full overflow-hidden"
+                className="bg-black border-2 border-red-900 group relative transition-colors rounded-full py-2 text-xl text-center font-bold uppercase w-full overflow-hidden"
               >
-                <div className="absolute h-full w-full inset-0 bg-purple-900 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 origin-bottom transition-transform duration-500"></div>
+                <div className="absolute h-full w-full inset-0 bg-red-900 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 origin-bottom transition-transform duration-500"></div>
                 <div className="relative overflow-hidden w-max mx-auto">
                   <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500">
                     {link.label}
@@ -96,8 +100,7 @@ export default async function Home() {
           </p>
           <p className="text-sm text-gray-400 mt-2">
             <MapPin className="inline-block mr-1 w-4 h-4" />
-            {restaurant.address}, {restaurant.city},{" "}
-            {restaurant.state}
+            {restaurant.address}, {restaurant.city}, {restaurant.state}
           </p>
           <p className="text-sm text-gray-400 mt-1">
             {restaurant.phone && (

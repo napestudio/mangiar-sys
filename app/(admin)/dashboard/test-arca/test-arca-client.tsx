@@ -1072,7 +1072,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
         {/* Response Display Section */}
         {response && (
           <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 text-purple-700">
+            <h2 className="text-lg font-semibold mb-4 text-red-700">
               Respuesta de ARCA
             </h2>
 

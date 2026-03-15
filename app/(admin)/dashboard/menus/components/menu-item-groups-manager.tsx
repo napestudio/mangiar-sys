@@ -79,19 +79,19 @@ export function MenuItemGroupsManager({
           return [...state, action.group];
         case "update":
           return state.map((g) =>
-            g.id === action.groupId ? { ...g, ...action.data } : g
+            g.id === action.groupId ? { ...g, ...action.data } : g,
           );
         case "delete":
           return state.filter((g) => g.id !== action.groupId);
         case "reorder":
           const orderMap = new Map(action.groups.map((g) => [g.id, g.order]));
           return [...state].sort(
-            (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0)
+            (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
           );
         default:
           return state;
       }
-    }
+    },
   );
 
   // UI state
@@ -99,7 +99,7 @@ export function MenuItemGroupsManager({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
-    new Set(groups.map((g) => g.id))
+    new Set(groups.map((g) => g.id)),
   );
 
   // Form state
@@ -291,7 +291,7 @@ export function MenuItemGroupsManager({
           onOpenChange={() => handleToggleGroup(group.id)}
         >
           <Card
-            className={`border-l-4 border-l-purple-500 ${
+            className={`border-l-4 border-l-red-500 ${
               isPending && group.id.startsWith("temp-") ? "opacity-50" : ""
             }`}
           >
@@ -379,7 +379,7 @@ export function MenuItemGroupsManager({
                   ) : (
                     <>
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <FolderOpen className="h-4 w-4 text-purple-500" />
+                        <FolderOpen className="h-4 w-4 text-red-500" />
                         {group.name}
                       </CardTitle>
                       {group.description && (
@@ -443,9 +443,9 @@ export function MenuItemGroupsManager({
 
       {/* Add Group Form */}
       {isAddingGroup ? (
-        <Card className="border-2 border-purple-500">
-          <CardHeader className="bg-purple-50 py-3">
-            <CardTitle className="text-sm text-purple-900">
+        <Card className="border-2 border-red-500">
+          <CardHeader className="bg-red-50 py-3">
+            <CardTitle className="text-sm text-red-900">
               Nuevo Grupo de Productos
             </CardTitle>
           </CardHeader>
@@ -479,7 +479,7 @@ export function MenuItemGroupsManager({
                 onClick={handleAddGroup}
                 disabled={isPending}
                 size="sm"
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                className="flex-1 bg-red-600 hover:bg-red-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Crear Grupo
@@ -504,7 +504,7 @@ export function MenuItemGroupsManager({
           variant="outline"
           size="sm"
           onClick={() => setIsAddingGroup(true)}
-          className="w-full border-purple-300 text-purple-700 hover:bg-purple-50 hover:text-purple-800 hover:border-purple-400"
+          className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-400"
         >
           <Plus className="mr-2 h-4 w-4" />
           Agregar Grupo de Productos

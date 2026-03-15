@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Reservas",
     description: "Reservá tu mesa online",
-    images: [{ url: "https://res.cloudinary.com/dujkztmkx/image/upload/v1764695269/LOGO_sbz1rh.svg" }],
+    images: [
+      {
+        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
+      },
+    ],
   },
 };
 

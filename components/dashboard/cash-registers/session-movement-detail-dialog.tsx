@@ -295,7 +295,7 @@ export function SessionMovementDetailDialog({
                   {/* Table info (DINE_IN) */}
                   {order.type === "DINE_IN" && order.table && (
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                      <div className="p-2 bg-red-50 rounded-lg text-red-600">
                         <UtensilsCrossed className="h-4 w-4" />
                       </div>
                       <div>

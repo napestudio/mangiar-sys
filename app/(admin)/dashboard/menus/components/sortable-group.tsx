@@ -108,8 +108,12 @@ export function SortableGroup({
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group.name);
-  const [editDescription, setEditDescription] = useState(group.description || "");
-  const [items, setItems] = useState<SerializedMenuItem[]>(group.menuItems || []);
+  const [editDescription, setEditDescription] = useState(
+    group.description || "",
+  );
+  const [items, setItems] = useState<SerializedMenuItem[]>(
+    group.menuItems || [],
+  );
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   // Add item dialog
@@ -144,7 +148,7 @@ export function SortableGroup({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Get all product IDs in the section
@@ -192,8 +196,12 @@ export function SortableGroup({
 
     if (!over || active.id === over.id) return;
 
-    const oldIndex = items.findIndex((item) => `group-item-${item.id}` === active.id);
-    const newIndex = items.findIndex((item) => `group-item-${item.id}` === over.id);
+    const oldIndex = items.findIndex(
+      (item) => `group-item-${item.id}` === active.id,
+    );
+    const newIndex = items.findIndex(
+      (item) => `group-item-${item.id}` === over.id,
+    );
 
     if (oldIndex === -1 || newIndex === -1) return;
 
@@ -217,7 +225,9 @@ export function SortableGroup({
   const handleAddItem = async () => {
     if (!selectedProductId) return;
 
-    const selectedProduct = availableProducts.find((p) => p.id === selectedProductId);
+    const selectedProduct = availableProducts.find(
+      (p) => p.id === selectedProductId,
+    );
     if (!selectedProduct) return;
 
     const productId = selectedProductId;
@@ -294,7 +304,7 @@ export function SortableGroup({
             : undefined,
         };
         setItems((prev) =>
-          prev.map((item) => (item.id === tempId ? confirmedItem : item))
+          prev.map((item) => (item.id === tempId ? confirmedItem : item)),
         );
         isOptimisticPending.current = false;
         // No onUpdate() — skip the full refetch
@@ -308,7 +318,7 @@ export function SortableGroup({
   const filteredProducts = availableProducts.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      product.category?.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -316,8 +326,8 @@ export function SortableGroup({
       ref={setNodeRef}
       style={style}
       className={`bg-white border rounded-lg ${
-        isDragging ? "opacity-50 shadow-lg border-purple-500" : "border-purple-200"
-      } border-l-4 border-l-purple-500`}
+        isDragging ? "opacity-50 shadow-lg border-red-500" : "border-red-200"
+      } border-l-4 border-l-red-500`}
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Group header */}
@@ -361,7 +371,11 @@ export function SortableGroup({
                   className="text-sm"
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveEdit} disabled={isLoading}>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveEdit}
+                    disabled={isLoading}
+                  >
                     <Check className="mr-1 h-3 w-3" />
                     Guardar
                   </Button>
@@ -382,7 +396,7 @@ export function SortableGroup({
             ) : (
               <>
                 <div className="font-medium text-sm flex items-center gap-2">
-                  <FolderOpen className="h-4 w-4 text-purple-500" />
+                  <FolderOpen className="h-4 w-4 text-red-500" />
                   {group.name}
                 </div>
                 {group.description && (
@@ -437,37 +451,41 @@ export function SortableGroup({
                 onDragStart={(e) => setActiveItemId(e.active.id as string)}
                 onDragEnd={handleItemDragEnd}
               >
-              <SortableContext
-                items={items.map((item) => `group-item-${item.id}`)}
-                strategy={verticalListSortingStrategy}
-              >
-                {items.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 text-xs border border-dashed border-gray-300 rounded ml-4">
-                    No hay productos en este grupo
-                  </div>
-                ) : (
-                  items.map((item) => (
-                    <SortableItem
-                      key={`group-item-${item.id}`}
-                      id={`group-item-${item.id}`}
-                      item={item}
-                      onUpdate={onUpdate}
-                      isPending={isLoading}
-                      isInGroup={true}
-                    />
-                  ))
-                )}
-              </SortableContext>
+                <SortableContext
+                  items={items.map((item) => `group-item-${item.id}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {items.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-xs border border-dashed border-gray-300 rounded ml-4">
+                      No hay productos en este grupo
+                    </div>
+                  ) : (
+                    items.map((item) => (
+                      <SortableItem
+                        key={`group-item-${item.id}`}
+                        id={`group-item-${item.id}`}
+                        item={item}
+                        onUpdate={onUpdate}
+                        isPending={isLoading}
+                        isInGroup={true}
+                      />
+                    ))
+                  )}
+                </SortableContext>
 
-              <DragOverlay>
-                {activeItemId ? (
-                  <div className="bg-white shadow-lg rounded-lg border-2 border-blue-500 opacity-90 p-3">
-                    <span className="text-sm font-medium">
-                      {items.find((i) => `group-item-${i.id}` === activeItemId)?.product?.name}
-                    </span>
-                  </div>
-                ) : null}
-              </DragOverlay>
+                <DragOverlay>
+                  {activeItemId ? (
+                    <div className="bg-white shadow-lg rounded-lg border-2 border-blue-500 opacity-90 p-3">
+                      <span className="text-sm font-medium">
+                        {
+                          items.find(
+                            (i) => `group-item-${i.id}` === activeItemId,
+                          )?.product?.name
+                        }
+                      </span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
               </DndContext>
             )}
 
@@ -511,7 +529,9 @@ export function SortableGroup({
                     setSelectedProductId("");
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={() =>
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }
                   placeholder="Buscar producto..."
                   autoComplete="off"
                 />
@@ -535,7 +555,9 @@ export function SortableGroup({
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="font-medium text-sm">{product.name}</div>
+                          <div className="font-medium text-sm">
+                            {product.name}
+                          </div>
                           {product.category && (
                             <div className="text-xs text-gray-500">
                               {product.category.name}
@@ -553,7 +575,9 @@ export function SortableGroup({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customPrice">Precio Personalizado (opcional)</Label>
+              <Label htmlFor="customPrice">
+                Precio Personalizado (opcional)
+              </Label>
               <NumberInput
                 id="customPrice"
                 step="0.01"
@@ -569,7 +593,10 @@ export function SortableGroup({
                 checked={isFeatured}
                 onCheckedChange={(checked) => setIsFeatured(checked as boolean)}
               />
-              <Label htmlFor="featured-group" className="font-normal cursor-pointer">
+              <Label
+                htmlFor="featured-group"
+                className="font-normal cursor-pointer"
+              >
                 Marcar como producto destacado
               </Label>
             </div>

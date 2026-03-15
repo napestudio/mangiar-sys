@@ -71,8 +71,7 @@ export function ShoppingCart({
                   <div className="flex-1">
                     <h3 className="font-semibold">{item.name}</h3>
                     <p className="text-sm text-gray-600">
-                      {formatCurrency(item.price)}{" "}
-                      c/u
+                      {formatCurrency(item.price)} c/u
                     </p>
                   </div>
                   <Button
@@ -133,30 +132,24 @@ export function ShoppingCart({
         <CardContent className="pt-6 space-y-2">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span>
-              {formatCurrency(subtotal)}
-            </span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
           {isDelivery && deliveryFee > 0 && (
             <div className="flex justify-between text-gray-600">
               <span>Costo de envío</span>
-              <span>
-                {formatCurrency(deliveryFee)}
-              </span>
+              <span>{formatCurrency(deliveryFee)}</span>
             </div>
           )}
           <div className="flex justify-between text-xl font-bold pt-2 border-t">
             <span>Total</span>
-            <span>
-              {formatCurrency(total)}
-            </span>
+            <span>{formatCurrency(total)}</span>
           </div>
         </CardContent>
       </Card>
       <div className="space-y-4">
         <Button
           onClick={onCheckout}
-          className="w-full bg-purple-900 hover:bg-purple-900/90 transition-colors text-xl py-6"
+          className="w-full bg-red-900 hover:bg-red-900/90 transition-colors text-xl py-6"
         >
           Finalizar pedido
         </Button>

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     description: "Realizá tu pedido para delivery o takeaway",
     images: [
       {
-        url: "https://res.cloudinary.com/dujkztmkx/image/upload/v1764695269/LOGO_sbz1rh.svg",
+        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
       },
     ],
   },
@@ -81,11 +81,7 @@ export default async function PedidosPage() {
     if (allowDelivery && allowTakeAway) {
       // Fetch both price sets in parallel
       const [deliveryResult, takeawayResult] = await Promise.all([
-        getProductsForDeliveryMenu(
-          branchId,
-          config.menuId,
-          OrderType.DELIVERY,
-        ),
+        getProductsForDeliveryMenu(branchId, config.menuId, OrderType.DELIVERY),
         getProductsForDeliveryMenu(
           branchId,
           config.menuId,

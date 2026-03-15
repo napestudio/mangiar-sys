@@ -3,62 +3,73 @@
     {
       "label": "Inicio",
       "href": "/dashboard",
+      "icon": "House",
       "minimumRole": "WAITER"
     },
     {
       "label": "Mesas",
       "href": "/dashboard/tables",
+      "icon": "TableIcon",
       "minimumRole": "WAITER"
     },
     {
       "label": "Ordenes",
       "href": "/dashboard/orders",
+      "icon": "ClipboardList",
       "minimumRole": "WAITER"
     },
     {
       "label": "Reservas",
       "href": "/dashboard/reservations",
+      "icon": "CalendarDays",
       "minimumRole": "WAITER"
     },
     {
       "label": "Arqueos",
       "href": "/dashboard/cash-registers",
+      "icon": "ArqueosIcon",
       "minimumRole": "MANAGER",
       "permissionGrant": "VIEW_CASH_REGISTERS"
     },
     {
       "label": "Estadísticas",
       "href": "/dashboard/stats",
+      "icon": "BarChart2",
       "minimumRole": "MANAGER",
       "permissionGrant": "VIEW_STATISTICS"
     },
     {
       "label": "Cartas",
       "href": "/dashboard/menus",
+      "icon": "CartasIcon",
       "minimumRole": "ADMIN",
       "permissionGrant": "MANAGE_MENU"
     },
     {
       "label": "Productos",
       "href": "/dashboard/menu-items",
+      "icon": "Package",
       "minimumRole": "ADMIN",
       "permissionGrant": "MANAGE_PRODUCTS"
     },
     {
       "label": "Stock",
       "href": "/dashboard/stock",
+      "icon": "Archive",
       "minimumRole": "MANAGER",
       "permissionGrant": "VIEW_STOCK"
     },
     {
       "label": "Facturas",
       "href": "/dashboard/invoices",
+      "icon": "Receipt",
       "minimumRole": "MANAGER",
       "permissionGrant": "VIEW_INVOICES"
     },
     {
       "label": "Configuración",
       "href": "/dashboard/config/restaurant",
+      "icon": "Settings",
       "minimumRole": "ADMIN",
       "permissionGrant": "MANAGE_CONFIG"
     }

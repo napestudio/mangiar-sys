@@ -7,7 +7,7 @@ interface AvatarProps {
 }
 
 export default function Avatar({
-  src = "https://res.cloudinary.com/dkgnaegp9/image/upload/v1764602727/LOGO_qm9wjw.svg",
+  src = "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
   alt = "Logo",
 }: AvatarProps) {
   return (
@@ -15,7 +15,7 @@ export default function Avatar({
       <Image
         src={
           src ||
-          "https://res.cloudinary.com/dkgnaegp9/image/upload/v1764602727/LOGO_qm9wjw.svg"
+          "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg"
         }
         alt={alt}
         width={256}

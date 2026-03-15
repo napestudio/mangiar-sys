@@ -70,7 +70,9 @@ export default function LoginForm() {
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 disabled={isPending}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
                 className="absolute inset-y-0 right-0 z-20 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700 disabled:opacity-40"
                 tabIndex={-1}
               >
@@ -94,7 +96,7 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-900 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-900 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isPending ? (
               <span className="flex items-center gap-2">

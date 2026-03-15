@@ -4,6 +4,7 @@ import { Maximize2 } from "lucide-react";
 import { TablePropertiesForm } from "./table-properties-form";
 import TableIcon from "@/components/ui/icons/TableIcon";
 import type { FloorTable } from "@/lib/floor-plan-utils";
+import BigTableIcon from "@/components/ui/icons/BigTableIcon";
 
 interface TablePropertiesPanelProps {
   selectedTable: FloorTable | undefined;
@@ -38,8 +39,8 @@ export function TablePropertiesPanel({
     <div className="sticky top-4 gap-2 h-[calc(100svh-120px)] bg-white">
       <div className="h-full grid place-items-center">
         <div className="text-lg py-1.5 w-max font-medium text-neutral-300">
-          <div className="w-30  mx-auto mb-2">
-            <TableIcon />
+          <div className="w-50  mx-auto mb-2">
+            <BigTableIcon className="w-50 h-20" />
           </div>
           No hay mesas seleccionadas
         </div>

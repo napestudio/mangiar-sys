@@ -61,7 +61,7 @@ export function ReservationWizard({ branchId }: ReservationWizardProps) {
     if (currentStep === 2) {
       const slots = await fetchAvailableSlots(
         wizardData.date,
-        wizardData.guests
+        wizardData.guests,
       );
       setAvailableSlots(slots);
     }
@@ -103,12 +103,12 @@ export function ReservationWizard({ branchId }: ReservationWizardProps) {
         pricePerPerson: number;
         moreInfoUrl: string | null;
         notes: string | null;
-      }
+      },
     ) => {
       updateData({ timeSlotId });
       setSelectedSlotDetails(slotDetails);
     },
-    [updateData, setSelectedSlotDetails]
+    [updateData, setSelectedSlotDetails],
   );
 
   // Success Screen
@@ -199,7 +199,7 @@ export function ReservationWizard({ branchId }: ReservationWizardProps) {
           <Button
             onClick={handleNextWithFetch}
             disabled={!canProceed || isPending}
-            className="bg-purple-900 hover:bg-purple-800"
+            className="bg-red-900 hover:bg-red-800"
             size="lg"
           >
             {isPending ? "Cargando..." : "Continuar"}

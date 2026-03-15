@@ -82,7 +82,7 @@ export function SortableItem({
       style={style}
       className={`flex items-center gap-2 p-3 bg-white border rounded-lg ${
         isDragging ? "opacity-50 shadow-lg border-blue-500" : "border-gray-200"
-      } ${isInGroup ? "ml-4 border-l-2 border-l-purple-300" : ""}`}
+      } ${isInGroup ? "ml-4 border-l-2 border-l-red-300" : ""}`}
     >
       {/* Drag handle */}
       <button

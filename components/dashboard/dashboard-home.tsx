@@ -147,10 +147,10 @@ export function DashboardHome({
       href: "/dashboard/reservations",
       icon: Calendar,
       count: recentReservations.length,
-      color: "text-purple-600",
-      bg: "bg-purple-50 hover:bg-purple-100",
-      border: "border-purple-200",
-      bubbleBg: "bg-purple-100",
+      color: "text-red-600",
+      bg: "bg-red-50 hover:bg-red-100",
+      border: "border-red-200",
+      bubbleBg: "bg-red-100",
     },
   ];
 
@@ -240,7 +240,7 @@ export function DashboardHome({
           <Card className="flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-purple-600" />
+                <Calendar className="h-4 w-4 text-red-600" />
                 Reservas de Hoy
               </CardTitle>
             </CardHeader>
@@ -285,7 +285,7 @@ export function DashboardHome({
             <div className="px-6 pb-4 pt-0">
               <Link
                 href="/dashboard/reservations"
-                className="text-xs text-purple-600 hover:underline font-medium"
+                className="text-xs text-red-600 hover:underline font-medium"
               >
                 Ver todas →
               </Link>

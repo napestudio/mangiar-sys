@@ -439,31 +439,23 @@ export function CustomerInfoForm({
               <span>
                 {item.quantity}x {item.name}
               </span>
-              <span>
-                {formatCurrency(item.price * item.quantity)}
-              </span>
+              <span>{formatCurrency(item.price * item.quantity)}</span>
             </div>
           ))}
           <div className="border-t pt-2 mt-2">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
-              <span>
-                {formatCurrency(subtotal)}
-              </span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             {isDelivery && (
               <div className="flex justify-between text-gray-600">
                 <span>Envío</span>
-                <span>
-                  {formatCurrency(deliveryFee)}
-                </span>
+                <span>{formatCurrency(deliveryFee)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold pt-2">
               <span>Total</span>
-              <span>
-                {formatCurrency(total)}
-              </span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </div>
         </CardContent>
@@ -472,7 +464,7 @@ export function CustomerInfoForm({
         <Button
           type="submit"
           size="lg"
-          className="w-full bg-purple-900 hover:bg-purple-900/90 transition-colors text-xl py-6"
+          className="w-full bg-red-900 hover:bg-red-900/90 transition-colors text-xl py-6"
           disabled={isSubmitting}
         >
           {isSubmitting ? "Procesando..." : "Confirmar Pedido"}

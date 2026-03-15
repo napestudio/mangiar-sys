@@ -37,11 +37,13 @@ export default function UserDropdown({
         <TooltipTrigger asChild>
           <DropdownMenuTrigger className="focus:outline-none cursor-pointer">
             <div
-              className={`flex items-center justify-center size-10 rounded-full bg-yellow-300 border-2 ${
-                hasAdminRole ? "border-red-500/50" : "border-gray-300"
+              className={`flex items-center justify-center size-9 rounded-full bg-yellow-300 border-2 ${
+                hasAdminRole
+                  ? "shadow shadow-red-500 border border-red-400"
+                  : "border-gray-300"
               }`}
             >
-              <User className="size-6 text-gray-600" />
+              <User className="size-5 text-gray-600" />
             </div>
           </DropdownMenuTrigger>
         </TooltipTrigger>
