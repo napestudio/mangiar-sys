@@ -53,7 +53,7 @@ export function HoursChart({ data }: HoursChartProps) {
               allowDecimals={false}
             />
             <Tooltip
-              formatter={(value: number | undefined) => [value ?? 0, "Órdenes"]}
+              formatter={(value) => [(value as number) ?? 0, "Órdenes"]}
               labelStyle={{ color: "#374151", fontWeight: 600 }}
               contentStyle={{
                 borderRadius: 8,
