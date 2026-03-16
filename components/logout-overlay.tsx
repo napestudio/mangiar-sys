@@ -9,7 +9,7 @@ export function LogoutOverlay() {
   if (!isLoggingOut) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center pointer-events-auto">
+    <div className="fixed inset-0 z-50 pointer-events-none bg-black/50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <SushiLoader />
         <p className="text-white text-lg font-medium">Cerrando sesión...</p>
