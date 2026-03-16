@@ -41,5 +41,11 @@ export default auth(async (req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/auth/callback", "/"],
+  matcher: [
+    /*
+     * Match all paths except Next.js internals and static files.
+     * Auth checks and subdomain extraction run on every request.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
+  ],
 };

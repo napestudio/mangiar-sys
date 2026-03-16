@@ -4,12 +4,12 @@ import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 
 export async function loginWithCredentials(formData: FormData) {
-  const username = formData.get("username") as string;
+  const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
   try {
     await signIn("credentials", {
-      username,
+      email,
       password,
       redirectTo: "/auth/callback",
     });
