@@ -142,12 +142,12 @@ export async function registerRestaurant(
                 description: p.description,
                 restaurantId: restaurant.id,
                 categoryId: categoryMap.get(p.category) ?? null,
-                productOnBranches: {
+                branches: {
                   create: [
                     {
                       branchId: branch.id,
                       stock: 0,
-                      productPrices: {
+                      prices: {
                         create: [{ type: PriceType.DINE_IN, price: p.price }],
                       },
                     },
