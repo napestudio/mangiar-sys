@@ -5,6 +5,45 @@ import Image from "next/image";
 import { headers } from "next/headers";
 import RestaurantLandingPage from "@/components/landing/restaurant-landing";
 import MangiarFooter from "@/components/mangiar-footer";
+import type { Metadata } from "next";
+import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const subdomain = (await headers()).get("x-subdomain");
+
+  if (!subdomain) {
+    return {
+      title: "Mangi.ar — Sistema de Gestión para Restaurantes",
+      description:
+        "La plataforma integral que gestiona reservas, ventas, delivery y facturación.",
+    };
+  }
+
+  const publicData = await getPublicRestaurantAndBranch();
+  if (!publicData) return { title: "Restaurante" };
+
+  const { restaurant } = publicData;
+
+  const locationParts = [restaurant.city, restaurant.state].filter(Boolean);
+  const location = locationParts.join(", ");
+  const description =
+    restaurant.description ??
+    (location
+      ? `${restaurant.name} — ${location}`
+      : `Visitá ${restaurant.name} y disfrutá de nuestra carta.`);
+
+  return {
+    title: restaurant.name,
+    description,
+    openGraph: {
+      title: restaurant.name,
+      description,
+      ...(restaurant.logoUrl && {
+        images: [{ url: restaurant.logoUrl }],
+      }),
+    },
+  };
+}
 
 export default async function Home() {
   const subdomain = (await headers()).get("x-subdomain");
