@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { RegistroForm } from "@/components/registro/registro-form";
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Crear cuenta",
   description: "Registrá tu negocio y empezá a gestionar tus pedidos y reservas.",

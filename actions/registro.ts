@@ -80,159 +80,160 @@ export async function registerRestaurant(
 
   // 5. Create all entities in a single atomic transaction
   try {
-    await prisma.$transaction(async (tx) => {
-      // Restaurant
-      const restaurant = await tx.restaurant.create({
-        data: {
-          name: businessName,
-          slug,
-          phone,
-          contactEmail,
-          restaurantType,
-          promoCode: promoCode && promoCode.trim() !== "" ? promoCode.trim() : null,
-        },
-      });
+    await prisma.$transaction(
+      async (tx) => {
+        // Restaurant
+        const restaurant = await tx.restaurant.create({
+          data: {
+            name: businessName,
+            slug,
+            phone,
+            contactEmail,
+            restaurantType,
+            promoCode: promoCode && promoCode.trim() !== "" ? promoCode.trim() : null,
+          },
+        });
 
-      // Branch "Principal"
-      const branch = await tx.branch.create({
-        data: {
-          name: "Principal",
-          address: "Principal",
-          restaurantId: restaurant.id,
-        },
-      });
+        // Branch "Principal"
+        const branch = await tx.branch.create({
+          data: {
+            name: "Principal",
+            address: "Principal",
+            restaurantId: restaurant.id,
+          },
+        });
 
-      // Admin user — username = adminEmail for global uniqueness
-      const user = await tx.user.create({
-        data: {
-          username: adminEmail,
-          email: adminEmail,
-          name: personName,
-          password: hashedPassword,
-        },
-      });
+        // Admin user — username = adminEmail for global uniqueness
+        const user = await tx.user.create({
+          data: {
+            username: adminEmail,
+            email: adminEmail,
+            name: personName,
+            password: hashedPassword,
+          },
+        });
 
-      // UserOnBranch with ADMIN role
-      await tx.userOnBranch.create({
-        data: {
-          userId: user.id,
-          branchId: branch.id,
-          role: UserRole.ADMIN,
-        },
-      });
+        // UserOnBranch with ADMIN role
+        await tx.userOnBranch.create({
+          data: {
+            userId: user.id,
+            branchId: branch.id,
+            role: UserRole.ADMIN,
+          },
+        });
 
-      // Categories
-      const createdCategories = await Promise.all(
-        sampleData.categories.map((name, order) =>
-          tx.category.create({
-            data: { name, order, restaurantId: restaurant.id },
-          })
-        )
-      );
+        // Categories
+        const createdCategories = await Promise.all(
+          sampleData.categories.map((name, order) =>
+            tx.category.create({
+              data: { name, order, restaurantId: restaurant.id },
+            })
+          )
+        );
 
-      const categoryMap = new Map(createdCategories.map((c) => [c.name, c.id]));
+        const categoryMap = new Map(createdCategories.map((c) => [c.name, c.id]));
 
-      // Products + ProductOnBranch + ProductPrice (DINE_IN)
-      await Promise.all(
-        sampleData.products.map(async (p) => {
-          const product = await tx.product.create({
-            data: {
-              name: p.name,
-              description: p.description,
-              restaurantId: restaurant.id,
-              categoryId: categoryMap.get(p.category) ?? null,
-            },
-          });
-
-          const pob = await tx.productOnBranch.create({
-            data: {
-              productId: product.id,
-              branchId: branch.id,
-              stock: 0,
-            },
-          });
-
-          await tx.productPrice.create({
-            data: {
-              productOnBranchId: pob.id,
-              type: PriceType.DINE_IN,
-              price: p.price,
-            },
-          });
-        })
-      );
-
-      // 5 tables (numbered 1–5, no sector) — spread in a 3+2 grid so they don't overlap
-      const tablePositions = [
-        { positionX: 10, positionY: 10 },
-        { positionX: 110, positionY: 10 },
-        { positionX: 210, positionY: 10 },
-        { positionX: 10, positionY: 110 },
-        { positionX: 110, positionY: 110 },
-      ];
-      await tx.table.createMany({
-        data: Array.from({ length: 5 }, (_, i) => ({
-          number: i + 1,
-          capacity: 4,
-          branchId: branch.id,
-          positionX: tablePositions[i].positionX,
-          positionY: tablePositions[i].positionY,
-          width: 80,
-          height: 80,
-          shape: "SQUARE",
-        })),
-      });
-
-      // Cash register "Principal"
-      await tx.cashRegister.create({
-        data: {
-          name: "Principal",
-          branchId: branch.id,
-        },
-      });
-
-      // Menu "Carta"
-      const menuSlug = `carta${slug}`;
-      const menu = await tx.menu.create({
-        data: {
-          name: "Carta",
-          slug: menuSlug,
-          priceType: PriceType.DINE_IN,
-          restaurantId: restaurant.id,
-          branchId: branch.id,
-        },
-      });
-
-      // MenuSections + MenuItems per category
-      await Promise.all(
-        createdCategories.map(async (category, index) => {
-          const section = await tx.menuSection.create({
-            data: {
-              name: category.name,
-              order: index,
-              menuId: menu.id,
-            },
-          });
-
-          const products = await tx.product.findMany({
-            where: { restaurantId: restaurant.id, categoryId: category.id },
-            select: { id: true },
-          });
-
-          await Promise.all(
-            products.map((product, order) =>
-              tx.menuItem.create({
-                data: {
-                  menuSectionId: section.id,
-                  productId: product.id,
-                  order,
+        // Products + ProductOnBranch + ProductPrice (DINE_IN) — nested creates to reduce round-trips
+        const createdProducts = await Promise.all(
+          sampleData.products.map((p) =>
+            tx.product.create({
+              data: {
+                name: p.name,
+                description: p.description,
+                restaurantId: restaurant.id,
+                categoryId: categoryMap.get(p.category) ?? null,
+                productOnBranches: {
+                  create: [
+                    {
+                      branchId: branch.id,
+                      stock: 0,
+                      productPrices: {
+                        create: [{ type: PriceType.DINE_IN, price: p.price }],
+                      },
+                    },
+                  ],
                 },
-              })
-            )
-          );
-        })
-      );
-    });
+              },
+              select: { id: true, categoryId: true },
+            })
+          )
+        );
+
+        // Build categoryId → productId[] map from creation results (avoids findMany queries)
+        const categoryProductMap = new Map<string, string[]>();
+        for (const p of createdProducts) {
+          if (p.categoryId) {
+            const list = categoryProductMap.get(p.categoryId) ?? [];
+            list.push(p.id);
+            categoryProductMap.set(p.categoryId, list);
+          }
+        }
+
+        // 5 tables (numbered 1–5, no sector) — spread in a 3+2 grid so they don't overlap
+        const tablePositions = [
+          { positionX: 10, positionY: 10 },
+          { positionX: 110, positionY: 10 },
+          { positionX: 210, positionY: 10 },
+          { positionX: 10, positionY: 110 },
+          { positionX: 110, positionY: 110 },
+        ];
+        await tx.table.createMany({
+          data: Array.from({ length: 5 }, (_, i) => ({
+            number: i + 1,
+            capacity: 4,
+            branchId: branch.id,
+            positionX: tablePositions[i].positionX,
+            positionY: tablePositions[i].positionY,
+            width: 80,
+            height: 80,
+            shape: "SQUARE",
+          })),
+        });
+
+        // Cash register "Principal"
+        await tx.cashRegister.create({
+          data: {
+            name: "Principal",
+            branchId: branch.id,
+          },
+        });
+
+        // Menu "Carta"
+        const menuSlug = `carta${slug}`;
+        const menu = await tx.menu.create({
+          data: {
+            name: "Carta",
+            slug: menuSlug,
+            priceType: PriceType.DINE_IN,
+            restaurantId: restaurant.id,
+            branchId: branch.id,
+          },
+        });
+
+        // MenuSections + MenuItems per category — createMany avoids N individual round-trips
+        await Promise.all(
+          createdCategories.map(async (category, index) => {
+            const section = await tx.menuSection.create({
+              data: {
+                name: category.name,
+                order: index,
+                menuId: menu.id,
+              },
+            });
+
+            const productIds = categoryProductMap.get(category.id) ?? [];
+            await tx.menuItem.createMany({
+              data: productIds.map((productId, order) => ({
+                menuSectionId: section.id,
+                productId,
+                order,
+              })),
+            });
+          })
+        );
+      },
+      { timeout: 30000, maxWait: 10000 }
+    );
   } catch (err) {
     console.error("Error creating restaurant during registration:", err);
     return { success: false, error: "Ocurrió un error al crear tu cuenta. Intentá nuevamente." };
