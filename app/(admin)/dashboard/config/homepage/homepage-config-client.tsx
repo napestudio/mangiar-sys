@@ -14,6 +14,9 @@ import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
 import { LinkDialog } from "./components/link-dialog";
 import { SortableLinkList } from "./components/sortable-link-list";
 import { reorderHomePageLinks } from "@/actions/HomePageLinks";
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { SITE_URL } from "@/lib/constants";
 
 type Menu = {
   id: string;
@@ -31,6 +34,7 @@ interface HomePageConfigClientProps {
   initialLinks: SerializedHomePageLink[];
   availableMenus: Menu[];
   availableTimeSlots: TimeSlot[];
+  restaurantSlug: string | null;
 }
 
 export default function HomePageConfigClient({
@@ -38,6 +42,7 @@ export default function HomePageConfigClient({
   initialLinks,
   availableMenus,
   availableTimeSlots,
+  restaurantSlug,
 }: HomePageConfigClientProps) {
   const { toast } = useToast();
   const [, startTransition] = useTransition();
@@ -103,14 +108,31 @@ export default function HomePageConfigClient({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Configuración de Página Principal
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Configura los enlaces que aparecen en la página de inicio del
-          restaurante.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Configuración de Página Principal
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Configura los enlaces que aparecen en la página de inicio del
+            restaurante.
+          </p>
+        </div>
+        {restaurantSlug && (
+          <Link
+            href={(() => {
+              const base = new URL(SITE_URL);
+              return `${base.protocol}//${restaurantSlug}.${base.host}`;
+            })()}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" className="shrink-0 gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Ver página de inicio
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Links Card */}

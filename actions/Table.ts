@@ -1081,9 +1081,9 @@ export async function updateFloorPlanBatch(
 ) {
   try {
     // Use a transaction to update all tables atomically
-    await prisma.$transaction(
-      tables.map((table) =>
-        prisma.table.update({
+    await prisma.$transaction(async (tx) => {
+      for (const table of tables) {
+        await tx.table.update({
           where: { id: table.id },
           data: {
             positionX: table.positionX,
@@ -1093,9 +1093,9 @@ export async function updateFloorPlanBatch(
             rotation: table.rotation,
             shape: table.shape,
           },
-        })
-      )
-    );
+        });
+      }
+    });
 
     return { success: true };
   } catch (error) {

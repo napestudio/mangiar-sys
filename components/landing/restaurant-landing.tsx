@@ -116,10 +116,15 @@ export default async function RestaurantLandingPage() {
                 {restaurant.description || "Disfruta de nuestra comida"}
               </p>
               {restaurant.address && (
-                <p className="text-gray-400">
+                <Link
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.address}, ${restaurant.city}, ${restaurant.state}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
                   <MapPin className="inline-block mr-1 w-6 h-6" />
                   {restaurant.address}, {restaurant.city}, {restaurant.state}
-                </p>
+                </Link>
               )}
               {restaurant.phone && (
                 <p className="text-sm text-gray-400 mt-1">

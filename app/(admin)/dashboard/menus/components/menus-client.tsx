@@ -3,9 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SerializedMenu } from "@/actions/menus";
-import { MenuCard } from "./menu-card";
+import { MenuRow } from "./menu-row";
 import { MenuDialog } from "./menu-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Plus } from "lucide-react";
 
 interface MenusClientProps {
@@ -26,7 +33,6 @@ export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClien
   const handleMenuCreated = (newMenu: SerializedMenu) => {
     setMenus((prev) => [newMenu, ...prev]);
     setIsCreateDialogOpen(false);
-    // Redirect to the newly created menu's page
     router.push(`/dashboard/menus/${newMenu.id}`);
   };
 
@@ -44,34 +50,31 @@ export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClien
     setMenus((prev) => prev.filter((m) => m.id !== menuId));
   };
 
-  const activeMenus = menus.filter((m) => m.isActive);
-  const inactiveMenus = menus.filter((m) => !m.isActive);
-
   return (
-    <div className="space-y-8">
-      {/* Header with Create Button */}
-      <div className="flex justify-between items-center">
-        <div></div>
-        {/* <div className="flex gap-4 text-sm text-gray-600">
-          <span>Total: {menus.length}</span>
-          <span>Activos: {activeMenus.length}</span>
-          <span>Inactivos: {inactiveMenus.length}</span>
-        </div> */}
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-end">
         <Button onClick={handleCreateMenu}>
           <Plus className="mr-2 h-4 w-4" />
           Crear Menú
         </Button>
       </div>
 
-      {/* Active Menus */}
-      {activeMenus.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Menús Activos
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
-            {activeMenus.map((menu) => (
-              <MenuCard
+      {/* Table */}
+      {menus.length > 0 ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Secciones</TableHead>
+              <TableHead>Productos</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {menus.map((menu) => (
+              <MenuRow
                 key={menu.id}
                 menu={menu}
                 onEdit={() => handleEditMenu(menu.id)}
@@ -79,32 +82,10 @@ export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClien
                 onUpdate={handleMenuUpdated}
               />
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Inactive Menus */}
-      {inactiveMenus.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-500 mb-4">
-            Menús Inactivos
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
-            {inactiveMenus.map((menu) => (
-              <MenuCard
-                key={menu.id}
-                menu={menu}
-                onEdit={() => handleEditMenu(menu.id)}
-                onDelete={() => handleMenuDeleted(menu.id)}
-                onUpdate={handleMenuUpdated}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {menus.length === 0 && (
+          </TableBody>
+        </Table>
+      ) : (
+        /* Empty State */
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
