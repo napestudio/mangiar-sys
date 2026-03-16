@@ -37,7 +37,7 @@ export default function UserDropdown({
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger className="focus:outline-none cursor-pointer">
