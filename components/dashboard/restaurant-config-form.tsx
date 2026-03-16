@@ -4,6 +4,7 @@ import {
   updateRestaurant,
   type RestaurantUpdateInput,
 } from "@/actions/Restaurant";
+import ProvinceCitySelect from "@/components/ui/province-city-select";
 import { useState } from "react";
 
 type Restaurant = {
@@ -68,11 +69,11 @@ export default function RestaurantConfigForm({
     if (result.success) {
       setSuccess(
         result.message ||
-          "Configuración del restaurante actualizada exitosamente"
+          "Configuración del restaurante actualizada exitosamente",
       );
     } else {
       setError(
-        result.error || "Error al actualizar la configuración del restaurante"
+        result.error || "Error al actualizar la configuración del restaurante",
       );
     }
 
@@ -80,7 +81,7 @@ export default function RestaurantConfigForm({
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -124,7 +125,7 @@ export default function RestaurantConfigForm({
               required
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
             />
           </div>
 
@@ -141,7 +142,7 @@ export default function RestaurantConfigForm({
               rows={3}
               value={formData.description}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="Breve descripción de tu restaurante"
             />
           </div>
@@ -159,7 +160,7 @@ export default function RestaurantConfigForm({
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="+54 11 1234-5678"
             />
           </div>
@@ -171,6 +172,17 @@ export default function RestaurantConfigForm({
         <h3 className="text-lg font-medium text-gray-900 mb-4">Dirección</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProvinceCitySelect
+            province={formData.state ?? ""}
+            city={formData.city ?? ""}
+            onProvinceChange={(value) =>
+              setFormData((prev) => ({ ...prev, state: value }))
+            }
+            onCityChange={(value) =>
+              setFormData((prev) => ({ ...prev, city: value }))
+            }
+            disabled={isSubmitting}
+          />
           <div className="md:col-span-2">
             <label
               htmlFor="address"
@@ -184,47 +196,10 @@ export default function RestaurantConfigForm({
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="Av. Corrientes 1234"
             />
           </div>
-
-          <div>
-            <label
-              htmlFor="city"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Ciudad
-            </label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Buenos Aires"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="state"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Provincia / Estado
-            </label>
-            <input
-              type="text"
-              id="state"
-              name="state"
-              value={formData.state}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="CABA"
-            />
-          </div>
-
           <div>
             <label
               htmlFor="postalCode"
@@ -238,7 +213,7 @@ export default function RestaurantConfigForm({
               name="postalCode"
               value={formData.postalCode}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="C1043"
             />
           </div>
@@ -256,8 +231,9 @@ export default function RestaurantConfigForm({
               name="country"
               value={formData.country}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="Argentina"
+              disabled
             />
           </div>
         </div>
@@ -283,7 +259,7 @@ export default function RestaurantConfigForm({
               name="websiteUrl"
               value={formData.websiteUrl}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="https://www.turestaurante.com"
             />
           </div>
@@ -301,7 +277,7 @@ export default function RestaurantConfigForm({
               name="facebookUrl"
               value={formData.facebookUrl}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="https://www.facebook.com/turestaurante"
             />
           </div>
@@ -319,7 +295,7 @@ export default function RestaurantConfigForm({
               name="instagramUrl"
               value={formData.instagramUrl}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="https://www.instagram.com/turestaurante"
             />
           </div>
@@ -337,7 +313,7 @@ export default function RestaurantConfigForm({
               name="tiktokUrl"
               value={formData.tiktokUrl}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="https://www.tiktok.com/@turestaurante"
             />
           </div>
@@ -355,11 +331,12 @@ export default function RestaurantConfigForm({
               name="whatsappNumber"
               value={formData.whatsappNumber}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
               placeholder="5491112345678"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Código de país + número, sin espacios ni símbolos. Ej: 5491112345678
+              Código de país + número, sin espacios ni símbolos. Ej:
+              5491112345678
             </p>
           </div>
         </div>

@@ -12,25 +12,25 @@ export function Navbar() {
       </Link>
 
       {/* Enlaces en el centro */}
-      <div className="flex items-center gap-8 uppercase font-medium">
+      {/* <div className="flex items-center gap-8 uppercase font-medium">
         <Link
-          href="/funcionalidades"
+          href="/"
           className="text-black hover:text-muted-foreground transition-colors"
         >
           Funcionalidades
         </Link>
         <Link
-          href="/precios"
+          href="/"
           className="text-black hover:text-muted-foreground transition-colors"
         >
           Precios
         </Link>
-      </div>
+      </div> */}
 
       {/* Botón rojo redondeado */}
-      <Button className="cursor-pointer rounded-full bg-white text-red border-2 border-red hover:bg-red hover:text-white transition-colors px-6 py-2 font-medium">
+      {/* <Button className="cursor-pointer rounded-full bg-white text-red border-2 border-red hover:bg-red hover:text-white transition-colors px-6 py-2 font-medium">
         Ver Demo
-      </Button>
+      </Button> */}
     </nav>
   );
 }

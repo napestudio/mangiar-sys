@@ -153,6 +153,24 @@ enum DiscountType {
   FIXED
 }
 
+enum RestaurantType {
+  RESTAURANT
+  CAFETERIA
+  BAR
+  FAST_FOOD
+  PIZZERIA
+  PARRILLA
+  SUSHI
+  FOOD_TRUCK
+  HELADERIA
+  PARADOR
+  EVENTO
+  CANTINA
+  CERVECERIA
+  PASTELERIA
+  CENTRO_EDUCATIVO
+}
+
 //
 // NEXTAUTH MODELS
 //
@@ -214,6 +232,10 @@ model Restaurant {
   state      String?
   postalCode String?
   country    String? @default("Argentina")
+
+  contactEmail   String?
+  restaurantType RestaurantType?
+  promoCode      String?
 
   // Social media links
   websiteUrl   String?
