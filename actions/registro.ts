@@ -103,10 +103,10 @@ export async function registerRestaurant(
           },
         });
 
-        // Admin user — username = adminEmail for global uniqueness
+        // Admin user — username = slug (globally unique), email = admin@slug.com
         const user = await tx.user.create({
           data: {
-            username: adminEmail,
+            username: slug,
             email: adminEmail,
             name: personName,
             password: hashedPassword,
@@ -251,7 +251,7 @@ export async function registerRestaurant(
   // 6. Auto-login — throws NEXT_REDIRECT, which must be re-thrown
   try {
     await signIn("credentials", {
-      username: adminEmail,
+      email: adminEmail,
       password,
       redirectTo: "/auth/callback",
     });
