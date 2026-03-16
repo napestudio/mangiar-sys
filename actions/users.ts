@@ -8,7 +8,6 @@ import {
   UserRegistrationInput,
   UserUpdateInput,
 } from "@/lib/validations/user";
-import { isUserAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { UserWithBranches } from "@/types/user";
@@ -18,7 +17,7 @@ import { authorizeAction } from "@/lib/permissions/middleware";
 export async function createUser(data: UserRegistrationInput) {
   try {
     // Authorization check - ADMIN and above can create users
-    await authorizeAction(UserRole.ADMIN);
+    const { userRole, branchId: sessionBranchId } = await authorizeAction(UserRole.ADMIN);
 
     // Validate input
     const validation = userRegistrationSchema.safeParse(data);
@@ -32,9 +31,6 @@ export async function createUser(data: UserRegistrationInput) {
 
     const { username, name, password, role, branchId } = validation.data;
 
-    // Generate email from username
-    const email = `${username}@kikusushi.com`;
-
     // Check if username already exists
     const existingUser = await prisma.user.findUnique({
       where: { username },
@@ -47,6 +43,36 @@ export async function createUser(data: UserRegistrationInput) {
       };
     }
 
+    // Check if branch exists (include restaurant slug for email generation)
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+      include: { restaurant: { select: { slug: true, id: true } } },
+    });
+
+    if (!branch) {
+      return {
+        success: false,
+        error: "Invalid branch selected",
+      };
+    }
+
+    // Tenant isolation: verify branch belongs to the same restaurant
+    if (userRole !== UserRole.SUPERADMIN) {
+      const sessionBranch = await prisma.branch.findUnique({
+        where: { id: sessionBranchId },
+        select: { restaurantId: true },
+      });
+      if (branch.restaurant.id !== sessionBranch?.restaurantId) {
+        return {
+          success: false,
+          error: "No tienes permisos para asignar esta sucursal",
+        };
+      }
+    }
+
+    // Generate email from username and restaurant slug
+    const email = `${username}@${branch.restaurant.slug}.com`;
+
     // Check if generated email already exists
     const existingEmail = await prisma.user.findUnique({
       where: { email },
@@ -56,18 +82,6 @@ export async function createUser(data: UserRegistrationInput) {
       return {
         success: false,
         error: "A user with this email already exists",
-      };
-    }
-
-    // Check if branch exists
-    const branch = await prisma.branch.findUnique({
-      where: { id: branchId },
-    });
-
-    if (!branch) {
-      return {
-        success: false,
-        error: "Invalid branch selected",
       };
     }
 
@@ -119,7 +133,19 @@ export async function createUser(data: UserRegistrationInput) {
 
 export async function getBranches() {
   try {
+    const { userRole, branchId } = await authorizeAction(UserRole.ADMIN);
+
+    let restaurantId: string | null = null;
+    if (userRole !== UserRole.SUPERADMIN) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { restaurantId: true },
+      });
+      restaurantId = branch?.restaurantId ?? null;
+    }
+
     const branches = await prisma.branch.findMany({
+      where: restaurantId ? { restaurantId } : undefined,
       include: {
         restaurant: true,
       },
@@ -148,25 +174,21 @@ export async function getUsers(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const { userRole, branchId } = await authorizeAction(UserRole.ADMIN);
 
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "Debes iniciar sesión para realizar esta acción",
-      };
-    }
-
-    const hasAdminAccess = await isUserAdmin(session.user.id);
-
-    if (!hasAdminAccess) {
-      return {
-        success: false,
-        error: "No tienes permisos para ver usuarios",
-      };
+    let restaurantId: string | null = null;
+    if (userRole !== UserRole.SUPERADMIN) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { restaurantId: true },
+      });
+      restaurantId = branch?.restaurantId ?? null;
     }
 
     const users = await prisma.user.findMany({
+      where: restaurantId
+        ? { userOnBranches: { some: { branch: { restaurantId } } } }
+        : undefined,
       select: {
         id: true,
         username: true,
@@ -242,7 +264,7 @@ export async function updateUser(
 }> {
   try {
     // Authorization check - ADMIN and above can update users
-    await authorizeAction(UserRole.ADMIN);
+    const { userRole, branchId: sessionBranchId } = await authorizeAction(UserRole.ADMIN);
 
     const validation = userUpdateSchema.safeParse(data);
 
@@ -258,7 +280,9 @@ export async function updateUser(
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        userOnBranches: true,
+        userOnBranches: {
+          include: { branch: { select: { restaurantId: true } } },
+        },
       },
     });
 
@@ -267,6 +291,35 @@ export async function updateUser(
         success: false,
         error: "Usuario no encontrado",
       };
+    }
+
+    // Tenant isolation: verify target user belongs to the same restaurant
+    if (userRole !== UserRole.SUPERADMIN) {
+      const sessionBranch = await prisma.branch.findUnique({
+        where: { id: sessionBranchId },
+        select: { restaurantId: true },
+      });
+      const userRestaurantIds = existingUser.userOnBranches.map(
+        (ub) => ub.branch.restaurantId,
+      );
+      if (!userRestaurantIds.includes(sessionBranch?.restaurantId ?? "")) {
+        return {
+          success: false,
+          error: "No tienes permisos para modificar este usuario",
+        };
+      }
+
+      // Also verify the target branchId belongs to the same restaurant
+      const targetBranch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { restaurantId: true },
+      });
+      if (targetBranch?.restaurantId !== sessionBranch?.restaurantId) {
+        return {
+          success: false,
+          error: "No tienes permisos para asignar esta sucursal",
+        };
+      }
     }
 
     // Check if username is taken by another user
@@ -385,7 +438,7 @@ export async function deleteUser(userId: string): Promise<{
 }> {
   try {
     // Authorization check - ADMIN and above can delete users
-    const { userId: sessionUserId } = await authorizeAction(UserRole.ADMIN);
+    const { userId: sessionUserId, userRole, branchId: sessionBranchId } = await authorizeAction(UserRole.ADMIN);
 
     // Prevent self-deletion
     if (sessionUserId === userId) {
@@ -405,6 +458,9 @@ export async function deleteUser(userId: string): Promise<{
             },
           },
         },
+        userOnBranches: {
+          include: { branch: { select: { restaurantId: true } } },
+        },
       },
     });
 
@@ -413,6 +469,23 @@ export async function deleteUser(userId: string): Promise<{
         success: false,
         error: "Usuario no encontrado",
       };
+    }
+
+    // Tenant isolation: verify target user belongs to the same restaurant
+    if (userRole !== UserRole.SUPERADMIN) {
+      const sessionBranch = await prisma.branch.findUnique({
+        where: { id: sessionBranchId },
+        select: { restaurantId: true },
+      });
+      const userRestaurantIds = existingUser.userOnBranches.map(
+        (ub) => ub.branch.restaurantId,
+      );
+      if (!userRestaurantIds.includes(sessionBranch?.restaurantId ?? "")) {
+        return {
+          success: false,
+          error: "No tienes permisos para eliminar este usuario",
+        };
+      }
     }
 
     // Check if user has active orders

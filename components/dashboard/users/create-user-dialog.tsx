@@ -167,6 +167,7 @@ export function CreateUserDialog({
                 {...register("name", { onChange: handleNameChange })}
                 placeholder="Juan Perez"
                 disabled={isPending}
+                autoComplete="false"
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
@@ -180,6 +181,7 @@ export function CreateUserDialog({
                 {...register("username", { onChange: handleUsernameChange })}
                 placeholder="juan_perez"
                 disabled={isPending}
+                autoComplete="false"
               />
               {errors.username && (
                 <p className="text-sm text-red-600">
