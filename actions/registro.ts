@@ -169,7 +169,15 @@ export async function registerRestaurant(
           }
         }
 
-        // 5 tables (numbered 1–5, no sector) — spread in a 3+2 grid so they don't overlap
+        // Default sector "Salón" for the tables
+        const sector = await tx.sector.create({
+          data: {
+            name: "Salón",
+            branchId: branch.id,
+          },
+        });
+
+        // 5 tables spread in a 3+2 grid
         const tablePositions = [
           { positionX: 10, positionY: 10 },
           { positionX: 110, positionY: 10 },
@@ -182,6 +190,7 @@ export async function registerRestaurant(
             number: i + 1,
             capacity: 4,
             branchId: branch.id,
+            sectorId: sector.id,
             positionX: tablePositions[i].positionX,
             positionY: tablePositions[i].positionY,
             width: 80,
