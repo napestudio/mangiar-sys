@@ -22,7 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Pencil } from "lucide-react";
-import { updateUser, getBranches } from "@/actions/users";
+import { updateUser, getBranches, updateUserAvatar } from "@/actions/users";
+import Image from "next/image";
+import { AVATARS } from "@/lib/avatars";
+import { cn } from "@/lib/utils";
 import {
   getUserGrantsForBranch,
   setUserPermission,
@@ -77,6 +80,10 @@ export function EditUserDialog({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolvedBranchId, setResolvedBranchId] = useState<string>("");
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(
+    user.image ?? null,
+  );
+  const [avatarSaving, setAvatarSaving] = useState<string | null>(null);
   // Map of permission → explicit override (true=allow, false=deny, undefined=no override)
   const [grantMap, setGrantMap] = useState<Map<PermissionGrant, boolean>>(
     new Map(),
@@ -173,6 +180,18 @@ export function EditUserDialog({
     }
   }, [open]);
 
+  const handleAvatarSelect = async (avatar: string) => {
+    if (avatar === currentAvatar || avatarSaving) return;
+    const previous = currentAvatar;
+    setCurrentAvatar(avatar);
+    setAvatarSaving(avatar);
+    const result = await updateUserAvatar(user.id, avatar);
+    setAvatarSaving(null);
+    if (!result.success) {
+      setCurrentAvatar(previous);
+    }
+  };
+
   const onSubmit = async (data: UserUpdateInput) => {
     setIsPending(true);
     setError(null);
@@ -267,12 +286,41 @@ export function EditUserDialog({
             )}
 
             <div className="space-y-2">
+              <Label>Avatar</Label>
+              <div className="flex gap-3">
+                {AVATARS.map((avatar, i) => (
+                  <button
+                    key={avatar}
+                    type="button"
+                    onClick={() => handleAvatarSelect(avatar)}
+                    disabled={!!avatarSaving}
+                    className={cn(
+                      "rounded-full border-4 transition-all focus:outline-none",
+                      currentAvatar === avatar
+                        ? "border-red-500 scale-105"
+                        : "border-transparent hover:border-gray-300",
+                      avatarSaving === avatar && "opacity-60",
+                    )}
+                  >
+                    <Image
+                      src={avatar}
+                      alt={`Avatar ${i + 1}`}
+                      width={56}
+                      height={56}
+                      className="rounded-full"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="edit-username">Usuario *</Label>
               <Input
                 id="edit-username"
                 {...register("username")}
                 placeholder="john_doe"
-                disabled={isPending}
+                disabled
               />
               {errors.username && (
                 <p className="text-sm text-red-600">
@@ -301,7 +349,7 @@ export function EditUserDialog({
                 type="email"
                 {...register("email")}
                 placeholder="john.doe@restaurant.com"
-                disabled={isPending}
+                disabled
               />
               {errors.email && (
                 <p className="text-sm text-red-600">{errors.email.message}</p>

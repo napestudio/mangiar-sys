@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getNavItems } from "@/lib/dashboard-nav";
 import { getUserRole } from "@/lib/permissions/roles";
 import { getCurrentUserBranchId } from "@/lib/user-branch";
+import prisma from "@/lib/prisma";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -35,10 +36,14 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Get user's role and branch in parallel
-  const [userRole, branchId] = await Promise.all([
+  // Get user's role, branch, and current avatar in parallel
+  const [userRole, branchId, userRecord] = await Promise.all([
     getUserRole(session.user.id),
     getCurrentUserBranchId(),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { image: true },
+    }),
   ]);
 
   // Get filtered nav items on server (includes grant-based overrides)
@@ -66,6 +71,7 @@ export default async function DashboardLayout({
           userName={session.user.name || session.user.email || ""}
           userRole={userRole}
           navItems={navItems}
+          userImage={userRecord?.image ?? null}
         />
         <main className="mx-auto">{children}</main>
       </div>

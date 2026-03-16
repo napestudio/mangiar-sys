@@ -625,8 +625,8 @@ export async function getFilteredReservations(
       };
     }
 
-    // Batch count and data fetch in a single transaction
-    const [totalCount, reservations] = await prisma.$transaction([
+    // Parallel reads — no transaction needed, each gets its own connection
+    const [totalCount, reservations] = await Promise.all([
       prisma.reservation.count({ where: whereClause }),
       prisma.reservation.findMany({
         where: whereClause,

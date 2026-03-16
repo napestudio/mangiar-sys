@@ -1641,8 +1641,8 @@ export async function getOrders(filters: OrderFilters) {
     // Calculate pagination
     const skip = (page - 1) * pageSize;
 
-    // Use transaction to get both count and data
-    const [totalCount, orders] = await prisma.$transaction([
+    // Parallel reads — no transaction needed, each gets its own connection
+    const [totalCount, orders] = await Promise.all([
       prisma.order.count({ where }),
       prisma.order.findMany({
         where,

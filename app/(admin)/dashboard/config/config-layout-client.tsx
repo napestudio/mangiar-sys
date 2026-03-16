@@ -29,7 +29,9 @@ export default function ConfigLayoutClient({
       />
 
       {/* Main content */}
-      <main className="w-full lg:ml-72 min-h-[calc(100svh-4.5rem)]">{children}</main>
+      <main className="w-full lg:ml-72 min-h-[calc(100svh-4.5rem)]">
+        {children}
+      </main>
     </div>
   );
 }

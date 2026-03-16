@@ -1,18 +1,21 @@
 import Logo from "@/components/dashboard/logo";
 import { Navbar } from "@/components/home/navbar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Users, TrendingUp, CheckCircle, Receipt, QrCode } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import { headers } from "next/headers";
+import RestaurantLandingPage from "@/components/landing/restaurant-landing";
+import MangiarFooter from "@/components/mangiar-footer";
 
-export default function Home() {
+export default async function Home() {
+  const subdomain = (await headers()).get("x-subdomain");
+  if (subdomain) return <RestaurantLandingPage />;
+
   return (
     <>
       <Navbar />
       <div className="min-w-full font-sans">
         {/* Hero Section */}
-        <section className="font-sans h-svh relative overflow-hidden bg-white px-6 py-[20vh] lg:px-28">
+        <section className="font-sans min-h-svh relative overflow-hidden bg-white px-6 py-[20vh] lg:px-28">
           <div className="mx-auto">
             <div className="grid gap-0 lg:grid-cols-12 items-center z-10 relative">
               <div className="col-span-5 space-y-8">
@@ -75,7 +78,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="absolute -top-10 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
+          <div className="absolute lg:-top-10 bottom-[-85%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
         </section>
 
         {/* How it Works */}

@@ -162,12 +162,24 @@ export async function registerRestaurant(
         })
       );
 
-      // 5 tables (numbered 1–5, no sector)
+      // 5 tables (numbered 1–5, no sector) — spread in a 3+2 grid so they don't overlap
+      const tablePositions = [
+        { positionX: 10, positionY: 10 },
+        { positionX: 110, positionY: 10 },
+        { positionX: 210, positionY: 10 },
+        { positionX: 10, positionY: 110 },
+        { positionX: 110, positionY: 110 },
+      ];
       await tx.table.createMany({
         data: Array.from({ length: 5 }, (_, i) => ({
           number: i + 1,
           capacity: 4,
           branchId: branch.id,
+          positionX: tablePositions[i].positionX,
+          positionY: tablePositions[i].positionY,
+          width: 80,
+          height: 80,
+          shape: "SQUARE",
         })),
       });
 

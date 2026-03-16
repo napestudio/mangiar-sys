@@ -831,25 +831,20 @@ export async function reorderSectionContent(data: {
   groups: { id: string; order: number }[];
 }) {
   try {
-    await prisma.$transaction([
-      // Update all items with their new order and group assignment
-      ...data.items.map((item) =>
-        prisma.menuItem.update({
+    await prisma.$transaction(async (tx) => {
+      for (const item of data.items) {
+        await tx.menuItem.update({
           where: { id: item.id },
-          data: {
-            order: item.order,
-            menuItemGroupId: item.menuItemGroupId,
-          },
-        })
-      ),
-      // Update all groups with their new order
-      ...data.groups.map((group) =>
-        prisma.menuItemGroup.update({
+          data: { order: item.order, menuItemGroupId: item.menuItemGroupId },
+        });
+      }
+      for (const group of data.groups) {
+        await tx.menuItemGroup.update({
           where: { id: group.id },
           data: { order: group.order },
-        })
-      ),
-    ]);
+        });
+      }
+    });
 
     revalidatePath("/dashboard/menus");
     return { success: true };
