@@ -71,7 +71,10 @@ export function TableEditSidebar({
   };
 
   const handleCapacityChange = (value: string) => {
-    onUpdateCapacity(table.id, Number.parseInt(value));
+    const parsed = Number.parseInt(value);
+    if (parsed !== table.capacity) {
+      onUpdateCapacity(table.id, parsed);
+    }
   };
 
   const handleShapeChange = (value: TableShapeType) => {
@@ -79,7 +82,9 @@ export function TableEditSidebar({
   };
 
   const handleIsSharedChange = (checked: boolean) => {
-    onUpdateIsShared(table.id, checked);
+    if (checked !== table.isShared) {
+      onUpdateIsShared(table.id, checked);
+    }
   };
 
   return (

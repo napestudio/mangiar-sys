@@ -11,7 +11,7 @@ export default function Avatar({
   alt = "Logo",
 }: AvatarProps) {
   return (
-    <div className="h-28">
+    <div className="min-h-24 max-h-52 w-auto">
       <Image
         src={
           src ||
@@ -21,7 +21,7 @@ export default function Avatar({
         width={256}
         height={256}
         priority
-        className="h-18 w-auto"
+        className="h-full w-full"
       />
     </div>
   );

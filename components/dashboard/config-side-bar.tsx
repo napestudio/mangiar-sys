@@ -63,7 +63,7 @@ export default function ConfigSideBar({
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -71,13 +71,13 @@ export default function ConfigSideBar({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-19 h-[calc(100svh-5.5rem)] md:left-4 rounded-xl md:shadow-md bg-red-500 z-50 md:z-0 transition-transform duration-300 ease-in-out",
-          "w-64 md:w-64",
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          "fixed left-0 top-19 h-[calc(100svh-5.5rem)] lg:left-4 rounded-xl lg:shadow-md bg-red-500 z-50 lg:z-0 transition-transform duration-300 ease-in-out",
+          "w-64 lg:w-64",
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Close button - mobile only */}
-        <div className="md:hidden flex justify-end p-4">
+        <div className="lg:hidden flex justify-end p-4">
           <button
             onClick={onClose}
             className="text-white hover:bg-white/10 rounded-lg p-2"

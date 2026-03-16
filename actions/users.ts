@@ -585,3 +585,48 @@ export async function getCurrentUserId(): Promise<string | null> {
   const session = await auth();
   return session?.user?.id ?? null;
 }
+
+export async function updateUserAvatar(
+  userId: string,
+  avatarPath: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { AVATARS } = await import("@/lib/avatars");
+
+    if (!(AVATARS as readonly string[]).includes(avatarPath)) {
+      return { success: false, error: "Avatar no válido" };
+    }
+
+    const { userRole, branchId: sessionBranchId } = await authorizeAction(
+      UserRole.ADMIN,
+    );
+
+    if (userRole !== UserRole.SUPERADMIN) {
+      const sessionBranch = await prisma.branch.findUnique({
+        where: { id: sessionBranchId },
+        select: { restaurantId: true },
+      });
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          userOnBranches: { select: { branch: { select: { restaurantId: true } } } },
+        },
+      });
+      const targetRestaurantIds =
+        targetUser?.userOnBranches.map((ub) => ub.branch.restaurantId) ?? [];
+      if (!targetRestaurantIds.includes(sessionBranch?.restaurantId ?? "")) {
+        return { success: false, error: "No tienes permisos para modificar este usuario" };
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { image: avatarPath },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating avatar:", error);
+    return { success: false, error: "Error al actualizar el avatar" };
+  }
+}

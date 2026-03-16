@@ -1,4 +1,5 @@
 import { getRestaurant } from "@/actions/Restaurant";
+import { getBusinessHours } from "@/actions/business-hours";
 import RestaurantConfigForm from "@/components/dashboard/restaurant-config-form";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/permissions/middleware";
@@ -15,7 +16,10 @@ export default async function RestaurantConfigPage() {
     redirect("/dashboard");
   }
 
-  const result = await getRestaurant(restaurantId);
+  const [result, hoursResult] = await Promise.all([
+    getRestaurant(restaurantId),
+    getBusinessHours(restaurantId),
+  ]);
 
   if (!result.success || !result.data) {
     return (
@@ -38,7 +42,10 @@ export default async function RestaurantConfigPage() {
         </p>
       </div>
 
-      <RestaurantConfigForm restaurant={result.data} />
+      <RestaurantConfigForm
+        restaurant={result.data}
+        initialPeriods={hoursResult.success ? hoursResult.data : []}
+      />
     </div>
   );
 }

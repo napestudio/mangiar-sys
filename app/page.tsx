@@ -1,33 +1,41 @@
+import Logo from "@/components/dashboard/logo";
 import { Navbar } from "@/components/home/navbar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Users, TrendingUp, CheckCircle, Receipt, QrCode } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import { headers } from "next/headers";
+import RestaurantLandingPage from "@/components/landing/restaurant-landing";
+import MangiarFooter from "@/components/mangiar-footer";
 
-export default function Home() {
+export default async function Home() {
+  const subdomain = (await headers()).get("x-subdomain");
+  if (subdomain) return <RestaurantLandingPage />;
+
   return (
     <>
       <Navbar />
       <div className="min-w-full font-sans">
         {/* Hero Section */}
-        <section className="font-sans relative overflow-hidden bg-white px-6 py-[20vh] lg:px-28">
+        <section className="font-sans min-h-svh relative overflow-hidden bg-white px-6 py-[20vh] lg:px-28">
           <div className="mx-auto">
             <div className="grid gap-0 lg:grid-cols-12 items-center z-10 relative">
               <div className="col-span-5 space-y-8">
-                <div className="inline-block py-2 text-sm font-semibold uppercase text-red">
+                <div className="inline-block py-4 bg-white rounded-full leading-none px-5 shadow-md text-sm font-semibold uppercase text-red">
                   Sistema Completo de Gestión
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-black lg:text-6xl text-pretty">
+                <h1 className="text-[clamp(1.875rem,3.5vw,calc(98vw-1rem))] leading-none font-semibold tracking-tight text-black text-pretty">
                   Transformá tu restaurante con{" "}
-                  <span className="text-red">mangi.ar</span>
+                  <Logo className="h-[clamp(1.875rem,3.5vw,calc(98vw-1rem))] w-auto" />
                 </h1>
-                <p className="text-md text-black font-light leading-relaxed text-pretty mb-12">
-                  La plataforma integral que gestiona reservas, ventas, delivery
-                  y facturación. Todo lo que necesitás para hacer crecer tu
-                  negocio gastronómico.
+                <p className="text-[clamp(1rem,1.2vw,calc(98vw-1rem))] leading-none text-balance text-black font-light mb-12">
+                  La plataforma integral que gestiona{" "}
+                  <span className="italic font-serif">
+                    reservas, ventas, delivery y facturación.
+                  </span>{" "}
+                  <br />
+                  Todo lo que necesitás para hacer crecer tu negocio
+                  gastronómico.
                 </p>
-                <div className="flex flex-col gap-4 sm:flex-row">
+                {/* <div className="flex flex-col gap-4 sm:flex-row">
                   <Button
                     size="lg"
                     className="bg-red font-light hover:bg-white text-white hover:text-red text-lg px-8 rounded-full"
@@ -41,18 +49,18 @@ export default function Home() {
                   >
                     Ver Demo
                   </Button>
-                </div>
+                </div> */}
                 <div className="hidden md:flex items-center gap-8 pt-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white px-4 py-5 rounded-xl shadow-md">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <span className="text-sm text-gray-600">
                       33 funcionalidades
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white px-4 py-5 rounded-xl shadow-md">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <span className="text-sm text-gray-600">
-                      Setup en 5 minutos
+                      En menos de 2 minutos
                     </span>
                   </div>
                 </div>
@@ -60,21 +68,21 @@ export default function Home() {
               <div className="col-span-7 relative p-2">
                 <Image
                   //src="/sistema-mangiar.webp"
-                  src="/mac.png"
-                  alt="Dashboard de mangi.ar"
-                  width={800}
-                  height={435}
+                  src="/images/laptop.png"
+                  alt="Laptop con la pantalla abierta mostrando las funcionalidades de la plataforma."
+                  width={1800}
+                  height={1435}
                   //sizes="(max-width: 768px) 100vw, 33vw"
                   className="w-full h-auto rounded-lg "
                 />
               </div>
             </div>
           </div>
-          <div className="absolute -top-10 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
+          <div className="absolute lg:-top-10 bottom-[-85%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
         </section>
 
         {/* How it Works */}
-        <section className="font-sans bg-white px-6 py-[20vh] lg:px-28">
+        {/* <section className="font-sans bg-white px-6 py-[20vh] lg:px-28">
           <div className="mx-auto max-w-7xl">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-semibold tracking-tight text-black lg:text-6xl text-pretty">
@@ -191,9 +199,9 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
-        <section className="bg-white px-6 py-24 lg:px-8">
+        {/* <section className="bg-white px-6 py-24 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-semibold tracking-tight text-black lg:text-6xl text-pretty">
@@ -206,7 +214,6 @@ export default function Home() {
             </div>
 
             <div className="grid gap-8 lg:grid-cols-1">
-              {/* Feature 1: Gestión de Mesas y Reservas */}
               <Card className="p-8 d-flex flex-row hover:shadow-xl transition-all border-2 hover:border-orange-200 bg-linear-to-br from-white to-orange-50">
                 <div className="rounded-full bg-orange-100 w-16 h-16 flex items-center justify-center mb-6">
                   <Users className="h-8 w-8 text-orange-600" />
@@ -244,7 +251,6 @@ export default function Home() {
                 </div>
               </Card>
 
-              {/* Feature 2: Ventas Multicanal */}
               <Card className="p-8 d-flex flex-row-reverse hover:shadow-xl transition-all border-2 hover:border-blue-200 bg-linear-to-br from-white to-blue-50">
                 <div className="rounded-full bg-blue-100 w-16 h-16 flex items-center justify-center mb-6">
                   <QrCode className="h-8 w-8 text-blue-600" />
@@ -282,7 +288,6 @@ export default function Home() {
                 </div>
               </Card>
 
-              {/* Feature 3: Facturación Electrónica */}
               <Card className="p-8 d-flex flex-row hover:shadow-xl transition-all border-2 hover:border-purple-200 bg-linear-to-br from-white to-purple-50">
                 <div className="rounded-full bg-purple-100 w-16 h-16 flex items-center justify-center mb-6">
                   <Receipt className="h-8 w-8 text-purple-600" />
@@ -333,10 +338,10 @@ export default function Home() {
               </Link>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* CTA Section */}
-        <section className="bg-white px-6 py-24 lg:px-8">
+        {/* <section className="bg-white px-6 py-24 lg:px-8">
           <div className="mx-auto max-w-4xl text-center space-y-8">
             <h2 className="text-3xl font-semibold tracking-tight text-black lg:text-6xl text-pretty">
               ¿Listo para llenar tu restaurante?
@@ -365,10 +370,10 @@ export default function Home() {
               Cancelá cuando quieras
             </p>
           </div>
-        </section>
+        </section> */}
 
         {/* Footer */}
-        <footer className="bg-gray-900 px-6 py-12 lg:px-8">
+        {/* <footer className="bg-gray-900 px-6 py-12 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="grid gap-8 md:grid-cols-4">
               <div className="space-y-4">
@@ -461,7 +466,7 @@ export default function Home() {
               <p>© 2025 mangi.ar. Todos los derechos reservados.</p>
             </div>
           </div>
-        </footer>
+        </footer> */}
       </div>
     </>
   );

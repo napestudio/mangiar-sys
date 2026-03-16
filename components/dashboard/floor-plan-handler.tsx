@@ -1,7 +1,6 @@
 "use client";
 
 import { createTable } from "@/actions/Table";
-import { tableHasActiveOrders } from "@/actions/Order";
 import type { TableShapeType } from "@/types/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TableWithReservations } from "@/lib/floor-plan-utils";
@@ -76,7 +75,6 @@ export default function FloorPlanHandler({
   const [selectedTableForOrder, setSelectedTableForOrder] = useState<
     string | null
   >(initialTableId ?? null);
-  const [selectedTableHasOrders, setSelectedTableHasOrders] = useState(false);
   const [tableEditSidebarOpen, setTableEditSidebarOpen] = useState(false);
   const [selectedTableForEdit, setSelectedTableForEdit] = useState<
     string | null
@@ -146,24 +144,6 @@ export default function FloorPlanHandler({
   });
 
   // 6. ALL useEffect hooks
-  // Check if selected table has active orders
-  useEffect(() => {
-    const checkActiveOrders = async () => {
-      if (selectedTable) {
-        const result = await tableHasActiveOrders(selectedTable);
-        if (result.success) {
-          setSelectedTableHasOrders(result.hasActiveOrders);
-        } else {
-          setSelectedTableHasOrders(false);
-        }
-      } else {
-        setSelectedTableHasOrders(false);
-      }
-    };
-
-    checkActiveOrders();
-  }, [selectedTable]);
-
   // Handle mouse move and mouse up for dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -584,7 +564,6 @@ export default function FloorPlanHandler({
                 onRotate={rotateTable}
                 onDelete={deleteTable}
                 isEditMode={editModeOnly}
-                hasActiveOrders={selectedTableHasOrders}
               />
             )}
           </div>

@@ -153,6 +153,24 @@ enum DiscountType {
   FIXED
 }
 
+enum RestaurantType {
+  RESTAURANT
+  CAFETERIA
+  BAR
+  FAST_FOOD
+  PIZZERIA
+  PARRILLA
+  SUSHI
+  FOOD_TRUCK
+  HELADERIA
+  PARADOR
+  EVENTO
+  CANTINA
+  CERVECERIA
+  PASTELERIA
+  CENTRO_EDUCATIVO
+}
+
 //
 // NEXTAUTH MODELS
 //
@@ -215,6 +233,10 @@ model Restaurant {
   postalCode String?
   country    String? @default("Argentina")
 
+  contactEmail   String?
+  restaurantType RestaurantType?
+  promoCode      String?
+
   // Social media links
   websiteUrl   String?
   facebookUrl  String?
@@ -231,12 +253,28 @@ model Restaurant {
   categories          Category[]
   products            Product[]
   menus               Menu[]
+  businessHours       BusinessHours[]
   fiscalConfiguration FiscalConfiguration?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([slug])
+}
+
+model BusinessHours {
+  id           String     @id @default(cuid())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  dayOfWeek    String     // "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+  openTime     String     // "HH:MM"
+  closeTime    String     // "HH:MM"
+  label        String?    // e.g. "Almuerzo", "Cena"
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([restaurantId, dayOfWeek])
 }
 
 model Branch {

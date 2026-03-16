@@ -18,3 +18,33 @@ export async function getPublicBranchId(): Promise<string | null> {
 
   return restaurant?.branches[0]?.id ?? null;
 }
+
+/**
+ * Returns restaurant data + branchId in a single query for public landing pages.
+ * Returns null when no subdomain header is set or no matching restaurant exists.
+ */
+export async function getPublicRestaurantAndBranch() {
+  const subdomain = (await headers()).get("x-subdomain") ?? "";
+  if (!subdomain) return null;
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { slug: subdomain },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      phone: true,
+      logoUrl: true,
+      address: true,
+      city: true,
+      state: true,
+      whatsappNumber: true,
+      branches: { take: 1, select: { id: true } },
+    },
+  });
+
+  if (!restaurant?.branches[0]) return null;
+
+  const { branches, ...rest } = restaurant;
+  return { restaurant: rest, branchId: branches[0].id };
+}

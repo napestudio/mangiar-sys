@@ -328,14 +328,14 @@ export async function reorderHomePageLinks(
   error?: string;
 }> {
   try {
-    await prisma.$transaction(
-      linkIds.map((id, index) =>
-        prisma.homePageLink.update({
-          where: { id, branchId }, // Ensure link belongs to this branch
+    await prisma.$transaction(async (tx) => {
+      for (let index = 0; index < linkIds.length; index++) {
+        await tx.homePageLink.update({
+          where: { id: linkIds[index], branchId },
           data: { order: index },
-        })
-      )
-    );
+        });
+      }
+    });
 
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
