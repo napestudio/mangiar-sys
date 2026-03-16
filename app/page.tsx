@@ -1,12 +1,11 @@
 import Logo from "@/components/dashboard/logo";
 import { Navbar } from "@/components/home/navbar";
-import { CheckCircle } from "lucide-react";
-import Image from "next/image";
-import { headers } from "next/headers";
 import RestaurantLandingPage from "@/components/landing/restaurant-landing";
-import MangiarFooter from "@/components/mangiar-footer";
-import type { Metadata } from "next";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
+import { CheckCircle } from "lucide-react";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Image from "next/image";
 
 export async function generateMetadata(): Promise<Metadata> {
   const subdomain = (await headers()).get("x-subdomain");
@@ -33,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
       : `Visitá ${restaurant.name} y disfrutá de nuestra carta.`);
 
   return {
-    title: restaurant.name,
+    title: `${restaurant.name} - ${location} - Mangi.ar`,
     description,
     openGraph: {
       title: restaurant.name,
