@@ -16,7 +16,7 @@ import { SortableLinkList } from "./components/sortable-link-list";
 import { reorderHomePageLinks } from "@/actions/HomePageLinks";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { SITE_URL } from "@/lib/constants";
+import { ROOT_DOMAIN } from "@/lib/constants";
 
 type Menu = {
   id: string;
@@ -120,10 +120,7 @@ export default function HomePageConfigClient({
         </div>
         {restaurantSlug && (
           <Link
-            href={(() => {
-              const base = new URL(SITE_URL);
-              return `${base.protocol}//${restaurantSlug}.${base.host}`;
-            })()}
+            href={`https://${restaurantSlug}.${ROOT_DOMAIN}`}
             target="_blank"
             rel="noopener noreferrer"
           >
