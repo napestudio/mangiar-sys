@@ -51,6 +51,7 @@ interface DashboardNavProps {
   userRole: UserRole | null;
   navItems: NavItem[];
   userImage?: string | null;
+  restaurantName?: string | null;
 }
 
 export function DashboardNav({
@@ -58,6 +59,7 @@ export function DashboardNav({
   userRole,
   navItems,
   userImage,
+  restaurantName,
 }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const currentPath = usePathname();
@@ -76,7 +78,7 @@ export function DashboardNav({
           </div>
 
           <div className="flex items-center gap-2">
-            <UserDropdown userName={userName} userRole={userRole} userImage={userImage} />
+            <UserDropdown userName={userName} userRole={userRole} userImage={userImage} restaurantName={restaurantName} />
 
             {/* Mobile menu button */}
             <button

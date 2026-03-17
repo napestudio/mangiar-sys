@@ -60,6 +60,10 @@ export default async function DashboardLayout({
     branchResult.success && branchResult.data?.printerServerUrl
       ? branchResult.data.printerServerUrl
       : undefined;
+  const restaurantName =
+    branchResult.success && branchResult.data?.restaurant?.name
+      ? branchResult.data.restaurant.name
+      : null;
 
   return (
     <ConditionalGgEzPrintProvider
@@ -72,6 +76,7 @@ export default async function DashboardLayout({
           userRole={userRole}
           navItems={navItems}
           userImage={userRecord?.image ?? null}
+          restaurantName={restaurantName}
         />
         <main className="mx-auto">{children}</main>
       </div>

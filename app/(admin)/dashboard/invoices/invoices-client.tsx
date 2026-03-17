@@ -230,7 +230,7 @@ export function InvoicesClient({
     });
 
     // Update URL without full page reload (Next.js handles this efficiently)
-    router.push(`/dashboard/invoices?${params.toString()}`, { scroll: false });
+    router.replace(`/dashboard/invoices?${params.toString()}`, { scroll: false });
   };
 
   // Handle search
@@ -251,7 +251,7 @@ export function InvoicesClient({
       await fetchInvoices({ page: 1 });
     });
 
-    router.push("/dashboard/invoices", { scroll: false });
+    router.replace("/dashboard/invoices", { scroll: false });
   };
 
   // Handle page change

@@ -1,14 +1,12 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
-import { invalidateUserCaches } from "@/actions/auth";
+import { logoutAction } from "@/actions/auth";
 
 export default function LogoutButton() {
   const handleLogout = async () => {
     showLogoutOverlay();
-    await invalidateUserCaches();
-    await signOut({ callbackUrl: "/ingresar" });
+    await logoutAction();
   };
 
   return (
