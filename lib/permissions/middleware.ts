@@ -21,7 +21,7 @@ const hierarchy: Record<UserRole, number> = {
  */
 export async function requireRole(
   minimumRole: UserRole,
-  permissionGrant?: PermissionGrant
+  permissionGrant?: PermissionGrant,
 ): Promise<{
   userId: string;
   userRole: UserRole;
@@ -30,7 +30,7 @@ export async function requireRole(
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   const userInfo = await getUserRoleAndBranchId(session.user.id);
@@ -45,7 +45,7 @@ export async function requireRole(
     const explicit = await getExplicitGrant(
       session.user.id,
       branchId,
-      permissionGrant
+      permissionGrant,
     );
     if (explicit !== null) {
       // Explicit override takes full precedence
@@ -69,7 +69,7 @@ export async function requireRole(
 export async function authorizeAction(
   minimumRole: UserRole,
   errorMessage?: string,
-  permissionGrant?: PermissionGrant
+  permissionGrant?: PermissionGrant,
 ): Promise<{ userId: string; userRole: UserRole; branchId: string }> {
   const session = await auth();
 
@@ -89,11 +89,13 @@ export async function authorizeAction(
     const explicit = await getExplicitGrant(
       session.user.id,
       branchId,
-      permissionGrant
+      permissionGrant,
     );
     if (explicit !== null) {
       if (explicit) return { userId: session.user.id, userRole, branchId };
-      throw new Error(errorMessage ?? "Forbidden: Permission explicitly denied");
+      throw new Error(
+        errorMessage ?? "Forbidden: Permission explicitly denied",
+      );
     }
   }
 

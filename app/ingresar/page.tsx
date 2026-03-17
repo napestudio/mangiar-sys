@@ -1,5 +1,5 @@
 import Avatar from "@/components/avatar";
-import LoginForm from "@/components/login-form";
+import LoginForm from "@/components/ingresar-form";
 
 export default function LoginPage() {
   return (

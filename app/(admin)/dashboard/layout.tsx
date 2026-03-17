@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   // This check is kept for type safety and to get user data for the nav
   const session = await auth();
   if (!session?.user) {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   // Get user's role, branch, and current avatar in parallel

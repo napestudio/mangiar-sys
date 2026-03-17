@@ -33,10 +33,7 @@ export default function LoginForm() {
       <form action={handleCredentialsSubmit} className="space-y-6">
         <div className="rounded-md shadow-sm space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium mb-1"
-            >
+            <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email
             </label>
             <input
