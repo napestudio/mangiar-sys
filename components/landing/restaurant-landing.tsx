@@ -84,7 +84,7 @@ export default async function RestaurantLandingPage() {
   return (
     <>
       <div className="min-h-svh place-content-center bg-white text-neutral-900">
-        <div className="max-w-120 p-8 mx-auto px-8 md:px-0 flex justify-center flex-col items-center gap-9">
+        <div className="max-w-120 p-8 pb-16 mx-auto px-8 md:px-0 flex justify-center flex-col items-center gap-9">
           <Avatar src={restaurant.logoUrl} alt={restaurant.name} />
 
           <div className="flex flex-col items-center justify-center gap-4 w-full">
