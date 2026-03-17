@@ -54,12 +54,12 @@ import { useState } from "react";
 
 interface MenuCardProps {
   menu: SerializedMenu;
-  onEdit: () => void;
+  editHref: string;
   onDelete: () => void;
   onUpdate: (menu: SerializedMenu) => void;
 }
 
-export function MenuCard({ menu, onEdit, onDelete, onUpdate }: MenuCardProps) {
+export function MenuCard({ menu, editHref, onDelete, onUpdate }: MenuCardProps) {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -207,9 +207,11 @@ export function MenuCard({ menu, onEdit, onDelete, onUpdate }: MenuCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar
+                <DropdownMenuItem asChild>
+                  <Link href={editHref}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleToggleActive}
@@ -282,10 +284,13 @@ export function MenuCard({ menu, onEdit, onDelete, onUpdate }: MenuCardProps) {
               Ver
             </Link>
           </div>
-          <Button onClick={onEdit} variant="default" className="w-full">
+          <Link
+            href={editHref}
+            className={buttonVariants({ variant: "default" }) + " w-full"}
+          >
             <Pencil className="h-4 w-4 mr-2" />
             Editar Menú
-          </Button>
+          </Link>
         </CardFooter>
       </Card>
 

@@ -82,11 +82,7 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
         });
 
         if (result.success && result.menu) {
-          // Fetch updated menu with sections
-          const updatedFull = await getMenu(menu.id);
-          if (updatedFull) {
-            setMenu(updatedFull);
-          }
+          setMenu((prev) => prev ? { ...prev, ...result.menu! } : prev);
           toast({
             title: "Éxito",
             description: "Menú actualizado correctamente",
@@ -110,17 +106,11 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
         });
 
         if (result.success && result.menu) {
-          // Fetch full menu data
-          const newFull = await getMenu(result.menu.id);
-          if (newFull) {
-            setMenu(newFull);
-            toast({
-              title: "Éxito",
-              description: "Menú creado correctamente",
-            });
-            // Redirect to the new menu's edit page
-            router.push(`/dashboard/menus/${result.menu.id}`);
-          }
+          toast({
+            title: "Éxito",
+            description: "Menú creado correctamente",
+          });
+          router.push(`/dashboard/menus/${result.menu.id}`);
         } else {
           toast({
             variant: "destructive",
@@ -299,15 +289,13 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
 
                 {/* Action Buttons */}
                 <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/dashboard/menus")}
-                    className="w-full justify-start"
+                  <Link
+                    href="/dashboard/menus"
+                    className={buttonVariants({ variant: "outline", size: "sm" }) + " w-full justify-start"}
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Volver a Menús
-                  </Button>
+                  </Link>
                   {menu && (
                     <Link
                       href={`/carta/${menu.slug}`}

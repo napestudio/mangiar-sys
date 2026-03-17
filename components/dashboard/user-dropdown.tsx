@@ -1,9 +1,8 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { LogOut, User } from "lucide-react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
-import { invalidateUserCaches } from "@/actions/auth";
+import { logoutAction } from "@/actions/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,20 +21,21 @@ interface UserDropdownProps {
   userName: string;
   userRole: UserRole | null;
   userImage?: string | null;
+  restaurantName?: string | null;
 }
 
 export default function UserDropdown({
   userName,
   userRole,
   userImage: initialUserImage,
+  restaurantName,
 }: UserDropdownProps) {
   const hasAdminRole = isAdminOrHigher(userRole);
   const [userImage] = useState<string | null>(initialUserImage ?? null);
 
   const handleLogout = async () => {
     showLogoutOverlay();
-    await invalidateUserCaches();
-    await signOut({ callbackUrl: "/ingresar" });
+    await logoutAction();
   };
 
   return (
@@ -67,6 +67,11 @@ export default function UserDropdown({
         <TooltipContent side="bottom">{userName}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
+        {restaurantName && (
+          <DropdownMenuLabel className="text-xs font-semibold">
+            {restaurantName}
+          </DropdownMenuLabel>
+        )}
         <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
           {userName}
         </DropdownMenuLabel>

@@ -1,17 +1,19 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { signOut, auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 
 /**
- * Invalidates all server-side permission caches for the current user.
- * Must be called before signOut() to ensure stale data is not served
- * to the next user who logs in.
+ * Clears server-side permission caches and signs out the user server-side.
+ * Using server-side signOut ensures the session cookie is cleared with the
+ * exact same domain/attributes as when it was created, which is critical
+ * in production multi-subdomain deployments.
  */
-export async function invalidateUserCaches(): Promise<void> {
+export async function logoutAction(): Promise<void> {
   const session = await auth();
-  if (!session?.user?.id) return;
-
-  revalidateTag("user-permissions");
-  revalidateTag("user-permission-grants");
+  if (session?.user?.id) {
+    revalidateTag("user-permissions");
+    revalidateTag("user-permission-grants");
+  }
+  await signOut({ redirectTo: "/ingresar" });
 }

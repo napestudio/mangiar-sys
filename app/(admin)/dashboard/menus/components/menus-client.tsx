@@ -36,10 +36,6 @@ export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClien
     router.push(`/dashboard/menus/${newMenu.id}`);
   };
 
-  const handleEditMenu = (menuId: string) => {
-    router.push(`/dashboard/menus/${menuId}`);
-  };
-
   const handleMenuUpdated = (updatedMenu: SerializedMenu) => {
     setMenus((prev) =>
       prev.map((m) => (m.id === updatedMenu.id ? updatedMenu : m)),
@@ -77,7 +73,7 @@ export function MenusClient({ initialMenus, restaurantId, branchId }: MenusClien
               <MenuRow
                 key={menu.id}
                 menu={menu}
-                onEdit={() => handleEditMenu(menu.id)}
+                editHref={`/dashboard/menus/${menu.id}`}
                 onDelete={() => handleMenuDeleted(menu.id)}
                 onUpdate={handleMenuUpdated}
               />

@@ -234,7 +234,7 @@ export function ProductsClient({
       }
     });
 
-    router.push(`/dashboard/menu-items?${params.toString()}`, {
+    router.replace(`/dashboard/menu-items?${params.toString()}`, {
       scroll: false,
     });
   };
@@ -264,7 +264,7 @@ export function ProductsClient({
       }
     });
 
-    router.push("/dashboard/menu-items", { scroll: false });
+    router.replace("/dashboard/menu-items", { scroll: false });
   };
 
   const handlePageChange = (page: number) => {

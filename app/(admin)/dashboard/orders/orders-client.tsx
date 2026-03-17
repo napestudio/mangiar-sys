@@ -183,7 +183,7 @@ export function OrdersClient({
     if (pm) params.set("paymentMethod", pm);
     if (so && so !== "desc") params.set("sortOrder", so);
     startTransition(() => {
-      router.push(`/dashboard/orders?${params.toString()}`);
+      router.replace(`/dashboard/orders?${params.toString()}`);
     });
   };
 
@@ -439,7 +439,7 @@ export function OrdersClient({
       if (paymentMethod) params.set("paymentMethod", paymentMethod);
       if (dateSortOrder !== "desc") params.set("sortOrder", dateSortOrder);
       startTransition(() => {
-        router.push(`/dashboard/orders?${params.toString()}`);
+        router.replace(`/dashboard/orders?${params.toString()}`);
       });
     } else {
       startTransition(async () => {

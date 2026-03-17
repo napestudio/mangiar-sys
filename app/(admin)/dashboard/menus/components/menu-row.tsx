@@ -48,12 +48,12 @@ import { useState } from "react";
 
 interface MenuRowProps {
   menu: SerializedMenu;
-  onEdit: () => void;
+  editHref: string;
   onDelete: () => void;
   onUpdate: (menu: SerializedMenu) => void;
 }
 
-export function MenuRow({ menu, onEdit, onDelete, onUpdate }: MenuRowProps) {
+export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -171,12 +171,12 @@ export function MenuRow({ menu, onEdit, onDelete, onUpdate }: MenuRowProps) {
     <>
       <TableRow className={!menu.isActive ? "opacity-60" : ""}>
         <TableCell>
-          <button
-            onClick={onEdit}
-            className="font-medium text-left hover:underline"
+          <Link
+            href={editHref}
+            className="font-medium hover:underline"
           >
             {menu.name}
-          </button>
+          </Link>
         </TableCell>
         <TableCell className="text-muted-foreground">{sectionCount}</TableCell>
         <TableCell className="text-muted-foreground">{itemCount}</TableCell>
@@ -200,9 +200,13 @@ export function MenuRow({ menu, onEdit, onDelete, onUpdate }: MenuRowProps) {
             >
               <ExternalLink className="h-4 w-4" />
             </Link>
-            <Button onClick={onEdit} variant="ghost" size="icon" title="Editar">
+            <Link
+              href={editHref}
+              className={buttonVariants({ variant: "ghost", size: "icon" })}
+              title="Editar"
+            >
               <Pencil className="h-4 w-4" />
-            </Button>
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
