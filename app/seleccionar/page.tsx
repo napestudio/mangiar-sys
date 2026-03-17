@@ -4,7 +4,7 @@ import { getUserBranchesWithRestaurant } from "@/lib/user-branch";
 import { buildSubdomainUrl } from "@/lib/constants";
 import BranchPicker from "@/components/auth/branch-picker";
 
-export default async function AuthCallbackPage() {
+export default async function SeleccionarPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
