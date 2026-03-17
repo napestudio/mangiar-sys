@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { isUserAdmin } from "@/lib/permissions";
 import type { RestaurantTheme } from "@/types/restaurant-theme";
 import { DEFAULT_THEME } from "@/types/restaurant-theme";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 // URL validation regex
@@ -159,6 +159,8 @@ export async function updateRestaurant(
     });
 
     revalidatePath("/dashboard/config/restaurant");
+    revalidatePath("/");
+    revalidateTag(`restaurant-landing-${updatedRestaurant.slug}`);
 
     return {
       success: true,
@@ -217,12 +219,15 @@ export async function updateRestaurantTheme(
       };
     }
 
-    await prisma.restaurant.update({
+    const updated = await prisma.restaurant.update({
       where: { id: restaurantId },
       data: { theme: validation.data },
+      select: { slug: true },
     });
 
     revalidatePath("/dashboard/config/appearance");
+    revalidatePath("/");
+    revalidateTag(`restaurant-landing-${updated.slug}`);
 
     return { success: true, message: "Diseño actualizado exitosamente" };
   } catch (error) {

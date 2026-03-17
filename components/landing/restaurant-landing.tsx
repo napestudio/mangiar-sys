@@ -1,7 +1,4 @@
-import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
-import { getActiveHomePageLinks } from "@/actions/HomePageLinks";
-import type { BusinessHoursPeriodData } from "@/actions/business-hours";
-import { getBusinessHours } from "@/actions/business-hours";
+import type { SerializedHomePageLink } from "@/types/home-page";
 import Avatar from "@/components/avatar";
 import LandingThemeProvider from "@/components/landing/theme-provider";
 import FacebookIcon from "@/components/ui/icons/Facebook";
@@ -11,6 +8,7 @@ import TikTokIcon from "@/components/ui/icons/TikTok";
 import TwitterIcon from "@/components/ui/icons/Twitter";
 import WhatsappIcon from "@/components/ui/icons/Whatsapp";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
+import type { LandingBusinessHour } from "@/lib/public-branch";
 import { Clock, Globe, MapPin } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -36,8 +34,8 @@ const DAY_LABELS: Record<string, string> = {
   sunday: "Domingo",
 };
 
-function groupByDay(periods: BusinessHoursPeriodData[]) {
-  const map = new Map<string, BusinessHoursPeriodData[]>();
+function groupByDay(periods: LandingBusinessHour[]) {
+  const map = new Map<string, LandingBusinessHour[]>();
   for (const p of periods) {
     if (!map.has(p.dayOfWeek)) map.set(p.dayOfWeek, []);
     map.get(p.dayOfWeek)!.push(p);
@@ -73,16 +71,8 @@ export default async function RestaurantLandingPage() {
     notFound();
   }
 
-  const { restaurant, branchId, theme } = publicData;
-
-  const [linksResult, hoursResult] = await Promise.all([
-    getActiveHomePageLinks(branchId),
-    getBusinessHours(restaurant.id),
-  ]);
-  const links = linksResult.success && linksResult.data ? linksResult.data : [];
-  const groupedHours = groupByDay(
-    hoursResult.success && hoursResult.data ? hoursResult.data : [],
-  );
+  const { restaurant, theme, links, hours } = publicData;
+  const groupedHours = groupByDay(hours);
 
   // Button classes change based on variant (solid fills immediately, outline does the slide-in animation)
   const isOutline = theme.buttonVariant === "outline";
@@ -122,9 +112,7 @@ export default async function RestaurantLandingPage() {
                     style={{ backgroundColor: "var(--rt-primary)" }}
                   />
                   <div className="relative overflow-hidden w-max mx-auto">
-                    <span
-                      className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500 group-hover:text-(--rt-bg) group-focus:text-(--rt-bg)"
-                    >
+                    <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500 group-hover:text-(--rt-bg) group-focus:text-(--rt-bg)">
                       {link.label}
                     </span>
                     <span
@@ -164,7 +152,10 @@ export default async function RestaurantLandingPage() {
                 {restaurant.description || "Disfruta de nuestra comida"}
               </p>
               {groupedHours.length > 0 && (
-                <div className="mt-4 mb-4 text-sm" style={{ color: "var(--rt-text)", opacity: 0.7 }}>
+                <div
+                  className="mt-4 mb-4 text-sm"
+                  style={{ color: "var(--rt-text)" }}
+                >
                   <p className="flex items-center justify-center gap-1 font-semibold mb-2">
                     <Clock className="w-4 h-4" />
                     Horarios
@@ -173,7 +164,7 @@ export default async function RestaurantLandingPage() {
                     {groupedHours.map(({ day, label, periods }) => (
                       <div key={day} className="flex justify-between gap-8">
                         <span className="font-medium">{label}</span>
-                        <span style={{ opacity: 0.6 }}>
+                        <span>
                           {periods.map((p, i) => (
                             <span key={p.id}>
                               {i > 0 && " / "}
@@ -193,7 +184,7 @@ export default async function RestaurantLandingPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="transition-opacity hover:opacity-70"
-                  style={{ color: "var(--rt-text)", opacity: 0.6 }}
+                  style={{ color: "var(--rt-text)" }}
                 >
                   <MapPin className="inline-block mr-1 w-6 h-6" />
                   {restaurant.address}, {restaurant.city}, {restaurant.state}
@@ -204,7 +195,9 @@ export default async function RestaurantLandingPage() {
                   <Link
                     href={`https://api.whatsapp.com/send/?phone=${restaurant.phone}&text=Hola!+Quisiera+hacer+una+consulta.&app_absent=0`}
                     className="flex items-center self-center justify-center transition-opacity hover:opacity-70"
-                    style={{ color: "var(--rt-text)", opacity: 0.6 }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "var(--rt-text)" }}
                   >
                     <span className="inline-block mr-1 w-5 h-5">
                       <WhatsappIcon />
@@ -213,40 +206,36 @@ export default async function RestaurantLandingPage() {
                   </Link>
                 </p>
               )}
-              {(restaurant.instagramUrl || restaurant.facebookUrl || restaurant.tiktokUrl || restaurant.twitterUrl || restaurant.linkedinUrl || restaurant.websiteUrl) && (
-                <div className="flex items-center justify-center gap-4 mt-3">
-                  {restaurant.websiteUrl && (
-                    <Link href={restaurant.websiteUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="Sitio web">
-                      <Globe className="w-full h-full" />
-                    </Link>
-                  )}
-                  {restaurant.instagramUrl && (
-                    <Link href={restaurant.instagramUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="Instagram">
-                      <InstagramIcon />
-                    </Link>
-                  )}
-                  {restaurant.facebookUrl && (
-                    <Link href={restaurant.facebookUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="Facebook">
-                      <FacebookIcon />
-                    </Link>
-                  )}
-                  {restaurant.tiktokUrl && (
-                    <Link href={restaurant.tiktokUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="TikTok">
-                      <TikTokIcon />
-                    </Link>
-                  )}
-                  {restaurant.twitterUrl && (
-                    <Link href={restaurant.twitterUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="Twitter / X">
-                      <TwitterIcon />
-                    </Link>
-                  )}
-                  {restaurant.linkedinUrl && (
-                    <Link href={restaurant.linkedinUrl} target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-70 w-6 h-6 inline-block" style={{ color: "var(--rt-text)", opacity: 0.6 }} aria-label="LinkedIn">
-                      <LinkedInIcon />
-                    </Link>
-                  )}
-                </div>
-              )}
+              {(() => {
+                const socials = [
+                  { url: restaurant.websiteUrl,   label: "Sitio web",  icon: <Globe className="w-full h-full" /> },
+                  { url: restaurant.instagramUrl, label: "Instagram",  icon: <InstagramIcon /> },
+                  { url: restaurant.facebookUrl,  label: "Facebook",   icon: <FacebookIcon /> },
+                  { url: restaurant.tiktokUrl,    label: "TikTok",     icon: <TikTokIcon /> },
+                  { url: restaurant.twitterUrl,   label: "Twitter / X",icon: <TwitterIcon /> },
+                  { url: restaurant.linkedinUrl,  label: "LinkedIn",   icon: <LinkedInIcon /> },
+                ].filter((s) => s.url);
+
+                if (socials.length === 0) return null;
+
+                return (
+                  <div className="flex items-center justify-center gap-4 mt-3">
+                    {socials.map(({ url, label, icon }) => (
+                      <Link
+                        key={label}
+                        href={url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition-opacity hover:opacity-70 w-6 h-6 inline-block"
+                        style={{ color: "var(--rt-text)" }}
+                        aria-label={label}
+                      >
+                        {icon}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
