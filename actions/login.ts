@@ -11,7 +11,7 @@ export async function loginWithCredentials(formData: FormData) {
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/auth/callback",
+      redirectTo: "/seleccionar",
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -27,5 +27,5 @@ export async function loginWithCredentials(formData: FormData) {
 }
 
 export async function loginWithGoogle() {
-  await signIn("google", { redirectTo: "/auth/callback" });
+  await signIn("google", { redirectTo: "/seleccionar" });
 }

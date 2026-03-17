@@ -12,7 +12,7 @@ export default auth(async (req) => {
   // Cache-Control: no-store prevents browsers/CDNs from caching this redirect decision,
   // which would cause stale redirects after logout.
   if (pathname === "/ingresar" && isLoggedIn) {
-    const response = NextResponse.redirect(new URL("/auth/callback", req.url));
+    const response = NextResponse.redirect(new URL("/seleccionar", req.url));
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     response.headers.set("Pragma", "no-cache");
     return response;
@@ -27,7 +27,7 @@ export default auth(async (req) => {
   }
 
   // Protect the callback page — requires an authenticated session
-  if (pathname === "/auth/callback" && !isLoggedIn) {
+  if (pathname === "/seleccionar" && !isLoggedIn) {
     const response = NextResponse.redirect(new URL("/ingresar", req.url));
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     response.headers.set("Pragma", "no-cache");

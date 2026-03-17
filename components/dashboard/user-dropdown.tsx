@@ -2,7 +2,6 @@
 
 import { LogOut, User } from "lucide-react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
-import { logoutAction } from "@/actions/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,9 +32,9 @@ export default function UserDropdown({
   const hasAdminRole = isAdminOrHigher(userRole);
   const [userImage] = useState<string | null>(initialUserImage ?? null);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     showLogoutOverlay();
-    await logoutAction();
+    window.location.href = "/api/logout";
   };
 
   return (
