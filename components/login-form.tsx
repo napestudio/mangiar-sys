@@ -1,13 +1,29 @@
 "use client";
 
 import { loginWithCredentials, loginWithGoogle } from "@/actions/login";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+
+const LOADING_MESSAGES = [
+  "Encendiendo hornallas...",
+  "Calentando la cafetera...",
+  "Calentando los hornos...",
+];
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isPending) return;
+    setLoadingMsgIndex(0);
+    const interval = setInterval(() => {
+      setLoadingMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isPending]);
 
   function handleCredentialsSubmit(formData: FormData) {
     setError(null);
@@ -98,7 +114,7 @@ export default function LoginForm() {
             {isPending ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Ingresando...
+                {LOADING_MESSAGES[loadingMsgIndex]}
               </span>
             ) : (
               "Ingresar"
