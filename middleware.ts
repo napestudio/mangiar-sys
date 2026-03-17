@@ -8,19 +8,19 @@ export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  // Redirect logged-in users away from /login to the post-login callback
-  if (pathname === "/login" && isLoggedIn) {
+  // Redirect logged-in users away from /ingresar to the post-login callback
+  if (pathname === "/ingresar" && isLoggedIn) {
     return NextResponse.redirect(new URL("/auth/callback", req.url));
   }
 
   // Protect dashboard routes
   if (pathname.startsWith("/dashboard") && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(new URL("/ingresar", req.url));
   }
 
   // Protect the callback page — requires an authenticated session
   if (pathname === "/auth/callback" && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(new URL("/ingresar", req.url));
   }
 
   // Extract subdomain and forward it as a header for the public page

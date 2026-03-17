@@ -8,7 +8,7 @@ export default async function AuthCallbackPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   const branches = await getUserBranchesWithRestaurant(session.user.id);
