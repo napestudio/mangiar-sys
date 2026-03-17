@@ -1,3 +1,4 @@
+import { parseTheme } from "@/lib/theme-utils";
 import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
 
@@ -39,12 +40,23 @@ export async function getPublicRestaurantAndBranch() {
       city: true,
       state: true,
       whatsappNumber: true,
+      websiteUrl: true,
+      facebookUrl: true,
+      instagramUrl: true,
+      twitterUrl: true,
+      linkedinUrl: true,
+      tiktokUrl: true,
+      theme: true,
       branches: { take: 1, select: { id: true } },
     },
   });
 
   if (!restaurant?.branches[0]) return null;
 
-  const { branches, ...rest } = restaurant;
-  return { restaurant: rest, branchId: branches[0].id };
+  const { branches, theme, ...rest } = restaurant;
+  return {
+    restaurant: rest,
+    branchId: branches[0].id,
+    theme: parseTheme(theme),
+  };
 }
