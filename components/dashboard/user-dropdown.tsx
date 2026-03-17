@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { LogOut, User } from "lucide-react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
+import { invalidateUserCaches } from "@/actions/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +34,8 @@ export default function UserDropdown({
 
   const handleLogout = async () => {
     showLogoutOverlay();
-    await signOut({ callbackUrl: "/" });
+    await invalidateUserCaches();
+    await signOut({ callbackUrl: "/ingresar" });
   };
 
   return (

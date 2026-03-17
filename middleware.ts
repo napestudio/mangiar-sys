@@ -8,19 +8,30 @@ export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  // Redirect logged-in users away from /ingresar to the post-login callback
+  // Redirect logged-in users away from /ingresar to the post-login callback.
+  // Cache-Control: no-store prevents browsers/CDNs from caching this redirect decision,
+  // which would cause stale redirects after logout.
   if (pathname === "/ingresar" && isLoggedIn) {
-    return NextResponse.redirect(new URL("/auth/callback", req.url));
+    const response = NextResponse.redirect(new URL("/auth/callback", req.url));
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    return response;
   }
 
   // Protect dashboard routes
   if (pathname.startsWith("/dashboard") && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/ingresar", req.url));
+    const response = NextResponse.redirect(new URL("/ingresar", req.url));
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    return response;
   }
 
   // Protect the callback page — requires an authenticated session
   if (pathname === "/auth/callback" && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/ingresar", req.url));
+    const response = NextResponse.redirect(new URL("/ingresar", req.url));
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    return response;
   }
 
   // Extract subdomain and forward it as a header for the public page
