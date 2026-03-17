@@ -48,6 +48,7 @@ interface DeliveryPageProps {
   allowTakeAway: boolean;
   restaurantName: string;
   whatsappUrl: string;
+  restaurantLogo?: string;
 }
 
 export default function DeliveryPage({
@@ -61,6 +62,7 @@ export default function DeliveryPage({
   allowTakeAway,
   restaurantName,
   whatsappUrl,
+  restaurantLogo,
 }: DeliveryPageProps) {
   const bothEnabled = allowDelivery && allowTakeAway;
 
@@ -146,7 +148,7 @@ export default function DeliveryPage({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <Avatar />
+            <Avatar alt={restaurantName} src={restaurantLogo} />
           </div>
           <h1 className="text-4xl font-bold mb-2">Pedidos</h1>
           {config.estimatedMinutes && step !== "orderType" && (

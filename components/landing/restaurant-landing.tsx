@@ -1,12 +1,13 @@
-import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
+import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
 import { getActiveHomePageLinks } from "@/actions/HomePageLinks";
-import { getBusinessHours } from "@/actions/business-hours";
 import type { BusinessHoursPeriodData } from "@/actions/business-hours";
+import { getBusinessHours } from "@/actions/business-hours";
 import Avatar from "@/components/avatar";
 import WhatsappIcon from "@/components/ui/icons/Whatsapp";
-import { MapPin, Clock } from "lucide-react";
+import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
+import { Clock, MapPin } from "lucide-react";
 import Link from "next/link";
-import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
+import { notFound } from "next/navigation";
 import MangiarFooter from "../mangiar-footer";
 
 const DAY_ORDER = [
@@ -63,11 +64,7 @@ export default async function RestaurantLandingPage() {
   const publicData = await getPublicRestaurantAndBranch();
 
   if (!publicData) {
-    return (
-      <div className="min-h-svh flex items-center justify-center bg-black text-white">
-        <p className="text-lg">El restaurante no está configurado.</p>
-      </div>
-    );
+    notFound();
   }
 
   const { restaurant, branchId } = publicData;

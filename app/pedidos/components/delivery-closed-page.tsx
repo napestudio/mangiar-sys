@@ -11,6 +11,8 @@ type DeliveryWindow = {
 interface DeliveryClosedPageProps {
   reason?: string;
   windows: DeliveryWindow[];
+  restaurantName: string;
+  restaurantLogo?: string;
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -41,12 +43,14 @@ function formatDays(days: string[]): string {
 export default function DeliveryClosedPage({
   reason,
   windows,
+  restaurantName,
+  restaurantLogo,
 }: DeliveryClosedPageProps) {
   return (
     <div className="min-h-svh bg-black text-white flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="flex justify-center mb-6">
-          <Avatar />
+          <Avatar alt={restaurantName} src={restaurantLogo} />
         </div>
 
         <div className="flex justify-center mb-6">
