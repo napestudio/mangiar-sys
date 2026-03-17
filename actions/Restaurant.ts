@@ -3,7 +3,9 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isUserAdmin } from "@/lib/permissions";
-import { revalidatePath } from "next/cache";
+import type { RestaurantTheme } from "@/types/restaurant-theme";
+import { DEFAULT_THEME } from "@/types/restaurant-theme";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 // URL validation regex
@@ -94,7 +96,7 @@ export async function getRestaurant(restaurantId: string) {
 
 export async function updateRestaurant(
   restaurantId: string,
-  data: RestaurantUpdateInput
+  data: RestaurantUpdateInput,
 ) {
   try {
     // Check authentication and admin status
@@ -157,6 +159,8 @@ export async function updateRestaurant(
     });
 
     revalidatePath("/dashboard/config/restaurant");
+    revalidatePath("/");
+    revalidateTag(`restaurant-landing-${updatedRestaurant.slug}`);
 
     return {
       success: true,
@@ -172,13 +176,89 @@ export async function updateRestaurant(
   }
 }
 
+const themeUpdateSchema = z.object({
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color primario inválido"),
+  backgroundColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color de fondo inválido"),
+  textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color de texto inválido"),
+  buttonShape: z.enum(["pill", "rounded", "sharp"]),
+  buttonVariant: z.enum(["solid", "outline"]),
+  fontFamily: z.enum(["geist", "poppins", "serif"]),
+});
+
+export async function updateRestaurantTheme(
+  restaurantId: string,
+  theme: RestaurantTheme,
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "Debes iniciar sesión para realizar esta acción",
+      };
+    }
+
+    const hasAdminAccess = await isUserAdmin(session.user.id);
+    if (!hasAdminAccess) {
+      return {
+        success: false,
+        error: "No tienes permisos para actualizar el diseño",
+      };
+    }
+
+    const validation = themeUpdateSchema.safeParse(theme);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      return {
+        success: false,
+        error: firstError?.message || "Error de validación",
+      };
+    }
+
+    const updated = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: { theme: validation.data },
+      select: { slug: true },
+    });
+
+    revalidatePath("/dashboard/config/appearance");
+    revalidatePath("/");
+    revalidateTag(`restaurant-landing-${updated.slug}`);
+
+    return { success: true, message: "Diseño actualizado exitosamente" };
+  } catch (error) {
+    console.error("Error updating restaurant theme:", error);
+    return { success: false, error: "Error al actualizar el diseño" };
+  }
+}
+
+export async function getRestaurantTheme(
+  restaurantId: string,
+): Promise<RestaurantTheme> {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { theme: true },
+    });
+    if (!restaurant) return { ...DEFAULT_THEME };
+    const { parseTheme } = await import("@/lib/theme-utils");
+    return parseTheme(restaurant.theme);
+  } catch {
+    return { ...DEFAULT_THEME };
+  }
+}
+
 export async function getRestaurantByBranchId(branchId: string) {
   try {
     const branch = await prisma.branch.findUnique({
       where: { id: branchId },
       select: {
         restaurant: {
-          select: { name: true, whatsappNumber: true, phone: true },
+          select: { name: true, logoUrl: true, whatsappNumber: true, phone: true },
         },
       },
     });

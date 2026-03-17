@@ -47,6 +47,8 @@ export default async function PedidosPage() {
 
   const config = configResult.data;
 
+  const restaurant = await getRestaurantByBranchId(branchId);
+
   // Check real-time availability (service active + current time within a window)
   const availability = await isDeliveryAvailable(branchId, new Date());
 
@@ -55,6 +57,8 @@ export default async function PedidosPage() {
       <DeliveryClosedPage
         reason={availability.reason}
         windows={config.deliveryWindows}
+        restaurantName={restaurant?.name ?? ""}
+        restaurantLogo={restaurant?.logoUrl ?? undefined}
       />
     );
   }
@@ -112,7 +116,6 @@ export default async function PedidosPage() {
     }
   }
 
-  const restaurant = await getRestaurantByBranchId(branchId);
   const phoneNumber = restaurant?.whatsappNumber || restaurant?.phone;
   const whatsappUrl = phoneNumber
     ? `https://api.whatsapp.com/send/?phone=${phoneNumber}&app_absent=0`

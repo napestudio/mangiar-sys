@@ -1,11 +1,15 @@
-import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
-import { getActiveHomePageLinks } from "@/actions/HomePageLinks";
-import type { BusinessHoursPeriodData } from "@/actions/business-hours";
-import { getBusinessHours } from "@/actions/business-hours";
+import type { SerializedHomePageLink } from "@/types/home-page";
 import Avatar from "@/components/avatar";
+import LandingThemeProvider from "@/components/landing/theme-provider";
+import FacebookIcon from "@/components/ui/icons/Facebook";
+import InstagramIcon from "@/components/ui/icons/Instagram";
+import LinkedInIcon from "@/components/ui/icons/LinkedIn";
+import TikTokIcon from "@/components/ui/icons/TikTok";
+import TwitterIcon from "@/components/ui/icons/Twitter";
 import WhatsappIcon from "@/components/ui/icons/Whatsapp";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
-import { Clock, MapPin } from "lucide-react";
+import type { LandingBusinessHour } from "@/lib/public-branch";
+import { Clock, Globe, MapPin } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MangiarFooter from "../mangiar-footer";
@@ -30,8 +34,8 @@ const DAY_LABELS: Record<string, string> = {
   sunday: "Domingo",
 };
 
-function groupByDay(periods: BusinessHoursPeriodData[]) {
-  const map = new Map<string, BusinessHoursPeriodData[]>();
+function groupByDay(periods: LandingBusinessHour[]) {
+  const map = new Map<string, LandingBusinessHour[]>();
   for (const p of periods) {
     if (!map.has(p.dayOfWeek)) map.set(p.dayOfWeek, []);
     map.get(p.dayOfWeek)!.push(p);
@@ -67,53 +71,91 @@ export default async function RestaurantLandingPage() {
     notFound();
   }
 
-  const { restaurant, branchId } = publicData;
+  const { restaurant, theme, links, hours } = publicData;
+  const groupedHours = groupByDay(hours);
 
-  const [linksResult, hoursResult] = await Promise.all([
-    getActiveHomePageLinks(branchId),
-    getBusinessHours(restaurant.id),
-  ]);
-  const links = linksResult.success && linksResult.data ? linksResult.data : [];
-  const groupedHours = groupByDay(
-    hoursResult.success && hoursResult.data ? hoursResult.data : [],
-  );
+  // Button classes change based on variant (solid fills immediately, outline does the slide-in animation)
+  const isOutline = theme.buttonVariant === "outline";
 
   return (
     <>
-      <div className="min-h-svh place-content-center bg-white text-neutral-900">
+      <LandingThemeProvider theme={theme} />
+      <div
+        className="min-h-svh place-content-center"
+        style={{
+          backgroundColor: "var(--rt-bg)",
+          color: "var(--rt-text)",
+          fontFamily: "var(--rt-font)",
+        }}
+      >
         <div className="max-w-120 p-8 pb-16 mx-auto px-8 md:px-0 flex justify-center flex-col items-center gap-9">
           <Avatar src={restaurant.logoUrl} alt={restaurant.name} />
 
           <div className="flex flex-col items-center justify-center gap-4 w-full">
-            {links.map((link) => (
-              <Link
-                key={link.id}
-                href={generateLinkUrl(link)}
-                prefetch={true}
-                className="bg-white text-red-500 border-2 hover:text-white border-red-500 group relative transition-colors rounded-md py-2 text-xl text-center font-bold uppercase w-full overflow-hidden"
-              >
-                <div className="absolute h-full w-full inset-0 bg-red-500 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 origin-bottom transition-transform duration-500"></div>
-                <div className="relative overflow-hidden w-max mx-auto">
-                  <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500">
-                    {link.label}
-                  </span>
-                  <span className="inline-block absolute left-0 -top-full skew-12 group-focus:skew-0 group-focus:translate-y-full group-hover:skew-0 group-hover:translate-y-full -translate-y-full transition-transform duration-500">
-                    {link.label}
-                  </span>
-                </div>
-              </Link>
-            ))}
+            {links.map((link) =>
+              isOutline ? (
+                <Link
+                  key={link.id}
+                  href={generateLinkUrl(link)}
+                  prefetch={true}
+                  className="group relative transition-colors py-2 text-xl text-center font-bold uppercase w-full overflow-hidden border-2"
+                  style={{
+                    borderRadius: "var(--rt-btn-radius)",
+                    borderColor: "var(--rt-primary)",
+                    color: "var(--rt-primary)",
+                    backgroundColor: "var(--rt-bg)",
+                  }}
+                >
+                  {/* slide-in fill on hover */}
+                  <div
+                    className="absolute h-full w-full inset-0 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 origin-bottom transition-transform duration-500"
+                    style={{ backgroundColor: "var(--rt-primary)" }}
+                  />
+                  <div className="relative overflow-hidden w-max mx-auto">
+                    <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500 group-hover:text-(--rt-bg) group-focus:text-(--rt-bg)">
+                      {link.label}
+                    </span>
+                    <span
+                      className="inline-block absolute left-0 -top-full skew-12 group-focus:skew-0 group-focus:translate-y-full group-hover:skew-0 group-hover:translate-y-full -translate-y-full transition-transform duration-500"
+                      style={{ color: "var(--rt-bg)" }}
+                    >
+                      {link.label}
+                    </span>
+                  </div>
+                </Link>
+              ) : (
+                <Link
+                  key={link.id}
+                  href={generateLinkUrl(link)}
+                  prefetch={true}
+                  className="py-2 text-xl text-center font-bold uppercase w-full transition-opacity hover:opacity-80"
+                  style={{
+                    borderRadius: "var(--rt-btn-radius)",
+                    backgroundColor: "var(--rt-primary)",
+                    color: "var(--rt-bg)",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
           </div>
           <div>
-            <h2 className="text-2xl leading-none font-bold text-center">
+            <h2
+              className="text-2xl leading-none font-bold text-center"
+              style={{ color: "var(--rt-text)" }}
+            >
               {restaurant.name}
             </h2>
             <div className="text-center">
-              <p className="text-lg">
+              <p className="text-lg" style={{ color: "var(--rt-text)" }}>
                 {restaurant.description || "Disfruta de nuestra comida"}
               </p>
               {groupedHours.length > 0 && (
-                <div className="mt-4 mb-4 text-sm text-neutral-700">
+                <div
+                  className="mt-4 mb-4 text-sm"
+                  style={{ color: "var(--rt-text)" }}
+                >
                   <p className="flex items-center justify-center gap-1 font-semibold mb-2">
                     <Clock className="w-4 h-4" />
                     Horarios
@@ -122,7 +164,7 @@ export default async function RestaurantLandingPage() {
                     {groupedHours.map(({ day, label, periods }) => (
                       <div key={day} className="flex justify-between gap-8">
                         <span className="font-medium">{label}</span>
-                        <span className="text-neutral-500">
+                        <span>
                           {periods.map((p, i) => (
                             <span key={p.id}>
                               {i > 0 && " / "}
@@ -141,17 +183,21 @@ export default async function RestaurantLandingPage() {
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.address}, ${restaurant.city}, ${restaurant.state}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="transition-opacity hover:opacity-70"
+                  style={{ color: "var(--rt-text)" }}
                 >
                   <MapPin className="inline-block mr-1 w-6 h-6" />
                   {restaurant.address}, {restaurant.city}, {restaurant.state}
                 </Link>
               )}
               {restaurant.phone && (
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm mt-1">
                   <Link
                     href={`https://api.whatsapp.com/send/?phone=${restaurant.phone}&text=Hola!+Quisiera+hacer+una+consulta.&app_absent=0`}
-                    className="flex items-center self-center justify-center"
+                    className="flex items-center self-center justify-center transition-opacity hover:opacity-70"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "var(--rt-text)" }}
                   >
                     <span className="inline-block mr-1 w-5 h-5">
                       <WhatsappIcon />
@@ -160,6 +206,36 @@ export default async function RestaurantLandingPage() {
                   </Link>
                 </p>
               )}
+              {(() => {
+                const socials = [
+                  { url: restaurant.websiteUrl,   label: "Sitio web",  icon: <Globe className="w-full h-full" /> },
+                  { url: restaurant.instagramUrl, label: "Instagram",  icon: <InstagramIcon /> },
+                  { url: restaurant.facebookUrl,  label: "Facebook",   icon: <FacebookIcon /> },
+                  { url: restaurant.tiktokUrl,    label: "TikTok",     icon: <TikTokIcon /> },
+                  { url: restaurant.twitterUrl,   label: "Twitter / X",icon: <TwitterIcon /> },
+                  { url: restaurant.linkedinUrl,  label: "LinkedIn",   icon: <LinkedInIcon /> },
+                ].filter((s) => s.url);
+
+                if (socials.length === 0) return null;
+
+                return (
+                  <div className="flex items-center justify-center gap-4 mt-3">
+                    {socials.map(({ url, label, icon }) => (
+                      <Link
+                        key={label}
+                        href={url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition-opacity hover:opacity-70 w-6 h-6 inline-block"
+                        style={{ color: "var(--rt-text)" }}
+                        aria-label={label}
+                      >
+                        {icon}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

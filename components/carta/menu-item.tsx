@@ -37,7 +37,7 @@ export function MenuItem({
       )}
       <div className="flex-1 flex flex-col min-h-full justify-between pb-3">
         <div className="flex flex-col md:flex-row items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg text-white leading-none">
+          <h3 className="font-semibold text-lg text-neutral-900 leading-none">
             <div className="flex md:flex-row flex-col gap-1 items-center">
               {name}
               {tags.length > 0 && (
@@ -53,12 +53,12 @@ export function MenuItem({
               </span>
             )} */}
           </h3>
-          <div className="hidden md:block flex-1 h-px w-full bg-white/50 mb-1.5 self-end"></div>
+          <div className="hidden md:block flex-1 h-px w-full bg-neutral-900/50 mb-1.5 self-end"></div>
           {price !== null &&
             price !== undefined &&
             price !== 0 &&
             showPrice && (
-              <div className="font-bold text-sm md:text-lg text-white block">
+              <div className="font-bold text-sm md:text-lg text-neutral-900 block">
                 {formatCurrency(price)}
               </div>
             )}

@@ -5,6 +5,7 @@ import {
   getAvailableMenus,
   getAvailableTimeSlots,
 } from "@/actions/HomePageLinks";
+import { getRestaurantTheme } from "@/actions/Restaurant";
 import HomePageConfigClient from "./homepage-config-client";
 import prisma from "@/lib/prisma";
 
@@ -19,7 +20,7 @@ export default async function HomePageConfigPage() {
       getAvailableTimeSlots(branchId),
       prisma.branch.findUnique({
         where: { id: branchId },
-        select: { restaurant: { select: { slug: true } } },
+        select: { restaurantId: true, restaurant: { select: { slug: true } } },
       }),
     ]);
 
@@ -28,6 +29,9 @@ export default async function HomePageConfigPage() {
   const timeSlots =
     timeSlotsResult.success && timeSlotsResult.data ? timeSlotsResult.data : [];
   const restaurantSlug = branch?.restaurant.slug ?? null;
+  const restaurantId = branch?.restaurantId ?? "";
+
+  const theme = restaurantId ? await getRestaurantTheme(restaurantId) : null;
 
   return (
     <div className="bg-gray-50 w-full min-h-svh">
@@ -38,6 +42,8 @@ export default async function HomePageConfigPage() {
           availableMenus={menus}
           availableTimeSlots={timeSlots}
           restaurantSlug={restaurantSlug}
+          restaurantId={restaurantId}
+          initialTheme={theme}
         />
       </div>
     </div>

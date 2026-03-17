@@ -237,6 +237,9 @@ model Restaurant {
   restaurantType RestaurantType?
   promoCode      String?
 
+  // Landing page theme customization (RestaurantTheme JSON)
+  theme Json?
+
   // Social media links
   websiteUrl   String?
   facebookUrl  String?
