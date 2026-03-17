@@ -11,17 +11,16 @@ export default function Avatar({
   alt = "Logo",
 }: AvatarProps) {
   return (
-    <div className="min-h-24 max-h-52 w-auto">
+    <div className="relative w-full h-64">
       <Image
         src={
           src ||
           "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg"
         }
         alt={alt}
-        width={256}
-        height={256}
+        fill
+        style={{ objectFit: "contain" }}
         priority
-        className="h-full w-full"
       />
     </div>
   );

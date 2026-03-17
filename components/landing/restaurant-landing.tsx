@@ -84,7 +84,7 @@ export default async function RestaurantLandingPage() {
   return (
     <>
       <div className="min-h-svh place-content-center bg-white text-neutral-900">
-        <div className="max-w-100 mx-auto px-8 md:px-0 flex justify-center flex-col items-center gap-9">
+        <div className="max-w-120 p-8 mx-auto px-8 md:px-0 flex justify-center flex-col items-center gap-9">
           <Avatar src={restaurant.logoUrl} alt={restaurant.name} />
 
           <div className="flex flex-col items-center justify-center gap-4 w-full">
@@ -115,6 +115,30 @@ export default async function RestaurantLandingPage() {
               <p className="text-lg">
                 {restaurant.description || "Disfruta de nuestra comida"}
               </p>
+              {groupedHours.length > 0 && (
+                <div className="mt-4 mb-4 text-sm text-neutral-700">
+                  <p className="flex items-center justify-center gap-1 font-semibold mb-2">
+                    <Clock className="w-4 h-4" />
+                    Horarios
+                  </p>
+                  <div className="space-y-1">
+                    {groupedHours.map(({ day, label, periods }) => (
+                      <div key={day} className="flex justify-between gap-8">
+                        <span className="font-medium">{label}</span>
+                        <span className="text-neutral-500">
+                          {periods.map((p, i) => (
+                            <span key={p.id}>
+                              {i > 0 && " / "}
+                              {p.openTime} – {p.closeTime}
+                              {p.label && ` (${p.label})`}
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {restaurant.address && (
                 <Link
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.address}, ${restaurant.city}, ${restaurant.state}`)}`}
@@ -138,30 +162,6 @@ export default async function RestaurantLandingPage() {
                     {restaurant.phone}
                   </Link>
                 </p>
-              )}
-              {groupedHours.length > 0 && (
-                <div className="mt-6 text-sm text-neutral-700">
-                  <p className="flex items-center justify-center gap-1 font-semibold mb-2">
-                    <Clock className="w-4 h-4" />
-                    Horarios
-                  </p>
-                  <div className="space-y-1">
-                    {groupedHours.map(({ day, label, periods }) => (
-                      <div key={day} className="flex justify-between gap-8">
-                        <span className="font-medium">{label}</span>
-                        <span className="text-neutral-500">
-                          {periods.map((p, i) => (
-                            <span key={p.id}>
-                              {i > 0 && " / "}
-                              {p.openTime} – {p.closeTime}
-                              {p.label && ` (${p.label})`}
-                            </span>
-                          ))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
           </div>
