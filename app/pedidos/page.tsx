@@ -32,7 +32,7 @@ export default async function PedidosPage() {
 
   if (!branchId) {
     return (
-      <div className="min-h-svh bg-black text-white flex items-center justify-center p-4">
+      <div className="min-h-svh bg-white text-neutral-900 flex items-center justify-center p-4">
         <p className="text-red-500">Error: Branch ID no configurado</p>
       </div>
     );
