@@ -1,8 +1,9 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { HomePageLinkType } from "@/app/generated/prisma";
+import { getRestaurantSlugByBranchId } from "@/lib/public-branch";
 
 import type { SerializedHomePageLink } from "@/types/home-page";
 export type { SerializedHomePageLink };
@@ -186,8 +187,10 @@ export async function createHomePageLink(data: {
       },
     });
 
+    const slug = await getRestaurantSlugByBranchId(link.branchId);
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
+    if (slug) revalidateTag(`restaurant-landing-${slug}`);
 
     return {
       success: true,
@@ -262,8 +265,10 @@ export async function updateHomePageLink(
       },
     });
 
+    const slug = await getRestaurantSlugByBranchId(link.branchId);
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
+    if (slug) revalidateTag(`restaurant-landing-${slug}`);
 
     return {
       success: true,
@@ -300,12 +305,15 @@ export async function deleteHomePageLink(id: string): Promise<{
   error?: string;
 }> {
   try {
-    await prisma.homePageLink.delete({
+    const deleted = await prisma.homePageLink.delete({
       where: { id },
+      select: { branchId: true },
     });
 
+    const slug = await getRestaurantSlugByBranchId(deleted.branchId);
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
+    if (slug) revalidateTag(`restaurant-landing-${slug}`);
 
     return { success: true };
   } catch (error) {
@@ -337,8 +345,10 @@ export async function reorderHomePageLinks(
       }
     });
 
+    const slug = await getRestaurantSlugByBranchId(branchId);
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
+    if (slug) revalidateTag(`restaurant-landing-${slug}`);
 
     return { success: true };
   } catch (error) {
@@ -387,8 +397,10 @@ export async function toggleHomePageLinkStatus(id: string): Promise<{
       },
     });
 
+    const slug = await getRestaurantSlugByBranchId(link.branchId);
     revalidatePath("/");
     revalidatePath("/dashboard/config/homepage");
+    if (slug) revalidateTag(`restaurant-landing-${slug}`);
 
     return {
       success: true,

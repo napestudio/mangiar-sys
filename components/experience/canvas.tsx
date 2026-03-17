@@ -2,7 +2,6 @@
 
 import { Canvas } from "@react-three/fiber";
 
-import { SushiModel } from "@/components/models/sushi";
 import NotFoundText from "./text";
 
 export default function CanvasExperience() {
@@ -18,7 +17,6 @@ export default function CanvasExperience() {
       />
       <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
       <NotFoundText />
-      <SushiModel position-z={2} rotation-z={-0.25} />
     </Canvas>
   );
 }

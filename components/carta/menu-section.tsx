@@ -29,10 +29,12 @@ export function MenuSection({ section, showPrices = true }: MenuSectionProps) {
   const hasContent = elements.length > 0;
 
   return (
-    <div className="text-white not-first:mt-12 bg-neutral-950 rounded-xl md:p-6 px-0 py-6">
+    <div className="text-neutral-900 not-first:mt-12 bg-white rounded-xl md:p-6 px-0 py-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold font-serif">{section.name}</h2>
-        {section.description && <p className="mt-2 whitespace-pre-wrap">{section.description}</p>}
+        {section.description && (
+          <p className="mt-2 whitespace-pre-wrap">{section.description}</p>
+        )}
       </div>
 
       <div>

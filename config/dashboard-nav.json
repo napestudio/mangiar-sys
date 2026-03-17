@@ -35,7 +35,7 @@
       "label": "Estadísticas",
       "href": "/dashboard/stats",
       "icon": "BarChart2",
-      "minimumRole": "MANAGER",
+      "minimumRole": "SUPERADMIN",
       "permissionGrant": "VIEW_STATISTICS"
     },
     {
@@ -63,7 +63,7 @@
       "label": "Facturas",
       "href": "/dashboard/invoices",
       "icon": "Receipt",
-      "minimumRole": "MANAGER",
+      "minimumRole": "SUPER_ADMIN",
       "permissionGrant": "VIEW_INVOICES"
     },
     {

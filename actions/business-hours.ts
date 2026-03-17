@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isUserAdmin } from "@/lib/permissions";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { saveBusinessHoursSchema } from "@/lib/validations/business-hours";
 import type { ActionResult } from "@/types/action-result";
 
@@ -95,7 +95,16 @@ export async function saveBusinessHours(
       });
     });
 
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { slug: true },
+    });
+
     revalidatePath("/dashboard/config/restaurant");
+    if (restaurant?.slug) {
+      revalidatePath("/");
+      revalidateTag(`restaurant-landing-${restaurant.slug}`);
+    }
 
     return { success: true, data: saved };
   } catch (error) {

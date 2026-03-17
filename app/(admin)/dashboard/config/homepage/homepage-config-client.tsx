@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import type { SerializedHomePageLink } from "@/actions/HomePageLinks";
 import { LinkDialog } from "./components/link-dialog";
@@ -17,6 +18,9 @@ import { reorderHomePageLinks } from "@/actions/HomePageLinks";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { ROOT_DOMAIN } from "@/lib/constants";
+import AppearanceConfigClient from "@/components/dashboard/appearance-config-client";
+import type { RestaurantTheme } from "@/types/restaurant-theme";
+import { DEFAULT_THEME } from "@/types/restaurant-theme";
 
 type Menu = {
   id: string;
@@ -35,6 +39,8 @@ interface HomePageConfigClientProps {
   availableMenus: Menu[];
   availableTimeSlots: TimeSlot[];
   restaurantSlug: string | null;
+  restaurantId: string;
+  initialTheme: RestaurantTheme | null;
 }
 
 export default function HomePageConfigClient({
@@ -43,6 +49,8 @@ export default function HomePageConfigClient({
   availableMenus,
   availableTimeSlots,
   restaurantSlug,
+  restaurantId,
+  initialTheme,
 }: HomePageConfigClientProps) {
   const { toast } = useToast();
   const [, startTransition] = useTransition();
@@ -73,26 +81,22 @@ export default function HomePageConfigClient({
           description: result.error || "Error al actualizar orden",
           variant: "destructive",
         });
-        // Revert on error
         setLinks(previousLinks);
       }
     });
   };
 
   const handleLinkCreated = (newLink: SerializedHomePageLink) => {
-    // Optimistically add the new link
     setLinks((prev) => [...prev, newLink]);
   };
 
   const handleLinkUpdated = (updatedLink: SerializedHomePageLink) => {
-    // Optimistically update the link
     setLinks((prev) =>
       prev.map((link) => (link.id === updatedLink.id ? updatedLink : link)),
     );
   };
 
   const handleLinkDeleted = (deletedId: string) => {
-    // Optimistically remove the link
     setLinks((prev) => prev.filter((link) => link.id !== deletedId));
   };
 
@@ -110,12 +114,9 @@ export default function HomePageConfigClient({
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Configuración de Página Principal
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Página Principal</h1>
           <p className="mt-2 text-gray-600">
-            Configura los enlaces que aparecen en la página de inicio del
-            restaurante.
+            Configura los enlaces y el diseño de tu página de inicio.
           </p>
         </div>
         {restaurantSlug && (
@@ -132,43 +133,57 @@ export default function HomePageConfigClient({
         )}
       </div>
 
-      {/* Links Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Enlaces de Inicio</CardTitle>
-              <CardDescription>
-                Agrega, edita o reordena los enlaces que verán los clientes.
-              </CardDescription>
-            </div>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              Agregar Enlace
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {links.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p className="mb-4">No hay enlaces configurados.</p>
-              <p className="text-sm">
-                Agrega enlaces para que los clientes puedan navegar desde la
-                página de inicio.
-              </p>
-            </div>
-          ) : (
-            <SortableLinkList
-              links={links}
-              onReorder={handleReorder}
-              onEdit={openEditDialog}
-              onLinkUpdated={handleLinkUpdated}
-              onLinkDeleted={handleLinkDeleted}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="contenido">
+        <TabsList>
+          <TabsTrigger value="contenido">Contenido</TabsTrigger>
+          <TabsTrigger value="apariencia">Diseño</TabsTrigger>
+        </TabsList>
 
-      {/* Dialog */}
+        <TabsContent value="contenido" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Enlaces de Inicio</CardTitle>
+                  <CardDescription>
+                    Agrega, edita o reordena los enlaces que verán los clientes.
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setIsDialogOpen(true)}>
+                  Agregar Enlace
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {links.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="mb-4">No hay enlaces configurados.</p>
+                  <p className="text-sm">
+                    Agrega enlaces para que los clientes puedan navegar desde la
+                    página de inicio.
+                  </p>
+                </div>
+              ) : (
+                <SortableLinkList
+                  links={links}
+                  onReorder={handleReorder}
+                  onEdit={openEditDialog}
+                  onLinkUpdated={handleLinkUpdated}
+                  onLinkDeleted={handleLinkDeleted}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="apariencia" className="mt-6">
+          <AppearanceConfigClient
+            restaurantId={restaurantId}
+            initialTheme={initialTheme ?? DEFAULT_THEME}
+          />
+        </TabsContent>
+      </Tabs>
+
       <LinkDialog
         open={isDialogOpen}
         onOpenChange={(open) => {
