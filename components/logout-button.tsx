@@ -7,6 +7,7 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     showLogoutOverlay();
     await logoutAction();
+    window.location.href = "/api/logout";
   };
 
   return (

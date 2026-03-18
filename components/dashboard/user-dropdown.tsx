@@ -35,6 +35,7 @@ export default function UserDropdown({
   const handleLogout = async () => {
     showLogoutOverlay();
     await logoutAction();
+    window.location.href = "/api/logout";
   };
 
   return (
