@@ -7,7 +7,9 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     showLogoutOverlay();
     await logoutAction();
-    window.location.href = "/api/logout";
+    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+    const protocol = root.startsWith("localhost") ? "http" : "https";
+    window.location.href = `${protocol}://${root}/ingresar`;
   };
 
   return (
