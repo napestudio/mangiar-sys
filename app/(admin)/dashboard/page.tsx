@@ -5,18 +5,24 @@ import { getFilteredReservations } from "@/actions/Reservation";
 import { getLowStockAlerts } from "@/actions/stock";
 import { getTablesWithStatus } from "@/actions/Table";
 import { DashboardHome } from "@/components/dashboard/dashboard-home";
+import LogoutButton from "@/components/logout-button";
 
 export default async function DashboardPage() {
   const { branchId } = await requireRole(UserRole.WAITER);
 
-  const [ordersResult, reservationsResult, stockAlertsResult, orderCounts, tablesResult] =
-    await Promise.all([
-      getOrders({ branchId, pageSize: 5, page: 1 }),
-      getFilteredReservations(branchId, { type: "today", limit: 5 }),
-      getLowStockAlerts(branchId),
-      getActiveOrderCounts(branchId),
-      getTablesWithStatus(branchId),
-    ]);
+  const [
+    ordersResult,
+    reservationsResult,
+    stockAlertsResult,
+    orderCounts,
+    tablesResult,
+  ] = await Promise.all([
+    getOrders({ branchId, pageSize: 5, page: 1 }),
+    getFilteredReservations(branchId, { type: "today", limit: 5 }),
+    getLowStockAlerts(branchId),
+    getActiveOrderCounts(branchId),
+    getTablesWithStatus(branchId),
+  ]);
 
   const recentOrders =
     ordersResult.success && ordersResult.data ? ordersResult.data : [];
@@ -27,7 +33,9 @@ export default async function DashboardPage() {
       : [];
 
   const stockAlerts =
-    stockAlertsResult.success && stockAlertsResult.data ? stockAlertsResult.data : [];
+    stockAlertsResult.success && stockAlertsResult.data
+      ? stockAlertsResult.data
+      : [];
 
   const tables =
     tablesResult.success && tablesResult.data ? tablesResult.data : [];
@@ -50,12 +58,15 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <DashboardHome
-      recentOrders={recentOrders}
-      recentReservations={recentReservations}
-      stockAlerts={stockAlerts}
-      orderCounts={orderCounts}
-      tables={serializedTables}
-    />
+    <>
+      <LogoutButton />
+      <DashboardHome
+        recentOrders={recentOrders}
+        recentReservations={recentReservations}
+        stockAlerts={stockAlerts}
+        orderCounts={orderCounts}
+        tables={serializedTables}
+      />
+    </>
   );
 }

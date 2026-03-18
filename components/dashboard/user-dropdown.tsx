@@ -1,21 +1,19 @@
 "use client";
 
-import { LogOut, User } from "lucide-react";
-import { showLogoutOverlay } from "@/contexts/logout-context";
+import { UserRole } from "@/app/generated/prisma";
+import { isAdminOrHigher } from "@/lib/permissions/role-utils";
+import { User } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { UserRole } from "@/app/generated/prisma";
-import { isAdminOrHigher } from "@/lib/permissions/role-utils";
-import { useState } from "react";
-import Image from "next/image";
-import { logoutAction } from "@/actions/auth";
+import { SignOutButton } from "./sign-out-button";
 
 interface UserDropdownProps {
   userName: string;
@@ -32,13 +30,6 @@ export default function UserDropdown({
 }: UserDropdownProps) {
   const hasAdminRole = isAdminOrHigher(userRole);
   const [userImage] = useState<string | null>(initialUserImage ?? null);
-  const handleLogout = async () => {
-    showLogoutOverlay();
-    await logoutAction();
-    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const protocol = root.startsWith("localhost") ? "http" : "https";
-    window.location.href = `${protocol}://${root}/ingresar`;
-  };
 
   return (
     <DropdownMenu modal={false}>
@@ -78,14 +69,7 @@ export default function UserDropdown({
           {userName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleLogout}
-          variant="destructive"
-          className="cursor-pointer"
-        >
-          <LogOut className="h-4 w-4" />
-          Cerrar sesión
-        </DropdownMenuItem>
+        <SignOutButton />
       </DropdownMenuContent>
     </DropdownMenu>
   );
