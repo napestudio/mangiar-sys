@@ -1,6 +1,7 @@
 "use server";
 
-import { signOut, auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
 
 export async function invalidateUserCaches(): Promise<void> {
@@ -13,10 +14,22 @@ export async function invalidateUserCaches(): Promise<void> {
 export async function logoutAction(): Promise<void> {
   revalidateTag("user-permissions");
   revalidateTag("user-permission-grants");
-  try {
-    await signOut({ redirect: false });
-  } catch {
-    // NextAuth v5 beta throws NEXT_REDIRECT despite redirect:false.
-    // JWT is deleted before any throw — session IS cleared.
-  }
+
+  const useSecureCookies = process.env.NODE_ENV === "production";
+  const cookieName = useSecureCookies
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+
+  const cookieStore = await cookies();
+  cookieStore.set({
+    name: cookieName,
+    value: "",
+    expires: new Date(0),
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: useSecureCookies,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  });
 }
