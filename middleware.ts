@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
 
   // Auth checks — only for routes that need them
   if (pathname === "/ingresar" || pathname.startsWith("/dashboard")) {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const token = await getToken({ req, secret: process.env.AUTH_SECRET ?? "" });
     const isLoggedIn = !!token;
 
     // Redirect logged-in users away from /ingresar to the post-login redirect handler.
