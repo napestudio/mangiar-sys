@@ -13,5 +13,5 @@ export async function invalidateUserCaches(): Promise<void> {
 export async function logoutAction(): Promise<void> {
   revalidateTag("user-permissions");
   revalidateTag("user-permission-grants");
-  await signOut({ redirect: false });
+  await signOut({ redirectTo: "/ingresar" });
 }
