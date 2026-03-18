@@ -13,7 +13,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { UserRole } from "@/app/generated/prisma";
 import { isAdminOrHigher } from "@/lib/permissions/role-utils";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import { logoutAction } from "@/actions/auth";
 
@@ -32,11 +32,13 @@ export default function UserDropdown({
 }: UserDropdownProps) {
   const hasAdminRole = isAdminOrHigher(userRole);
   const [userImage] = useState<string | null>(initialUserImage ?? null);
+  const [, startTransition] = useTransition();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     showLogoutOverlay();
-    await logoutAction();
-    window.location.href = "/ingresar";
+    startTransition(async () => {
+      await logoutAction();
+    });
   };
 
   return (

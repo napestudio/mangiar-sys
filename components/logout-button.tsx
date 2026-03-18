@@ -1,13 +1,17 @@
 "use client";
 
+import { useTransition } from "react";
 import { showLogoutOverlay } from "@/contexts/logout-context";
 import { logoutAction } from "@/actions/auth";
 
 export default function LogoutButton() {
-  const handleLogout = async () => {
+  const [, startTransition] = useTransition();
+
+  const handleLogout = () => {
     showLogoutOverlay();
-    await logoutAction();
-    window.location.href = "/ingresar";
+    startTransition(async () => {
+      await logoutAction();
+    });
   };
 
   return (
