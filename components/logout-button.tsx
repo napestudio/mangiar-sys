@@ -1,11 +1,13 @@
 "use client";
 
 import { showLogoutOverlay } from "@/contexts/logout-context";
+import { logoutAction } from "@/actions/auth";
 
 export default function LogoutButton() {
-  const handleLogout = () => {
+  const handleLogout = async () => {
     showLogoutOverlay();
-    window.location.href = "/api/logout";
+    await logoutAction();
+    window.location.href = "/ingresar";
   };
 
   return (

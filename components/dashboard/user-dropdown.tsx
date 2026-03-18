@@ -15,6 +15,7 @@ import { UserRole } from "@/app/generated/prisma";
 import { isAdminOrHigher } from "@/lib/permissions/role-utils";
 import { useState } from "react";
 import Image from "next/image";
+import { logoutAction } from "@/actions/auth";
 
 interface UserDropdownProps {
   userName: string;
@@ -32,9 +33,10 @@ export default function UserDropdown({
   const hasAdminRole = isAdminOrHigher(userRole);
   const [userImage] = useState<string | null>(initialUserImage ?? null);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     showLogoutOverlay();
-    window.location.href = "/api/logout";
+    await logoutAction();
+    window.location.href = "/ingresar";
   };
 
   return (
