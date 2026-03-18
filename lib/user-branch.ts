@@ -30,7 +30,7 @@ export type UserBranchWithRestaurant = {
 
 /**
  * Returns all branches the user has access to, with restaurant slug for subdomain routing.
- * Used by /seleccionar after login to determine where to redirect.
+ * Used by /api/auth-redirect after login to determine where to redirect.
  */
 export async function getUserBranchesWithRestaurant(
   userId: string

@@ -253,7 +253,7 @@ export async function registerRestaurant(
     await signIn("credentials", {
       email: adminEmail,
       password,
-      redirectTo: "/seleccionar",
+      redirectTo: "/api/auth-redirect",
     });
   } catch (error) {
     if (error instanceof AuthError) {
