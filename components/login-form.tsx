@@ -1,6 +1,7 @@
 "use client";
 
 import { loginWithCredentials, loginWithGoogle } from "@/actions/login";
+import { hideLogoutOverlay } from "@/contexts/logout-context";
 import { useState, useTransition, useEffect } from "react";
 
 const LOADING_MESSAGES = [
@@ -15,6 +16,10 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+
+  useEffect(() => {
+    hideLogoutOverlay();
+  }, []);
 
   useEffect(() => {
     if (!isPending) return;

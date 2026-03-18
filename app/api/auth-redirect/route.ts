@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getUserBranchesWithRestaurant } from "@/lib/user-branch";
-import { buildSubdomainUrl } from "@/lib/constants";
+
+const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+const PROTOCOL = ROOT.startsWith("localhost") ? "http" : "https";
 
 export async function GET() {
   const session = await auth();
@@ -10,15 +11,5 @@ export async function GET() {
     redirect("/ingresar");
   }
 
-  const branches = await getUserBranchesWithRestaurant(session.user.id);
-
-  if (branches.length === 0) {
-    redirect("/ingresar");
-  }
-
-  const uniqueRestaurants = [
-    ...new Map(branches.map((b) => [b.restaurant.id, b.restaurant])).values(),
-  ];
-
-  redirect(buildSubdomainUrl(uniqueRestaurants[0].slug, "/dashboard"));
+  redirect(`${PROTOCOL}://${ROOT}/dashboard`);
 }
