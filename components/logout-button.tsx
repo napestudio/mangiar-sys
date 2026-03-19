@@ -1,15 +1,11 @@
 "use client";
 
 import { showLogoutOverlay } from "@/contexts/logout-context";
-import { logoutAction } from "@/actions/auth";
 
 export default function LogoutButton() {
-  const handleLogout = async () => {
+  const handleLogout = () => {
     showLogoutOverlay();
-    await logoutAction();
-    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const protocol = root.startsWith("localhost") ? "http" : "https";
-    window.location.href = `${protocol}://${root}/ingresar`;
+    window.location.href = "/api/logout";
   };
 
   return (

@@ -1,17 +1,13 @@
 "use client";
 
-import { logoutAction } from "@/actions/auth";
 import { showLogoutOverlay } from "@/contexts/logout-context";
 import { LogOut } from "lucide-react";
 import { DropdownMenuItem } from "../ui/dropdown-menu";
 
 export function SignOutButton() {
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     showLogoutOverlay();
-    await logoutAction();
-    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const protocol = root.startsWith("localhost") ? "http" : "https";
-    window.location.href = `${protocol}://${root}/ingresar`;
+    window.location.href = "/api/logout";
   };
 
   return (

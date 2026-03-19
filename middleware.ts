@@ -20,27 +20,36 @@ export async function middleware(req: NextRequest) {
 
   // Auth checks — only for routes that need them
   if (pathname === "/ingresar" || pathname.startsWith("/dashboard")) {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET ?? "" });
-    const isLoggedIn = !!token;
+    // Skip auth redirects for server action POSTs and RSC data fetches.
+    // Redirecting these internal Next.js requests returns non-RSC content,
+    // which causes "An unexpected response was received from the server" on the client.
+    const isServerAction =
+      req.method === "POST" && req.headers.has("next-action");
+    const isRscRequest = req.headers.get("rsc") === "1";
 
-    // Redirect logged-in users away from /ingresar to the post-login redirect handler.
-    // Cache-Control: no-store prevents browsers/CDNs from caching this redirect decision,
-    // which would cause stale redirects after logout.
-    if (pathname === "/ingresar" && isLoggedIn) {
-      const response = NextResponse.redirect(
-        new URL("/api/auth-redirect", req.url)
-      );
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-      response.headers.set("Pragma", "no-cache");
-      return response;
-    }
+    if (!isServerAction && !isRscRequest) {
+      const token = await getToken({ req, secret: process.env.AUTH_SECRET ?? "" });
+      const isLoggedIn = !!token;
 
-    // Protect dashboard routes
-    if (pathname.startsWith("/dashboard") && !isLoggedIn) {
-      const response = NextResponse.redirect(new URL("/ingresar", req.url));
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-      response.headers.set("Pragma", "no-cache");
-      return response;
+      // Redirect logged-in users away from /ingresar to the post-login redirect handler.
+      // Cache-Control: no-store prevents browsers/CDNs from caching this redirect decision,
+      // which would cause stale redirects after logout.
+      if (pathname === "/ingresar" && isLoggedIn) {
+        const response = NextResponse.redirect(
+          new URL("/api/auth-redirect", req.url)
+        );
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        return response;
+      }
+
+      // Protect dashboard routes
+      if (pathname.startsWith("/dashboard") && !isLoggedIn) {
+        const response = NextResponse.redirect(new URL("/ingresar", req.url));
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        return response;
+      }
     }
   }
 
