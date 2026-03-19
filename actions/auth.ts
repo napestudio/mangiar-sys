@@ -12,9 +12,6 @@ export async function invalidateUserCaches(): Promise<void> {
 }
 
 export async function logoutAction(): Promise<void> {
-  revalidateTag("user-permissions");
-  revalidateTag("user-permission-grants");
-
   const useSecureCookies = process.env.NODE_ENV === "production";
   const cookieName = useSecureCookies
     ? "__Secure-authjs.session-token"

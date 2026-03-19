@@ -397,7 +397,11 @@ export function OrderDetailsSidebar({
           discountTypeInput,
         );
         if (!result.success) {
-          console.error("Failed to update discount:", result.error);
+          toast({
+            variant: "destructive",
+            title: "Error al actualizar el descuento",
+            description: result.error,
+          });
         }
       }
 
