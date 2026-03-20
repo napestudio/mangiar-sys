@@ -195,6 +195,7 @@ export async function getBranchStockSummary(branchId: string) {
       where: {
         branchId,
         isActive: true,
+        product: { isCombo: false }, // Combos derive stock from components — excluded here
       },
       include: {
         product: {
@@ -330,6 +331,7 @@ export async function getLowStockAlerts(branchId: string) {
           minStockAlert: { not: null },
           trackStock: true, // Solo productos con seguimiento de stock
           isActive: true,
+          isCombo: false, // Combos no tienen stock propio
         },
       },
       include: {
@@ -383,6 +385,82 @@ export async function getLowStockAlerts(branchId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error al obtener alertas de stock bajo"
+    };
+  }
+}
+
+/**
+ * Obtiene combos activos de una sucursal con su disponibilidad calculada
+ */
+export async function getCombosForBranch(branchId: string) {
+  try {
+    const combos = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        isCombo: true,
+        branches: { some: { branchId, isActive: true } },
+      },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        category: { select: { name: true } },
+        comboComponents: {
+          select: {
+            componentId: true,
+            quantity: true,
+            component: {
+              select: {
+                name: true,
+                trackStock: true,
+                branches: {
+                  where: { branchId },
+                  select: { stock: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const result = combos.map((combo) => {
+      let availability = Infinity;
+      const components = combo.comboComponents.map((cc) => {
+        const stock = Number(cc.component.branches[0]?.stock ?? 0);
+        const qty = Number(cc.quantity);
+        const canMake =
+          cc.component.trackStock && qty > 0
+            ? Math.floor(stock / qty)
+            : Infinity;
+        if (isFinite(canMake)) availability = Math.min(availability, canMake);
+        return {
+          componentId: cc.componentId,
+          name: cc.component.name,
+          trackStock: cc.component.trackStock,
+          stock,
+          quantity: qty,
+          canMake: isFinite(canMake) ? canMake : null,
+        };
+      });
+
+      return {
+        id: combo.id,
+        name: combo.name,
+        categoryId: combo.categoryId,
+        categoryName: combo.category?.name ?? null,
+        availability: combo.comboComponents.length === 0 ? 0 : (isFinite(availability) ? availability : 0),
+        components,
+      };
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error fetching combos:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al obtener combos",
     };
   }
 }

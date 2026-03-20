@@ -12,6 +12,7 @@ import LoadingToast from "@/components/dashboard/loading-toast";
 import { downloadCSV, generateCSV } from "@/lib/csv/csv-export";
 import {
   AlertTriangle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -82,16 +83,36 @@ type StockSummary = {
   };
 };
 
+type ComboComponentInfo = {
+  componentId: string;
+  name: string;
+  trackStock: boolean;
+  stock: number;
+  quantity: number;
+  canMake: number | null;
+};
+
+type ComboInfo = {
+  id: string;
+  name: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  availability: number;
+  components: ComboComponentInfo[];
+};
+
 type StockManagementClientProps = {
   branchId: string;
   initialSummary: StockSummary | null;
   initialAlerts: ProductOnBranchWithRelations[];
+  initialCombos: ComboInfo[];
 };
 
 export function StockManagementClient({
   branchId,
   initialSummary,
   initialAlerts,
+  initialCombos,
 }: StockManagementClientProps) {
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] =
@@ -100,6 +121,8 @@ export function StockManagementClient({
   const [summary, setSummary] = useState<StockSummary | null>(initialSummary);
   const [alerts, setAlerts] =
     useState<ProductOnBranchWithRelations[]>(initialAlerts);
+  const [combos] = useState<ComboInfo[]>(initialCombos);
+  const [combosExpanded, setCombosExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -683,6 +706,92 @@ export function StockManagementClient({
           </div>
         )}
       </div>
+
+      {/* Sección de Combos */}
+      {combos.length > 0 && (
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-amber-200">
+          <button
+            type="button"
+            onClick={() => setCombosExpanded((prev) => !prev)}
+            className="w-full flex items-center justify-between px-6 py-4 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-gray-900">
+                Combos y Promos
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                {combos.length}
+              </span>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-gray-500 transition-transform ${combosExpanded ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {combosExpanded && (
+            <div className="border-t border-amber-100 divide-y divide-gray-100">
+              {combos.map((combo) => (
+                <div key={combo.id} className="px-6 py-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <span className="font-medium text-gray-900">
+                        {combo.name}
+                      </span>
+                      {combo.categoryName && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          {combo.categoryName}
+                        </span>
+                      )}
+                    </div>
+                    {combo.availability > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Disponible: {combo.availability} u.
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Sin stock
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {combo.components.map((comp) => (
+                      <div
+                        key={comp.componentId}
+                        className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <span className="text-gray-700 truncate">
+                          {comp.name}
+                        </span>
+                        <div className="flex items-center gap-2 ml-2 shrink-0">
+                          <span className="text-gray-400 text-xs">
+                            ×{comp.quantity}
+                          </span>
+                          {comp.trackStock ? (
+                            <span
+                              className={`font-medium text-xs ${
+                                comp.canMake === 0
+                                  ? "text-red-600"
+                                  : comp.canMake !== null &&
+                                      comp.canMake <= 2
+                                    ? "text-amber-600"
+                                    : "text-green-700"
+                              }`}
+                            >
+                              {comp.stock} u.
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">∞</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Diálogo de ajuste de stock */}
       {showAdjustmentDialog && selectedProduct && (

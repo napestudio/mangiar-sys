@@ -68,12 +68,14 @@ type MenuItemWithRelations = {
   trackStock: boolean;
   tags: ProductTag[];
   isActive: boolean;
+  isCombo: boolean;
   createdAt: string;
   updatedAt: string;
   restaurantId: string;
   categoryId: string | null;
   category: SerializedCategory | null;
   branches: SerializedProductOnBranch[];
+  comboComponents: { id: string; comboId: string; componentId: string; quantity: number; component: { id: string; name: string; unitType: string } }[];
 };
 
 type MenuItemsTableProps = {

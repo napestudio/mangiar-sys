@@ -85,6 +85,18 @@ type SerializedCategory = {
   restaurantId: string;
 };
 
+type SerializedComboComponent = {
+  id: string;
+  comboId: string;
+  componentId: string;
+  quantity: number;
+  component: {
+    id: string;
+    name: string;
+    unitType: string;
+  };
+};
+
 type MenuItemWithRelations = {
   id: string;
   name: string;
@@ -98,12 +110,14 @@ type MenuItemWithRelations = {
   trackStock: boolean;
   tags: ProductTag[];
   isActive: boolean;
+  isCombo: boolean;
   createdAt: string;
   updatedAt: string;
   restaurantId: string;
   categoryId: string | null;
   category: SerializedCategory | null;
   branches: SerializedProductOnBranch[];
+  comboComponents: SerializedComboComponent[];
 };
 
 type OptimisticAction =
@@ -740,6 +754,9 @@ export function ProductsClient({
         <ProductDialog
           item={editingItem}
           categories={categories}
+          availableComponents={menuItems
+            .filter((p) => !p.isCombo && p.isActive)
+            .map((p) => ({ id: p.id, name: p.name }))}
           restaurantId={restaurantId}
           branchId={branchId}
           onClose={handleCloseDialog}

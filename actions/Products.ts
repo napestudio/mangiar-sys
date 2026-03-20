@@ -35,25 +35,56 @@ export async function createMenuItem(input: CreateMenuItemInput) {
       input.sku ||
       (await generateProductSKU(input.restaurantId, input.categoryId));
 
-    const product = await prisma.product.create({
-      data: {
-        name: input.name,
-        description: input.description,
-        imageUrl: input.imageUrl,
-        sku: finalSku,
-        unitType: input.unitType,
-        weightUnit: input.weightUnit,
-        volumeUnit: input.volumeUnit,
-        minStockAlert: input.minStockAlert,
-        trackStock: input.trackStock ?? true,
-        tags: input.tags ?? [],
-        categoryId: input.categoryId,
-        restaurantId: input.restaurantId,
-        isActive: input.isActive ?? true,
-      },
-      include: {
-        category: true,
-      },
+    const isCombo = input.isCombo ?? false;
+    const components = input.components ?? [];
+
+    // Validate combo components before creating anything
+    if (isCombo && components.length > 0) {
+      const componentIds = components.map((c) => c.componentId);
+      const comboComponents = await prisma.product.findMany({
+        where: { id: { in: componentIds }, isCombo: true },
+        select: { id: true, name: true },
+      });
+      if (comboComponents.length > 0) {
+        return {
+          success: false,
+          error: `Los componentes de un combo no pueden ser otros combos: ${comboComponents.map((p) => p.name).join(", ")}`,
+        };
+      }
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          imageUrl: input.imageUrl,
+          sku: finalSku,
+          unitType: input.unitType,
+          weightUnit: input.weightUnit,
+          volumeUnit: input.volumeUnit,
+          minStockAlert: isCombo ? null : input.minStockAlert,
+          trackStock: isCombo ? false : (input.trackStock ?? true),
+          tags: input.tags ?? [],
+          categoryId: input.categoryId,
+          restaurantId: input.restaurantId,
+          isActive: input.isActive ?? true,
+          isCombo,
+        },
+        include: { category: true },
+      });
+
+      if (isCombo && components.length > 0) {
+        await tx.productComponent.createMany({
+          data: components.map((c) => ({
+            comboId: created.id,
+            componentId: c.componentId,
+            quantity: c.quantity,
+          })),
+        });
+      }
+
+      return created;
     });
 
     // Serialize Decimal and Date fields
@@ -110,25 +141,60 @@ export async function createMenuItem(input: CreateMenuItemInput) {
  */
 export async function updateMenuItem(input: UpdateMenuItemInput) {
   try {
-    const product = await prisma.product.update({
-      where: { id: input.id },
-      data: {
-        name: input.name,
-        description: input.description,
-        imageUrl: input.imageUrl,
-        sku: input.sku,
-        unitType: input.unitType,
-        weightUnit: input.weightUnit,
-        volumeUnit: input.volumeUnit,
-        minStockAlert: input.minStockAlert,
-        trackStock: input.trackStock,
-        tags: input.tags,
-        categoryId: input.categoryId,
-        isActive: input.isActive,
-      },
-      include: {
-        category: true,
-      },
+    const isCombo = input.isCombo;
+    const components = input.components;
+
+    // Validate combo components if provided
+    if (isCombo && components && components.length > 0) {
+      const componentIds = components.map((c) => c.componentId);
+      const comboComponents = await prisma.product.findMany({
+        where: { id: { in: componentIds }, isCombo: true },
+        select: { id: true, name: true },
+      });
+      if (comboComponents.length > 0) {
+        return {
+          success: false,
+          error: `Los componentes de un combo no pueden ser otros combos: ${comboComponents.map((p) => p.name).join(", ")}`,
+        };
+      }
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id: input.id },
+        data: {
+          name: input.name,
+          description: input.description,
+          imageUrl: input.imageUrl,
+          sku: input.sku,
+          unitType: input.unitType,
+          weightUnit: input.weightUnit,
+          volumeUnit: input.volumeUnit,
+          minStockAlert: isCombo ? null : input.minStockAlert,
+          trackStock: isCombo ? false : input.trackStock,
+          tags: input.tags,
+          categoryId: input.categoryId,
+          isActive: input.isActive,
+          isCombo,
+        },
+        include: { category: true },
+      });
+
+      // Update combo components if provided
+      if (isCombo !== undefined && components !== undefined) {
+        await tx.productComponent.deleteMany({ where: { comboId: input.id } });
+        if (isCombo && components.length > 0) {
+          await tx.productComponent.createMany({
+            data: components.map((c) => ({
+              comboId: input.id,
+              componentId: c.componentId,
+              quantity: c.quantity,
+            })),
+          });
+        }
+      }
+
+      return updated;
     });
 
     // Serialize Decimal and Date fields
@@ -336,6 +402,7 @@ export async function duplicateProduct(productId: string) {
           categoryId: originalProduct.categoryId,
           restaurantId: originalProduct.restaurantId,
           isActive: originalProduct.isActive,
+          isCombo: originalProduct.isCombo,
         },
       });
 
@@ -375,6 +442,13 @@ export async function duplicateProduct(productId: string) {
               branch: true,
             },
           },
+          comboComponents: {
+            include: {
+              component: {
+                select: { id: true, name: true, unitType: true },
+              },
+            },
+          },
         },
       });
     });
@@ -405,6 +479,10 @@ export async function duplicateProduct(productId: string) {
           ...price,
           price: Number(price.price),
         })),
+      })),
+      comboComponents: duplicatedProduct.comboComponents.map((cc) => ({
+        ...cc,
+        quantity: Number(cc.quantity),
       })),
     };
 
@@ -437,6 +515,13 @@ export async function getMenuItems(restaurantId: string) {
             prices: true,
           },
         },
+        comboComponents: {
+          include: {
+            component: {
+              select: { id: true, name: true, unitType: true },
+            },
+          },
+        },
       },
       orderBy: {
         name: "asc",
@@ -465,6 +550,10 @@ export async function getMenuItems(restaurantId: string) {
           ...price,
           price: Number(price.price),
         })),
+      })),
+      comboComponents: product.comboComponents.map((cc) => ({
+        ...cc,
+        quantity: Number(cc.quantity),
       })),
     }));
 
@@ -738,6 +827,13 @@ export async function getMenuItemsPaginated(params: {
               prices: true,
             },
           },
+          comboComponents: {
+            include: {
+              component: {
+                select: { id: true, name: true, unitType: true },
+              },
+            },
+          },
         },
         orderBy: {
           name: "asc",
@@ -796,6 +892,10 @@ export async function getMenuItemsPaginated(params: {
           ...price,
           price: Number(price.price),
         })),
+      })),
+      comboComponents: product.comboComponents.map((cc) => ({
+        ...cc,
+        quantity: Number(cc.quantity),
       })),
     }));
 
