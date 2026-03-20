@@ -11,7 +11,7 @@ export async function loginWithCredentials(formData: FormData) {
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/api/auth-redirect",
+      redirect: false, // session is created; client navigates manually
     });
   } catch (error) {
     if (error instanceof AuthError) {
