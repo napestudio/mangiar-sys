@@ -1,7 +1,7 @@
 import { getMenuItemsPaginated, getCategories } from "@/actions/Products";
 import { ProductsClient } from "./components/product-client";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getBranch } from "@/actions/Branch";
 
 type SearchParams = {
@@ -18,7 +18,7 @@ export default async function MenuItemsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_PRODUCTS);
 
   // Await searchParams (Next.js 15 requirement)
   const params = await searchParams;

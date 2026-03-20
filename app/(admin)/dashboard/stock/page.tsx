@@ -1,10 +1,10 @@
 import { getBranchStockSummary, getLowStockAlerts } from "@/actions/stock";
 import { StockManagementClient } from "./components/stock-management-client";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 
 export default async function StockPage() {
-  const { branchId } = await requireRole(UserRole.MANAGER);
+  const { branchId } = await requireRole(UserRole.MANAGER, PermissionGrant.VIEW_STOCK);
 
   // Fetch stock summary and low stock alerts
   const [summaryResult, alertsResult] = await Promise.all([

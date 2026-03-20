@@ -12,7 +12,10 @@ import {
 import { calculateDiscountAmount } from "@/lib/discount";
 import { serializeClient } from "@/lib/serializers";
 import { serializeForClient } from "@/lib/serialize";
-import { todayBoundsARDate, dateStringToTimestampBoundsAR } from "@/lib/date-utils";
+import {
+  todayBoundsARDate,
+  dateStringToTimestampBoundsAR,
+} from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
 import type {
   DeliverySection,
@@ -73,8 +76,7 @@ async function validateTableForOrder(
 async function getClientDiscount(
   clientId: string | null | undefined,
 ): Promise<{ discountPercentage: number; discountType: string }> {
-  if (!clientId)
-    return { discountPercentage: 0, discountType: "PERCENTAGE" };
+  if (!clientId) return { discountPercentage: 0, discountType: "PERCENTAGE" };
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -410,7 +412,7 @@ export async function createTableOrder(
     }
 
     // Generate a unique public code
-    const publicCode = `KS${Date.now().toString().slice(-8)}`;
+    const publicCode = `MGR${Date.now().toString().slice(-8)}`;
 
     // Get client discount if clientId is provided
     const clientDiscount = await getClientDiscount(clientId);
@@ -694,10 +696,7 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
 }
 
 // Add multiple items to order (bulk operation)
-export async function addOrderItems(
-  orderId: string,
-  items: OrderItemInput[],
-) {
+export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
   try {
     // Single transaction for all items - much faster than sequential calls
     const result = await prisma.orderItem.createMany({
@@ -1067,9 +1066,10 @@ export async function getAvailableProductsForOrder(
 ) {
   try {
     // Build price type filter: fetch requested type + DINE_IN for fallback
-    const priceTypes = orderType === OrderType.DINE_IN
-      ? [OrderType.DINE_IN]
-      : [orderType, OrderType.DINE_IN];
+    const priceTypes =
+      orderType === OrderType.DINE_IN
+        ? [OrderType.DINE_IN]
+        : [orderType, OrderType.DINE_IN];
 
     const products = await prisma.product.findMany({
       where: {
@@ -1127,30 +1127,32 @@ export async function getAvailableProductsForOrder(
     });
 
     // Transform to include price directly and convert Decimal to number
-    const productsWithPrice = products.map((product) => {
-      const branchPrices = product.branches[0]?.prices || [];
+    const productsWithPrice = products
+      .map((product) => {
+        const branchPrices = product.branches[0]?.prices || [];
 
-      // Try to find price matching orderType
-      let priceObj = branchPrices.find((p) => p.type === orderType);
+        // Try to find price matching orderType
+        let priceObj = branchPrices.find((p) => p.type === orderType);
 
-      // Fallback to DINE_IN if orderType price not found
-      if (!priceObj && orderType !== OrderType.DINE_IN) {
-        priceObj = branchPrices.find((p) => p.type === OrderType.DINE_IN);
-      }
+        // Fallback to DINE_IN if orderType price not found
+        if (!priceObj && orderType !== OrderType.DINE_IN) {
+          priceObj = branchPrices.find((p) => p.type === OrderType.DINE_IN);
+        }
 
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        imageUrl: product.imageUrl,
-        categoryId: product.categoryId,
-        tags: product.tags,
-        category: product.category,
-        price: Number(priceObj?.price ?? 0),
-        trackStock: product.trackStock,
-        stock: Number(product.branches[0]?.stock ?? 0),
-      };
-    }).filter((p) => !p.trackStock || p.stock > 0);
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          imageUrl: product.imageUrl,
+          categoryId: product.categoryId,
+          tags: product.tags,
+          category: product.category,
+          price: Number(priceObj?.price ?? 0),
+          trackStock: product.trackStock,
+          stock: Number(product.branches[0]?.stock ?? 0),
+        };
+      })
+      .filter((p) => !p.trackStock || p.stock > 0);
 
     return productsWithPrice;
   } catch (error) {
@@ -1601,11 +1603,15 @@ export async function getOrders(filters: OrderFilters) {
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
-        const { start } = dateStringToTimestampBoundsAR(startDate.toISOString().slice(0, 10));
+        const { start } = dateStringToTimestampBoundsAR(
+          startDate.toISOString().slice(0, 10),
+        );
         where.createdAt.gte = start;
       }
       if (endDate) {
-        const { end } = dateStringToTimestampBoundsAR(endDate.toISOString().slice(0, 10));
+        const { end } = dateStringToTimestampBoundsAR(
+          endDate.toISOString().slice(0, 10),
+        );
         where.createdAt.lt = end;
       }
     }
@@ -1788,7 +1794,10 @@ export async function updateDiscount(
     );
 
     // Validate discount value
-    if (discountType === "PERCENTAGE" && (discountPercentage < 0 || discountPercentage > 100)) {
+    if (
+      discountType === "PERCENTAGE" &&
+      (discountPercentage < 0 || discountPercentage > 100)
+    ) {
       return {
         success: false,
         error: "El descuento porcentual debe estar entre 0 y 100",
@@ -1901,7 +1910,8 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     if (status === OrderStatus.COMPLETED) {
       return {
         success: false,
-        error: "No se puede marcar como completada manualmente. Use 'Finalizar Venta' para registrar el pago.",
+        error:
+          "No se puede marcar como completada manualmente. Use 'Finalizar Venta' para registrar el pago.",
       };
     }
 
@@ -2001,7 +2011,6 @@ export async function setNeedsInvoice(orderId: string, needsInvoice: boolean) {
 // - generateInvoiceForOrder() - Generates ARCA electronic invoices with CAE
 // - getInvoices() - Lists invoices with pagination and filters
 // - getInvoiceById() - Gets a single invoice with full details
-
 
 // Close table with payment - records payment in cash register
 export async function closeTableWithPayment(data: {
@@ -2342,10 +2351,7 @@ export async function updateOrderType(
     if (order.type === newType) {
       return { success: false, error: "La orden ya es de ese tipo" };
     }
-    if (
-      order.type === OrderType.DINE_IN ||
-      newType === OrderType.DINE_IN
-    ) {
+    if (order.type === OrderType.DINE_IN || newType === OrderType.DINE_IN) {
       return {
         success: false,
         error: "Solo se puede cambiar entre Para Llevar y Delivery",

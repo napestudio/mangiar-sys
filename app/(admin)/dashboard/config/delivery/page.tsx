@@ -1,10 +1,10 @@
 import { getDeliveryConfig, getMenusForBranch } from "@/actions/DeliveryConfig";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import DeliveryConfigClient from "./delivery-config-client";
 
 export default async function DeliveryConfigPage() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   // Fetch delivery config and available menus
   const [configResult, menusResult] = await Promise.all([

@@ -1,10 +1,10 @@
 import { getClients } from "@/actions/clients";
 import { ClientsManager } from "@/components/dashboard/clients";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 
 export default async function ClientsPage() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   const clientsResult = await getClients(branchId);
   const clients =
