@@ -108,15 +108,15 @@ export default async function RestaurantLandingPage() {
                 >
                   {/* slide-in fill on hover */}
                   <div
-                    className="absolute h-full w-full inset-0 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 origin-bottom transition-transform duration-500"
+                    className="absolute h-full w-full inset-0 scale-y-0 group-focus:scale-y-100 group-hover:scale-y-100 group-active:scale-y-100 origin-bottom transition-transform duration-500"
                     style={{ backgroundColor: "var(--rt-primary)" }}
                   />
                   <div className="relative overflow-hidden w-max mx-auto">
-                    <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 transition-transform duration-500 group-hover:text-(--rt-bg) group-focus:text-(--rt-bg)">
+                    <span className="inline-block group-focus:translate-y-14 group-focus:skew-12 group-hover:translate-y-14 group-hover:skew-12 group-active:translate-y-14 group-active:skew-12 transition-transform duration-500 group-hover:text-(--rt-bg) group-focus:text-(--rt-bg) group-active:text-(--rt-bg)">
                       {link.label}
                     </span>
                     <span
-                      className="inline-block absolute left-0 -top-full skew-12 group-focus:skew-0 group-focus:translate-y-full group-hover:skew-0 group-hover:translate-y-full -translate-y-full transition-transform duration-500"
+                      className="inline-block absolute left-0 -top-full skew-12 group-focus:skew-0 group-focus:translate-y-full group-hover:skew-0 group-hover:translate-y-full group-active:skew-0 group-active:translate-y-full -translate-y-full transition-transform duration-500"
                       style={{ color: "var(--rt-bg)" }}
                     >
                       {link.label}
