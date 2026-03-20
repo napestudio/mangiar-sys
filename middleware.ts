@@ -28,7 +28,14 @@ export async function middleware(req: NextRequest) {
     const isRscRequest = req.headers.get("rsc") === "1";
 
     if (!isServerAction && !isRscRequest) {
-      const token = await getToken({ req, secret: process.env.AUTH_SECRET ?? "" });
+      const useSecureCookies = process.env.NODE_ENV === "production";
+      const token = await getToken({
+        req,
+        secret: process.env.AUTH_SECRET ?? "",
+        cookieName: useSecureCookies
+          ? "__Secure-authjs.session-token"
+          : "authjs.session-token",
+      });
       const isLoggedIn = !!token;
 
       // Redirect logged-in users away from /ingresar to the post-login redirect handler.
