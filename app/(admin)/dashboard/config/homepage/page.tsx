@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import {
   getHomePageLinks,
   getAvailableMenus,
@@ -10,7 +10,7 @@ import HomePageConfigClient from "./homepage-config-client";
 import prisma from "@/lib/prisma";
 
 export default async function HomePageConfigPage() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   // Fetch all necessary data
   const [linksResult, menusResult, timeSlotsResult, branch] =

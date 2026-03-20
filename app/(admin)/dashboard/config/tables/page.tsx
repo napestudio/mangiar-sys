@@ -1,11 +1,11 @@
 import { getTablesWithStatus } from "@/actions/Table";
 import { TablesClientWrapper } from "@/components/dashboard/tables-client-wrapper";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getSectorsByBranch } from "@/actions/Sector";
 
 export default async function ConfigTables() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
   const [tablesResult, sectorsResult] = await Promise.all([
     getTablesWithStatus(branchId),
     getSectorsByBranch(branchId),

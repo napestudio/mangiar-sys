@@ -5,10 +5,10 @@ import { getBranch } from "@/actions/Branch";
 import { PrintersManager } from "@/components/dashboard/printers-manager";
 import { BranchPrinterServerForm } from "@/components/dashboard/printers/branch-printer-server-form";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 
 export default async function PrintersPage() {
-  await requireRole(UserRole.ADMIN);
+  await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   const branchId = (await getCurrentUserBranchId()) || "";
 

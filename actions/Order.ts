@@ -12,7 +12,10 @@ import {
 import { calculateDiscountAmount } from "@/lib/discount";
 import { serializeClient } from "@/lib/serializers";
 import { serializeForClient } from "@/lib/serialize";
-import { todayBoundsARDate, dateStringToTimestampBoundsAR } from "@/lib/date-utils";
+import {
+  todayBoundsARDate,
+  dateStringToTimestampBoundsAR,
+} from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
 import type {
   DeliverySection,
@@ -73,8 +76,7 @@ async function validateTableForOrder(
 async function getClientDiscount(
   clientId: string | null | undefined,
 ): Promise<{ discountPercentage: number; discountType: string }> {
-  if (!clientId)
-    return { discountPercentage: 0, discountType: "PERCENTAGE" };
+  if (!clientId) return { discountPercentage: 0, discountType: "PERCENTAGE" };
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -330,6 +332,61 @@ export async function createOrderWithItems(data: {
         })),
       });
 
+      // Auto-decrement component stocks for combo products
+      for (const item of items) {
+        if (!item.productId) continue;
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: {
+            isCombo: true,
+            comboComponents: {
+              select: {
+                componentId: true,
+                quantity: true,
+                component: {
+                  select: {
+                    trackStock: true,
+                    branches: {
+                      where: { branchId },
+                      select: { id: true, stock: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!product?.isCombo) continue;
+        for (const comp of product.comboComponents) {
+          if (!comp.component.trackStock) continue;
+          const pob = comp.component.branches[0];
+          if (!pob) continue;
+          const decrementQty = Number(comp.quantity) * item.quantity;
+          const previousStock = Number(pob.stock);
+          const newStock = previousStock - decrementQty;
+          if (newStock < 0) {
+            throw new Error(
+              `Stock insuficiente para el componente del combo "${item.itemName}"`,
+            );
+          }
+          await tx.productOnBranch.update({
+            where: { id: pob.id },
+            data: { stock: newStock },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productOnBranchId: pob.id,
+              quantity: -decrementQty,
+              previousStock,
+              newStock,
+              reason: "Venta combo",
+              reference: `COMBO:${item.productId}`,
+              notes: `Componente de combo vendido x${item.quantity}`,
+            },
+          });
+        }
+      }
+
       // Update table status to OCCUPIED if it's a dine-in order
       if (tableId && type === OrderType.DINE_IN) {
         await tx.table.update({
@@ -410,7 +467,7 @@ export async function createTableOrder(
     }
 
     // Generate a unique public code
-    const publicCode = `KS${Date.now().toString().slice(-8)}`;
+    const publicCode = `MGR${Date.now().toString().slice(-8)}`;
 
     // Get client discount if clientId is provided
     const clientDiscount = await getClientDiscount(clientId);
@@ -655,19 +712,86 @@ export async function getTableOrders(tableId: string) {
 // Add item to order
 export async function addOrderItem(orderId: string, item: OrderItemInput) {
   try {
-    const orderItem = await prisma.orderItem.create({
-      data: {
-        orderId,
-        productId: item.productId,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        price: item.price,
-        originalPrice: item.originalPrice,
-        notes: item.notes || null,
-      },
-      include: {
-        product: true,
-      },
+    // Fetch the order's branchId for combo stock decrement
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { branchId: true },
+    });
+    if (!order) {
+      return { success: false, error: "Orden no encontrada" };
+    }
+    const branchId = order.branchId;
+
+    const orderItem = await prisma.$transaction(async (tx) => {
+      const created = await tx.orderItem.create({
+        data: {
+          orderId,
+          productId: item.productId,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          price: item.price,
+          originalPrice: item.originalPrice,
+          notes: item.notes || null,
+        },
+        include: { product: true },
+      });
+
+      // Auto-decrement component stocks for combo products
+      if (item.productId) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: {
+            isCombo: true,
+            comboComponents: {
+              select: {
+                componentId: true,
+                quantity: true,
+                component: {
+                  select: {
+                    trackStock: true,
+                    branches: {
+                      where: { branchId },
+                      select: { id: true, stock: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (product?.isCombo) {
+          for (const comp of product.comboComponents) {
+            if (!comp.component.trackStock) continue;
+            const pob = comp.component.branches[0];
+            if (!pob) continue;
+            const decrementQty = Number(comp.quantity) * item.quantity;
+            const previousStock = Number(pob.stock);
+            const newStock = previousStock - decrementQty;
+            if (newStock < 0) {
+              throw new Error(
+                `Stock insuficiente para el componente del combo "${item.itemName}"`,
+              );
+            }
+            await tx.productOnBranch.update({
+              where: { id: pob.id },
+              data: { stock: newStock },
+            });
+            await tx.stockMovement.create({
+              data: {
+                productOnBranchId: pob.id,
+                quantity: -decrementQty,
+                previousStock,
+                newStock,
+                reason: "Venta combo",
+                reference: `COMBO:${item.productId}`,
+                notes: `Componente de combo vendido x${item.quantity}`,
+              },
+            });
+          }
+        }
+      }
+
+      return created;
     });
 
     // Convert Decimal to number
@@ -688,16 +812,14 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
     console.error("Error adding order item:", error);
     return {
       success: false,
-      error: "Error al agregar el producto",
+      error:
+        error instanceof Error ? error.message : "Error al agregar el producto",
     };
   }
 }
 
 // Add multiple items to order (bulk operation)
-export async function addOrderItems(
-  orderId: string,
-  items: OrderItemInput[],
-) {
+export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
   try {
     // Single transaction for all items - much faster than sequential calls
     const result = await prisma.orderItem.createMany({
@@ -1067,9 +1189,10 @@ export async function getAvailableProductsForOrder(
 ) {
   try {
     // Build price type filter: fetch requested type + DINE_IN for fallback
-    const priceTypes = orderType === OrderType.DINE_IN
-      ? [OrderType.DINE_IN]
-      : [orderType, OrderType.DINE_IN];
+    const priceTypes =
+      orderType === OrderType.DINE_IN
+        ? [OrderType.DINE_IN]
+        : [orderType, OrderType.DINE_IN];
 
     const products = await prisma.product.findMany({
       where: {
@@ -1089,6 +1212,7 @@ export async function getAvailableProductsForOrder(
         categoryId: true,
         tags: true,
         trackStock: true,
+        isCombo: true,
         category: {
           select: {
             name: true,
@@ -1113,6 +1237,20 @@ export async function getAvailableProductsForOrder(
             },
           },
         },
+        comboComponents: {
+          select: {
+            quantity: true,
+            component: {
+              select: {
+                trackStock: true,
+                branches: {
+                  where: { branchId },
+                  select: { stock: true },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: [
         {
@@ -1127,30 +1265,55 @@ export async function getAvailableProductsForOrder(
     });
 
     // Transform to include price directly and convert Decimal to number
-    const productsWithPrice = products.map((product) => {
-      const branchPrices = product.branches[0]?.prices || [];
+    const productsWithPrice = products
+      .map((product) => {
+        const branchPrices = product.branches[0]?.prices || [];
 
-      // Try to find price matching orderType
-      let priceObj = branchPrices.find((p) => p.type === orderType);
+        // Try to find price matching orderType
+        let priceObj = branchPrices.find((p) => p.type === orderType);
 
-      // Fallback to DINE_IN if orderType price not found
-      if (!priceObj && orderType !== OrderType.DINE_IN) {
-        priceObj = branchPrices.find((p) => p.type === OrderType.DINE_IN);
-      }
+        // Fallback to DINE_IN if orderType price not found
+        if (!priceObj && orderType !== OrderType.DINE_IN) {
+          priceObj = branchPrices.find((p) => p.type === OrderType.DINE_IN);
+        }
 
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        imageUrl: product.imageUrl,
-        categoryId: product.categoryId,
-        tags: product.tags,
-        category: product.category,
-        price: Number(priceObj?.price ?? 0),
-        trackStock: product.trackStock,
-        stock: Number(product.branches[0]?.stock ?? 0),
-      };
-    }).filter((p) => !p.trackStock || p.stock > 0);
+        // For combos, compute availability from component stocks
+        let comboAvailability: number | undefined = undefined;
+        if (product.isCombo) {
+          if (product.comboComponents.length === 0) {
+            comboAvailability = 0;
+          } else {
+            let minAvail = Infinity;
+            for (const comp of product.comboComponents) {
+              if (!comp.component.trackStock) continue; // untracked = unlimited
+              const compStock = Number(comp.component.branches[0]?.stock ?? 0);
+              const qty = Number(comp.quantity);
+              if (qty <= 0) continue;
+              minAvail = Math.min(minAvail, Math.floor(compStock / qty));
+            }
+            comboAvailability = isFinite(minAvail) ? minAvail : undefined;
+          }
+        }
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          imageUrl: product.imageUrl,
+          categoryId: product.categoryId,
+          tags: product.tags,
+          category: product.category,
+          price: Number(priceObj?.price ?? 0),
+          trackStock: product.trackStock,
+          stock: Number(product.branches[0]?.stock ?? 0),
+          isCombo: product.isCombo,
+          comboAvailability,
+        };
+      })
+      .filter((p) => {
+        if (p.isCombo) return p.comboAvailability === undefined || p.comboAvailability > 0;
+        return !p.trackStock || p.stock > 0;
+      });
 
     return productsWithPrice;
   } catch (error) {
@@ -1317,6 +1480,7 @@ export async function getProductsForDeliveryMenu(
               tags: dp.tags,
               trackStock: dp.trackStock,
               stock: dp.stock,
+              isCombo: false,
             });
           }
         }
@@ -1601,11 +1765,15 @@ export async function getOrders(filters: OrderFilters) {
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
-        const { start } = dateStringToTimestampBoundsAR(startDate.toISOString().slice(0, 10));
+        const { start } = dateStringToTimestampBoundsAR(
+          startDate.toISOString().slice(0, 10),
+        );
         where.createdAt.gte = start;
       }
       if (endDate) {
-        const { end } = dateStringToTimestampBoundsAR(endDate.toISOString().slice(0, 10));
+        const { end } = dateStringToTimestampBoundsAR(
+          endDate.toISOString().slice(0, 10),
+        );
         where.createdAt.lt = end;
       }
     }
@@ -1788,7 +1956,10 @@ export async function updateDiscount(
     );
 
     // Validate discount value
-    if (discountType === "PERCENTAGE" && (discountPercentage < 0 || discountPercentage > 100)) {
+    if (
+      discountType === "PERCENTAGE" &&
+      (discountPercentage < 0 || discountPercentage > 100)
+    ) {
       return {
         success: false,
         error: "El descuento porcentual debe estar entre 0 y 100",
@@ -1901,7 +2072,8 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     if (status === OrderStatus.COMPLETED) {
       return {
         success: false,
-        error: "No se puede marcar como completada manualmente. Use 'Finalizar Venta' para registrar el pago.",
+        error:
+          "No se puede marcar como completada manualmente. Use 'Finalizar Venta' para registrar el pago.",
       };
     }
 
@@ -2001,7 +2173,6 @@ export async function setNeedsInvoice(orderId: string, needsInvoice: boolean) {
 // - generateInvoiceForOrder() - Generates ARCA electronic invoices with CAE
 // - getInvoices() - Lists invoices with pagination and filters
 // - getInvoiceById() - Gets a single invoice with full details
-
 
 // Close table with payment - records payment in cash register
 export async function closeTableWithPayment(data: {
@@ -2342,10 +2513,7 @@ export async function updateOrderType(
     if (order.type === newType) {
       return { success: false, error: "La orden ya es de ese tipo" };
     }
-    if (
-      order.type === OrderType.DINE_IN ||
-      newType === OrderType.DINE_IN
-    ) {
+    if (order.type === OrderType.DINE_IN || newType === OrderType.DINE_IN) {
       return {
         success: false,
         error: "Solo se puede cambiar entre Para Llevar y Delivery",

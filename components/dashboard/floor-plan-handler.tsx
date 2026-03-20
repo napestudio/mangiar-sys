@@ -500,7 +500,7 @@ export default function FloorPlanHandler({
       <div
         className={`grid grid-cols-1 ${
           editModeOnly ? "" : "lg:grid-cols-6"
-        } gap-0 shadow-md h-[calc(100svh-7rem)]`}
+        } gap-0 shadow-md h-[calc(100svh-8rem)]`}
       >
         {/* Floor Plan Canvas */}
         <div

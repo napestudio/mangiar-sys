@@ -1,7 +1,7 @@
 import { getMenu } from "@/actions/menus";
 import { getBranch } from "@/actions/Branch";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { notFound } from "next/navigation";
 import { MenuEditorClient } from "./components/menu-editor-client";
 
@@ -13,7 +13,7 @@ interface MenuEditorPageProps {
 
 export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
   const { id } = await params;
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_MENU);
 
   const branchResult = await getBranch(branchId);
   const restaurantId =

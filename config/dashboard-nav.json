@@ -63,7 +63,7 @@
       "label": "Facturas",
       "href": "/dashboard/invoices",
       "icon": "Receipt",
-      "minimumRole": "SUPER_ADMIN",
+      "minimumRole": "SUPERADMIN",
       "permissionGrant": "VIEW_INVOICES"
     },
     {

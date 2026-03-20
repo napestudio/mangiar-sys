@@ -3,11 +3,11 @@ import { getBusinessHours } from "@/actions/business-hours";
 import RestaurantConfigForm from "@/components/dashboard/restaurant-config-form";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getBranch } from "@/actions/Branch";
 
 export default async function RestaurantConfigPage() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   const branchResult = await getBranch(branchId);
   const restaurantId = branchResult.success && branchResult.data ? branchResult.data.restaurantId : "";

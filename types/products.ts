@@ -1,5 +1,10 @@
 import type { UnitType, WeightUnit, VolumeUnit, PriceType, ProductTag } from "@/app/generated/prisma";
 
+export type ComboComponent = {
+  componentId: string;
+  quantity: number;
+};
+
 // ─── Delivery menu section types ─────────────────────────────────────────────
 
 export type DeliveryProduct = {
@@ -54,6 +59,8 @@ export type OrderProduct = {
   tags: ProductTag[];
   trackStock: boolean;
   stock: number;
+  isCombo: boolean;
+  comboAvailability?: number; // computed for combos (min units possible from component stocks)
 };
 
 export type CreateMenuItemInput = {
@@ -70,6 +77,8 @@ export type CreateMenuItemInput = {
   restaurantId: string;
   isActive?: boolean;
   tags?: ProductTag[];
+  isCombo?: boolean;
+  components?: ComboComponent[];
 };
 
 export type UpdateMenuItemInput = {
@@ -86,6 +95,8 @@ export type UpdateMenuItemInput = {
   categoryId?: string;
   isActive?: boolean;
   tags?: ProductTag[];
+  isCombo?: boolean;
+  components?: ComboComponent[];
 };
 
 export type SetProductBranchInput = {

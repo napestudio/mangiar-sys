@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getAllStats } from "@/actions/Statistics";
 
 import { subDays } from "date-fns";
@@ -8,7 +8,7 @@ import { StatsClient } from "@/components/dashboard/stats/stats-client";
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
-  const { branchId } = await requireRole(UserRole.MANAGER);
+  const { branchId } = await requireRole(UserRole.MANAGER, PermissionGrant.VIEW_STATISTICS);
   const to = new Date();
   const from = subDays(to, 30);
 

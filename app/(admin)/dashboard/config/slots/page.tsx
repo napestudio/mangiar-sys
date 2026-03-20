@@ -3,10 +3,10 @@ import BranchNotificationEmailForm from "@/components/dashboard/branch-notificat
 import { getTimeSlots } from "@/actions/TimeSlot";
 import { getBranch } from "@/actions/Branch";
 import { requireRole } from "@/lib/permissions/middleware";
-import { UserRole } from "@/app/generated/prisma";
+import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 
 export default async function TimeSlotsPage() {
-  const { branchId } = await requireRole(UserRole.ADMIN);
+  const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
   // Fetch time slots and branch data in parallel
   const [result, branchResult] = await Promise.all([

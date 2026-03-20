@@ -1,6 +1,6 @@
 import { getInvoices } from "@/actions/Invoice";
 import { InvoicesClient } from "./invoices-client";
-import { UserRole, InvoiceStatus } from "@/app/generated/prisma";
+import { UserRole, InvoiceStatus, PermissionGrant } from "@/app/generated/prisma";
 import { requireRole } from "@/lib/permissions/middleware";
 import { getCurrentUserBranchId } from "@/lib/user-branch";
 
@@ -41,7 +41,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireRole(UserRole.MANAGER);
+  await requireRole(UserRole.MANAGER, PermissionGrant.VIEW_INVOICES);
 
   const params = await searchParams;
   const branchId = (await getCurrentUserBranchId()) || "";

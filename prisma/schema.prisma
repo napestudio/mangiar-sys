@@ -699,6 +699,9 @@ model Product {
   trackStock    Boolean  @default(true) // Si es false, el producto siempre estará disponible sin importar el stock
   tags          ProductTag[] // Etiquetas dietéticas/alérgenos (picante, vegano, sin TACC, etc.)
 
+  // Combo/Promo: si es true, la disponibilidad se deriva del stock de sus componentes
+  isCombo Boolean @default(false)
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -712,9 +715,11 @@ model Product {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  branches   ProductOnBranch[]
-  orderItems OrderItem[]
-  menuItems  MenuItem[]
+  branches        ProductOnBranch[]
+  orderItems      OrderItem[]
+  menuItems       MenuItem[]
+  comboComponents ProductComponent[] @relation("ComboProduct")
+  usedInCombos    ProductComponent[] @relation("ComponentProduct")
 
   @@unique([restaurantId, name]) // evita duplicar nombres de producto dentro del restaurante
   @@unique([restaurantId, sku]) // SKU único por restaurante
@@ -744,6 +749,20 @@ model ProductOnBranch {
   @@index([branchId])
   @@index([productId])
   @@index([branchId, isActive]) // Performance: Filter active products by branch
+}
+
+model ProductComponent {
+  id          String @id @default(cuid())
+  comboId     String
+  componentId String
+  quantity    Decimal @db.Decimal(10, 2)
+
+  combo     Product @relation("ComboProduct", fields: [comboId], references: [id], onDelete: Cascade)
+  component Product @relation("ComponentProduct", fields: [componentId], references: [id])
+
+  @@unique([comboId, componentId])
+  @@index([comboId])
+  @@index([componentId])
 }
 
 model ProductPrice {

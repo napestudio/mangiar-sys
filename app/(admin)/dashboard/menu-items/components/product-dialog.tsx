@@ -21,7 +21,7 @@ import { SpicyIcon } from "@/components/ui/tag-icons/SpicyIcon";
 import { SpicyMediumIcon } from "@/components/ui/tag-icons/SpicyMediumIcon";
 import { VeganIcon } from "@/components/ui/tag-icons/VeganIcon";
 import { VegetarianIcon } from "@/components/ui/tag-icons/VegetarianIcon";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import {
   UNIT_TYPE_OPTIONS,
@@ -58,6 +58,18 @@ type SerializedCategory = {
   restaurantId: string;
 };
 
+type SerializedComboComponent = {
+  id: string;
+  comboId: string;
+  componentId: string;
+  quantity: number;
+  component: {
+    id: string;
+    name: string;
+    unitType: string;
+  };
+};
+
 type ProductWithRelations = {
   id: string;
   name: string;
@@ -71,12 +83,19 @@ type ProductWithRelations = {
   trackStock: boolean;
   tags: ProductTag[];
   isActive: boolean;
+  isCombo: boolean;
   createdAt: string;
   updatedAt: string;
   restaurantId: string;
   categoryId: string | null;
   category: SerializedCategory | null;
   branches: SerializedProductOnBranch[];
+  comboComponents: SerializedComboComponent[];
+};
+
+type AvailableComponent = {
+  id: string;
+  name: string;
 };
 
 const TAG_OPTIONS: {
@@ -137,10 +156,16 @@ const TAG_OPTIONS: {
 type ProductDialogProps = {
   item: ProductWithRelations | null;
   categories: SerializedCategory[];
+  availableComponents: AvailableComponent[];
   restaurantId: string;
   branchId: string;
   onClose: () => void;
   onSuccess: (savedItem?: ProductWithRelations, isNewItem?: boolean) => void;
+};
+
+type ComponentRow = {
+  componentId: string;
+  quantity: string;
 };
 
 type FormData = {
@@ -155,6 +180,8 @@ type FormData = {
   tags: ProductTag[];
   categoryId: string;
   isActive: boolean;
+  isCombo: boolean;
+  components: ComponentRow[];
   // Datos de sucursal
   stock: string;
   prices: {
@@ -167,6 +194,7 @@ type FormData = {
 export function ProductDialog({
   item,
   categories,
+  availableComponents,
   restaurantId,
   branchId,
   onClose,
@@ -174,9 +202,9 @@ export function ProductDialog({
 }: ProductDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<"basic" | "stock" | "prices">(
-    "basic",
-  );
+  const [currentTab, setCurrentTab] = useState<
+    "basic" | "stock" | "prices" | "components"
+  >("basic");
 
   // Track original image URL for cleanup
   const [originalImageUrl] = useState(item?.imageUrl ?? null);
@@ -201,6 +229,11 @@ export function ProductDialog({
     tags: item?.tags ?? [],
     categoryId: item?.categoryId ?? "",
     isActive: item?.isActive ?? true,
+    isCombo: item?.isCombo ?? false,
+    components: item?.comboComponents?.map((cc) => ({
+      componentId: cc.componentId,
+      quantity: Math.round(cc.quantity).toString(),
+    })) ?? [],
     stock: branchData?.stock ? branchData.stock.toString() : "0",
     prices: {
       dineIn: existingPrices.dineIn?.price
@@ -280,6 +313,21 @@ export function ProductDialog({
       return "Debe definir al menos un precio";
     }
 
+    if (formData.isCombo) {
+      if (formData.components.length === 0) {
+        return "Un combo debe tener al menos un ingrediente";
+      }
+      for (const comp of formData.components) {
+        if (!comp.componentId) {
+          return "Todos los ingredientes deben tener un producto seleccionado";
+        }
+        const qty = parseInt(comp.quantity, 10);
+        if (!qty || qty < 1 || !Number.isInteger(qty)) {
+          return "Todos los ingredientes deben tener una cantidad entera mayor a 0";
+        }
+      }
+    }
+
     return null;
   };
 
@@ -301,6 +349,16 @@ export function ProductDialog({
       let savedProduct: ProductWithRelations | null = null;
       const isNewItem = !item;
 
+      const comboPayload = formData.isCombo
+        ? {
+            isCombo: true as const,
+            components: formData.components.map((c) => ({
+              componentId: c.componentId,
+              quantity: parseInt(c.quantity, 10),
+            })),
+          }
+        : { isCombo: false as const, components: [] };
+
       if (item) {
         // Actualizar producto existente
         const result = await updateMenuItem({
@@ -311,13 +369,15 @@ export function ProductDialog({
           unitType: formData.unitType,
           weightUnit: formData.weightUnit || undefined,
           volumeUnit: formData.volumeUnit || undefined,
-          minStockAlert: formData.minStockAlert
-            ? parseFloat(formData.minStockAlert)
-            : undefined,
-          trackStock: formData.trackStock,
+          minStockAlert:
+            !formData.isCombo && formData.minStockAlert
+              ? parseFloat(formData.minStockAlert)
+              : undefined,
+          trackStock: formData.isCombo ? false : formData.trackStock,
           tags: formData.tags,
           categoryId: formData.categoryId || undefined,
           isActive: formData.isActive,
+          ...comboPayload,
         });
 
         if (!result.success || !result.data) {
@@ -326,7 +386,7 @@ export function ProductDialog({
 
         productId = result.data.id;
         // Branches will be added after setting product on branch
-        savedProduct = { ...result.data, branches: [] };
+        savedProduct = { ...result.data, branches: [], comboComponents: [] };
       } else {
         // Crear nuevo producto
         const result = await createMenuItem({
@@ -336,14 +396,16 @@ export function ProductDialog({
           unitType: formData.unitType,
           weightUnit: formData.weightUnit || undefined,
           volumeUnit: formData.volumeUnit || undefined,
-          minStockAlert: formData.minStockAlert
-            ? parseFloat(formData.minStockAlert)
-            : undefined,
-          trackStock: formData.trackStock,
+          minStockAlert:
+            !formData.isCombo && formData.minStockAlert
+              ? parseFloat(formData.minStockAlert)
+              : undefined,
+          trackStock: formData.isCombo ? false : formData.trackStock,
           tags: formData.tags,
           categoryId: formData.categoryId || undefined,
           restaurantId,
           isActive: formData.isActive,
+          ...comboPayload,
         });
 
         if (!result.success || !result.data) {
@@ -352,7 +414,7 @@ export function ProductDialog({
 
         productId = result.data.id;
         // Branches will be added after setting product on branch
-        savedProduct = { ...result.data, branches: [] };
+        savedProduct = { ...result.data, branches: [], comboComponents: [] };
       }
 
       // 2. Configurar el producto en la sucursal con precios
@@ -380,7 +442,8 @@ export function ProductDialog({
         const branchResult = await setProductOnBranch({
           productId,
           branchId,
-          stock: parseFloat(formData.stock) || 0,
+          // Combos have no own stock — always 0
+          stock: formData.isCombo ? 0 : (parseFloat(formData.stock) || 0),
           isActive: formData.isActive,
           prices,
         });
@@ -488,6 +551,24 @@ export function ProductDialog({
           >
             Precios
           </button>
+          {formData.isCombo && (
+            <button
+              type="button"
+              onClick={() => setCurrentTab("components")}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                currentTab === "components"
+                  ? "border-amber-500 text-amber-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Ingredientes
+              {formData.components.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs bg-amber-100 text-amber-700 rounded-full">
+                  {formData.components.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Form */}
@@ -631,6 +712,40 @@ export function ProductDialog({
                     Producto activo
                   </label>
                 </div>
+
+                {/* Es un combo */}
+                <div className="border border-amber-200 rounded-lg p-4 bg-amber-50">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="isCombo"
+                      checked={formData.isCombo}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({
+                          ...prev,
+                          isCombo: checked,
+                          trackStock: checked ? false : prev.trackStock,
+                          components: checked ? prev.components : [],
+                        }));
+                        if (checked) setCurrentTab("components");
+                      }}
+                      className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-2 focus:ring-amber-500 mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="isCombo"
+                        className="text-sm font-medium text-amber-900 cursor-pointer"
+                      >
+                        Es un combo / promo
+                      </label>
+                      <p className="text-xs text-amber-700 mt-1">
+                        El stock de este producto se gestiona automáticamente a
+                        través de sus ingredientes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -646,152 +761,275 @@ export function ProductDialog({
                   </p>
                 </div>
 
-                {/* Tipo de Unidad */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Unidad *
-                  </label>
-                  <select
-                    name="unitType"
-                    value={formData.unitType}
-                    onChange={handleUnitTypeChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {UNIT_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label} - {option.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Unidad de Peso (si aplica) */}
-                {formData.unitType === "WEIGHT" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unidad de Peso *
-                    </label>
-                    <select
-                      name="weightUnit"
-                      value={formData.weightUnit}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {WEIGHT_UNIT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Unidad de Volumen (si aplica) */}
-                {formData.unitType === "VOLUME" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unidad de Volumen *
-                    </label>
-                    <select
-                      name="volumeUnit"
-                      value={formData.volumeUnit}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {VOLUME_UNIT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Seguimiento de Stock */}
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      name="trackStock"
-                      id="trackStock"
-                      checked={formData.trackStock}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <label
-                        htmlFor="trackStock"
-                        className="text-sm font-medium text-gray-900 cursor-pointer"
-                      >
-                        Habilitar seguimiento de stock
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Si está deshabilitado, el producto siempre estará
-                        disponible sin importar el stock.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Alerta de Stock Mínimo - Show for both new and edit */}
-                {formData.trackStock && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Alerta de Stock Mínimo
-                    </label>
-                    <NumberInput
-                      name="minStockAlert"
-                      value={formData.minStockAlert}
-                      onChange={handleChange}
-                      step="0.01"
-                      min="0"
-                      placeholder="Cantidad mínima antes de alertar"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Se mostrará una alerta cuando el stock de cualquier
-                      sucursal esté por debajo de este valor
+                {formData.isCombo && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-amber-800">
+                      Este producto es un combo
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      Su disponibilidad se calcula automáticamente a partir del
+                      stock de sus ingredientes. No requiere stock propio.
                     </p>
                   </div>
                 )}
 
-                {!formData.trackStock ? (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                    <p className="text-sm text-gray-600">
-                      El seguimiento de stock está desactivado para este
-                      producto.
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Activa la opción &quot;Habilitar seguimiento de
-                      stock&quot; arriba para gestionar el inventario.
-                    </p>
-                  </div>
-                ) : (
+                {!formData.isCombo && (
                   <>
-                    {!item && (
+                    {/* Tipo de Unidad */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipo de Unidad *
+                      </label>
+                      <select
+                        name="unitType"
+                        value={formData.unitType}
+                        onChange={handleUnitTypeChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {UNIT_TYPE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label} - {option.description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Unidad de Peso (si aplica) */}
+                    {formData.unitType === "WEIGHT" && (
                       <div>
-                        {/* Stock Actual - Single field instead of 3-column grid */}
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Stock Actual *
+                          Unidad de Peso *
+                        </label>
+                        <select
+                          name="weightUnit"
+                          value={formData.weightUnit}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {WEIGHT_UNIT_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Unidad de Volumen (si aplica) */}
+                    {formData.unitType === "VOLUME" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Unidad de Volumen *
+                        </label>
+                        <select
+                          name="volumeUnit"
+                          value={formData.volumeUnit}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {VOLUME_UNIT_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Seguimiento de Stock */}
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          name="trackStock"
+                          id="trackStock"
+                          checked={formData.trackStock}
+                          onChange={handleChange}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <label
+                            htmlFor="trackStock"
+                            className="text-sm font-medium text-gray-900 cursor-pointer"
+                          >
+                            Habilitar seguimiento de stock
+                          </label>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Si está deshabilitado, el producto siempre estará
+                            disponible sin importar el stock.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Alerta de Stock Mínimo */}
+                    {formData.trackStock && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Alerta de Stock Mínimo
                         </label>
                         <NumberInput
-                          name="stock"
-                          value={formData.stock}
+                          name="minStockAlert"
+                          value={formData.minStockAlert}
                           onChange={handleChange}
-                          min="0"
                           step="0.01"
-                          required={formData.trackStock}
-                          placeholder="0"
+                          min="0"
+                          placeholder="Cantidad mínima antes de alertar"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Stock disponible en esta sucursal. Para configurar
-                          alertas, usa &quot;Alerta de Stock Mínimo&quot;
-                          arriba.
+                          Se mostrará una alerta cuando el stock de cualquier
+                          sucursal esté por debajo de este valor
                         </p>
                       </div>
                     )}
+
+                    {!formData.trackStock ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                        <p className="text-sm text-gray-600">
+                          El seguimiento de stock está desactivado para este
+                          producto.
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Activa la opción &quot;Habilitar seguimiento de
+                          stock&quot; arriba para gestionar el inventario.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {!item && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Stock Actual *
+                            </label>
+                            <NumberInput
+                              name="stock"
+                              value={formData.stock}
+                              onChange={handleChange}
+                              min="0"
+                              step="0.01"
+                              required={formData.trackStock}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Stock disponible en esta sucursal. Para configurar
+                              alertas, usa &quot;Alerta de Stock Mínimo&quot;
+                              arriba.
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </>
+                )}
+              </div>
+            )}
+
+            {/* Tab: Ingredientes */}
+            {currentTab === "components" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    Ingredientes del Combo
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Definí qué productos incluye este combo y en qué cantidad.
+                    El stock de cada ingrediente se descontará automáticamente
+                    al vender el combo.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.components.map((comp, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <select
+                          value={comp.componentId}
+                          onChange={(e) => {
+                            const newComponents = [...formData.components];
+                            newComponents[index] = {
+                              ...newComponents[index],
+                              componentId: e.target.value,
+                            };
+                            setFormData((prev) => ({
+                              ...prev,
+                              components: newComponents,
+                            }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
+                        >
+                          <option value="">Seleccionar producto...</option>
+                          {availableComponents
+                            .filter((p) => p.id !== item?.id)
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div className="w-28">
+                        <NumberInput
+                          value={comp.quantity}
+                          onChange={(e) => {
+                            const newComponents = [...formData.components];
+                            newComponents[index] = {
+                              ...newComponents[index],
+                              quantity: e.target.value,
+                            };
+                            setFormData((prev) => ({
+                              ...prev,
+                              components: newComponents,
+                            }));
+                          }}
+                          min="1"
+                          step="1"
+                          placeholder="Cant."
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            components: prev.components.filter(
+                              (_, i) => i !== index,
+                            ),
+                          }));
+                        }}
+                        className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      components: [
+                        ...prev.components,
+                        { componentId: "", quantity: "1" },
+                      ],
+                    }));
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar ingrediente
+                </button>
+
+                {formData.components.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 text-sm">
+                    No hay ingredientes definidos. Agregá al menos uno.
+                  </div>
                 )}
               </div>
             )}
