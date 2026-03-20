@@ -3,7 +3,10 @@
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 
-export async function loginWithCredentials(formData: FormData) {
+export async function loginWithCredentials(
+  _prevState: { error: string } | null,
+  formData: FormData
+): Promise<{ error: string } | null> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
@@ -24,6 +27,7 @@ export async function loginWithCredentials(formData: FormData) {
     }
     throw error;
   }
+  return null; // unreachable — signIn throws NEXT_REDIRECT on success
 }
 
 export async function loginWithGoogle() {

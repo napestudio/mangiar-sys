@@ -1,9 +1,9 @@
 "use client";
 
+import { loginWithCredentials } from "@/actions/login";
 import { hideLogoutOverlay } from "@/contexts/logout-context";
 import { Eye, EyeOff } from "lucide-react";
-import { signIn } from "next-auth/react";
-import { useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 const LOADING_MESSAGES = [
   "Encendiendo hornallas...",
@@ -12,9 +12,8 @@ const LOADING_MESSAGES = [
 ];
 
 export default function LoginForm() {
-  const [error, setError] = useState<string | null>(null);
+  const [state, action, isPending] = useActionState(loginWithCredentials, null);
   const [showPassword, setShowPassword] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
 
   useEffect(() => {
@@ -30,31 +29,13 @@ export default function LoginForm() {
     return () => clearInterval(interval);
   }, [isPending]);
 
-  function handleCredentialsSubmit(formData: FormData) {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    setError(null);
-    startTransition(async () => {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-      if (result?.error) {
-        setError("Usuario o Contraseña incorrectos");
-      } else {
-        window.location.href = "/api/auth-redirect";
-      }
-    });
-  }
-
   return (
     <div className="w-full">
       <div>
         <h2 className="text-center text-3xl font-extrabold">Ingresar</h2>
       </div>
 
-      <form action={handleCredentialsSubmit} className="space-y-6">
+      <form action={action} className="space-y-6">
         <div className="rounded-md shadow-sm space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -107,9 +88,9 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {error && (
+        {state?.error && (
           <div className="rounded-md bg-red-50 p-4">
-            <p className="text-sm text-red-800">{error}</p>
+            <p className="text-sm text-red-800">{state.error}</p>
           </div>
         )}
 
