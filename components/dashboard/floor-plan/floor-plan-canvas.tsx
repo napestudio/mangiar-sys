@@ -32,25 +32,25 @@ interface FloorPlanCanvasProps {
 }
 
 const statusColors: Record<FloorTableStatus, string> = {
-  empty:           "#22c55e", // green-500 — available
-  occupied:        "#ef4444", // red-500 — seated / active order
-  reserved:        "#8b5cf6", // violet-500 — reservation window active now
-  upcoming:        "#f59e0b", // amber-500 — reservation in next 60 min
-  late:            "#f97316", // orange-500 — reservation overdue, not seated
+  empty: "#22c55e", // green-500 — available
+  occupied: "#ef4444", // red-500 — seated / active order
+  reserved: "#8b5cf6", // violet-500 — reservation window active now
+  upcoming: "#f59e0b", // amber-500 — reservation in next 60 min
+  late: "#f97316", // orange-500 — reservation overdue, not seated
   pending_payment: "#06b6d4", // cyan-500 — paid reservation awaiting payment
-  cleaning:        "#eab308", // yellow-500 — being cleaned
-  paying:          "#3b82f6", // blue-500 — check printed, awaiting payment
+  cleaning: "#eab308", // yellow-500 — being cleaned
+  paying: "#3b82f6", // blue-500 — check printed, awaiting payment
 };
 
 const statusStrokeColors: Record<FloorTableStatus, string> = {
-  empty:           "#16a34a", // green-700
-  occupied:        "#dc2626", // red-700
-  reserved:        "#7c3aed", // violet-700
-  upcoming:        "#d97706", // amber-700
-  late:            "#ea580c", // orange-700
+  empty: "#16a34a", // green-700
+  occupied: "#dc2626", // red-700
+  reserved: "#7c3aed", // violet-700
+  upcoming: "#d97706", // amber-700
+  late: "#ea580c", // orange-700
   pending_payment: "#0891b2", // cyan-700
-  cleaning:        "#ca8a04", // yellow-700
-  paying:          "#1d4ed8", // blue-700
+  cleaning: "#ca8a04", // yellow-700
+  paying: "#1d4ed8", // blue-700
 };
 
 // Edit mode colors (gray)
@@ -378,7 +378,7 @@ export const FloorPlanCanvas = memo(function FloorPlanCanvas({
 }: FloorPlanCanvasProps) {
   // Track mouse position for hover effect
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
-    null
+    null,
   );
 
   // Track hovered table for showing icons
@@ -391,7 +391,7 @@ export const FloorPlanCanvas = memo(function FloorPlanCanvas({
         setHoveredTable(tableId);
       }
     },
-    [editModeOnly]
+    [editModeOnly],
   );
 
   const handleTableMouseLeave = useCallback(() => {
@@ -412,7 +412,7 @@ export const FloorPlanCanvas = memo(function FloorPlanCanvas({
   // Note: table.x and table.y are CENTER coordinates
   const isGridCellOccupied = (
     cellCenterX: number,
-    cellCenterY: number
+    cellCenterY: number,
   ): boolean => {
     return tables.some((table) => {
       // table.x and table.y are already center coordinates
@@ -523,7 +523,7 @@ export const FloorPlanCanvas = memo(function FloorPlanCanvas({
           </Button>
         </div>
         <div
-          className="border overflow-auto bg-gray-100 h-[calc(100svh-120px)]"
+          className="border overflow-auto bg-gray-100 h-[calc(100svh-8rem)]"
           // style={{ height: `${CANVAS_CONTAINER_HEIGHT + 100}px` }}
         >
           <svg
