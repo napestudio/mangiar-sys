@@ -1,8 +1,8 @@
 "use client";
 
-import { loginWithCredentials } from "@/actions/login";
 import { hideLogoutOverlay } from "@/contexts/logout-context";
 import { Eye, EyeOff } from "lucide-react";
+import { signIn } from "next-auth/react";
 import { useEffect, useState, useTransition } from "react";
 
 const LOADING_MESSAGES = [
@@ -31,11 +31,17 @@ export default function LoginForm() {
   }, [isPending]);
 
   function handleCredentialsSubmit(formData: FormData) {
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
     setError(null);
     startTransition(async () => {
-      const result = await loginWithCredentials(formData);
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
       if (result?.error) {
-        setError(result.error);
+        setError("Usuario o Contraseña incorrectos");
       } else {
         window.location.href = "/api/auth-redirect";
       }
