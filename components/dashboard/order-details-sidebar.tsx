@@ -1143,6 +1143,7 @@ export function OrderDetailsSidebar({
                 onClick={() => setIsInvoiceDialogOpen(true)}
                 variant="default"
                 className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={true}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Generar Factura
@@ -1216,7 +1217,8 @@ export function OrderDetailsSidebar({
             <div className="py-2 space-y-3">
               {order.status === OrderStatus.COMPLETED && (
                 <p className="text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-                  Esta orden ya está cerrada. ¿Estás seguro de que querés cambiar el tipo de todas formas?
+                  Esta orden ya está cerrada. ¿Estás seguro de que querés
+                  cambiar el tipo de todas formas?
                 </p>
               )}
               <p className="text-sm text-gray-700">
