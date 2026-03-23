@@ -3,6 +3,7 @@
 import {
   createMenuItem,
   deleteProductImage,
+  reactivateMenuItem,
   setProductOnBranch,
   updateMenuItem,
 } from "@/actions/Products";
@@ -202,6 +203,7 @@ export function ProductDialog({
 }: ProductDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inactiveDuplicate, setInactiveDuplicate] = useState<{ id: string } | null>(null);
   const [currentTab, setCurrentTab] = useState<
     "basic" | "stock" | "prices" | "components"
   >("basic");
@@ -409,6 +411,11 @@ export function ProductDialog({
         });
 
         if (!result.success || !result.data) {
+          if (!result.success && result.error.startsWith("INACTIVE_DUPLICATE:")) {
+            setInactiveDuplicate({ id: result.error.replace("INACTIVE_DUPLICATE:", "") });
+            setLoading(false);
+            return;
+          }
           throw new Error(result.error);
         }
 
@@ -580,6 +587,51 @@ export function ProductDialog({
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                 {error}
+              </div>
+            )}
+
+            {inactiveDuplicate && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
+                <p className="text-sm font-medium text-amber-800">
+                  Ya existe un producto inactivo con el nombre &quot;{formData.name}&quot;.
+                </p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  ¿Deseas reactivarlo en lugar de crear uno nuevo?
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={async () => {
+                      setLoading(true);
+                      const result = await reactivateMenuItem(inactiveDuplicate.id);
+                      if (result.success) {
+                        setInactiveDuplicate(null);
+                        onSuccess(undefined, false);
+                        onClose();
+                      } else {
+                        setError(result.error);
+                        setInactiveDuplicate(null);
+                        setLoading(false);
+                      }
+                    }}
+                    className="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin inline" />
+                    ) : (
+                      "Reactivar producto"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setInactiveDuplicate(null)}
+                    className="px-3 py-1.5 text-sm font-medium text-amber-700 border border-amber-300 rounded hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             )}
 
