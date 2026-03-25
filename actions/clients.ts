@@ -282,3 +282,38 @@ export async function getClientByEmail(
     };
   }
 }
+
+export async function upsertClientFromReservation(
+  branchId: string,
+  name: string,
+  email: string,
+  phone?: string
+): Promise<{ success: boolean; data?: ClientData; error?: string }> {
+  try {
+    if (!email || email.trim().length === 0) {
+      return { success: false, error: "Email requerido para upsert" };
+    }
+
+    const existing = await prisma.client.findFirst({
+      where: { branchId, email: email.trim() },
+    });
+
+    if (existing) {
+      return { success: true, data: serializeClient(existing) };
+    }
+
+    const client = await prisma.client.create({
+      data: {
+        branchId,
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone?.trim() || null,
+      },
+    });
+
+    return { success: true, data: serializeClient(client) };
+  } catch (error) {
+    console.error("Error en upsertClientFromReservation:", error);
+    return { success: false, error: "Error al registrar cliente" };
+  }
+}

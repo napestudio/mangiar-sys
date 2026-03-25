@@ -3,6 +3,7 @@ import { ProductsClient } from "./components/product-client";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getBranch } from "@/actions/Branch";
+import { getStationsByBranch } from "@/actions/Station";
 
 type SearchParams = {
   page?: string;
@@ -37,8 +38,8 @@ export default async function MenuItemsPage({
   const unitType = params.unitType || "all";
   const includeInactive = params.includeInactive === "true";
 
-  // Fetch paginated menu items and categories
-  const [productsResult, categoriesResult] = await Promise.all([
+  // Fetch paginated menu items, categories and stations
+  const [productsResult, categoriesResult, stationsResult] = await Promise.all([
     getMenuItemsPaginated({
       restaurantId,
       branchId,
@@ -51,6 +52,7 @@ export default async function MenuItemsPage({
       includeInactive,
     }),
     getCategories(restaurantId),
+    getStationsByBranch(branchId),
   ]);
 
   const menuItems =
@@ -64,6 +66,11 @@ export default async function MenuItemsPage({
   const categories =
     categoriesResult.success && categoriesResult.data
       ? categoriesResult.data
+      : [];
+
+  const stations =
+    stationsResult.success && stationsResult.data
+      ? stationsResult.data.map((s) => ({ id: s.id, name: s.name, color: s.color }))
       : [];
 
   // Data is already serialized by the server action
@@ -90,6 +97,7 @@ export default async function MenuItemsPage({
           categories={categories}
           restaurantId={restaurantId}
           branchId={branchId}
+          stations={stations}
         />
       </main>
     </div>

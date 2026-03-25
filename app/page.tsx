@@ -252,9 +252,9 @@ export default async function Home() {
             </div>
 
             <div className="grid gap-8 lg:grid-cols-1">
-              <Card className="p-8 d-flex flex-row hover:shadow-xl transition-all border-2 hover:border-orange-200 bg-linear-to-br from-white to-orange-50">
-                <div className="rounded-full bg-orange-100 w-16 h-16 flex items-center justify-center mb-6">
-                  <Users className="h-8 w-8 text-orange-600" />
+              <Card className="p-8 d-flex flex-row hover:shadow-xl transition-all border-2 hover:border-red-200 bg-linear-to-br from-white to-red-50">
+                <div className="rounded-full bg-red-100 w-16 h-16 flex items-center justify-center mb-6">
+                  <Users className="h-8 w-8 text-red-600" />
                 </div>
                 <div className="w-3/6 ml-auto">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">

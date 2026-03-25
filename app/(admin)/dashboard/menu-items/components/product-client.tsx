@@ -78,11 +78,18 @@ type SerializedProductOnBranch = {
   prices: SerializedProductPrice[];
 };
 
+type StationInfo = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type SerializedCategory = {
   id: string;
   name: string;
   order: number;
   restaurantId: string;
+  station?: StationInfo | null;
 };
 
 type SerializedComboComponent = {
@@ -133,6 +140,12 @@ type FilterState = {
   includeInactive?: boolean;
 };
 
+type Station = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type ProductsProps = {
   initialMenuItems: MenuItemWithRelations[];
   initialPagination: PaginationInfo;
@@ -140,6 +153,7 @@ type ProductsProps = {
   categories: SerializedCategory[];
   restaurantId: string;
   branchId: string;
+  stations: Station[];
 };
 
 export function ProductsClient({
@@ -149,6 +163,7 @@ export function ProductsClient({
   categories: initialCategories,
   restaurantId,
   branchId,
+  stations,
 }: ProductsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -769,6 +784,7 @@ export function ProductsClient({
         <CategoryDialog
           categories={categories}
           restaurantId={restaurantId}
+          stations={stations}
           onClose={() => setShowCategoryDialog(false)}
           onSuccess={handleSuccess}
         />
