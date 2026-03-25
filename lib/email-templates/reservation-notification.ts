@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/currency";
+import { formatDateEmailAR } from "@/lib/date-utils";
 
 interface ReservationEmailData {
   customerName: string;
@@ -22,20 +23,10 @@ interface ReservationEmailData {
 export function generateReservationNotificationEmail(
   data: ReservationEmailData,
 ): string {
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.slice(0, 10).split("-").map(Number);
-    return new Intl.DateTimeFormat("es-ES", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }).format(new Date(year, month - 1, day));
-  };
-
   const formatTime = (timeString?: string) => {
     if (!timeString) return data.time;
     const time = new Date(timeString);
-    return new Intl.DateTimeFormat("es-ES", {
+    return new Intl.DateTimeFormat("es-AR", {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: "America/Argentina/Buenos_Aires",
@@ -78,9 +69,7 @@ export function generateReservationNotificationEmail(
                   <tr>
                     <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
                       <strong style="color: #374151; display: block; font-size: 14px; margin-bottom: 4px;">Fecha</strong>
-                      <span style="color: #1f2937; font-size: 16px;">${formatDate(
-                        data.date,
-                      )}</span>
+                      <span style="color: #1f2937; font-size: 16px;">${formatDateEmailAR(data.date)}</span>
                     </td>
                   </tr>
                   <tr>

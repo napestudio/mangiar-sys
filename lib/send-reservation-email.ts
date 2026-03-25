@@ -3,6 +3,7 @@
 import { getTransporter } from "./email";
 import { generateReservationNotificationEmail } from "./email-templates/reservation-notification";
 import { generateReservationConfirmationEmail } from "./email-templates/reservation-confirmation";
+import { formatDateAR } from "./date-utils";
 
 interface SendReservationEmailParams {
   customerName: string;
@@ -32,12 +33,7 @@ export async function sendReservationNotificationEmail(
     return { success: false, error: "Email configuration not set up" };
   }
 
-  const [dYear, dMonth, dDay] = params.date.toISOString().slice(0, 10).split("-").map(Number);
-  const formattedDate = new Intl.DateTimeFormat("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(dYear, dMonth - 1, dDay));
+  const formattedDate = formatDateAR(params.date.toISOString());
 
   const results: {
     restaurant?: { success: boolean; messageId?: string; error?: string };

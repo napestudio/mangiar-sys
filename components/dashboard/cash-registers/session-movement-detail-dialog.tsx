@@ -34,6 +34,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import { calculateDiscountAmount } from "@/lib/discount";
 import {
   PAYMENT_METHOD_LABELS,
   MOVEMENT_TYPE_LABELS,
@@ -388,16 +389,22 @@ export function SessionMovementDetailDialog({
                           {order.discountPercentage > 0 && (
                             <div className="flex justify-between text-sm text-gray-500">
                               <span>
-                                Descuento ({order.discountPercentage}%)
+                                Descuento (
+                                {order.discountType === "FIXED"
+                                  ? formatCurrency(order.discountPercentage)
+                                  : `${order.discountPercentage}%`}
+                                )
                               </span>
                               <span className="text-red-500">
-                                -
-                                {formatCurrency(
-                                  order.items.reduce(
-                                    (sum, i) => sum + i.price * i.quantity,
-                                    0,
-                                  ) *
-                                    (order.discountPercentage / 100),
+                                -{formatCurrency(
+                                  calculateDiscountAmount(
+                                    order.items.reduce(
+                                      (sum, i) => sum + i.price * i.quantity,
+                                      0,
+                                    ),
+                                    order.discountPercentage,
+                                    order.discountType as "PERCENTAGE" | "FIXED",
+                                  ),
                                 )}
                               </span>
                             </div>

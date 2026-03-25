@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
+import { calculateDiscountAmount } from "@/lib/discount";
 import { Order } from "@/types/orders";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -165,7 +166,11 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
       (sum, item) => sum + item.quantity * item.price,
       0,
     );
-    const discount = subtotal * (order.discountPercentage / 100);
+    const discount = calculateDiscountAmount(
+      subtotal,
+      order.discountPercentage,
+      order.discountType as "PERCENTAGE" | "FIXED",
+    );
     return subtotal - discount;
   };
 
