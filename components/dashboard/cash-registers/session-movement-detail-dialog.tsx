@@ -259,7 +259,7 @@ export function SessionMovementDetailDialog({
               {/* Description */}
               {movement.description && (
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
+                  <div className="p-2 bg-red-50 rounded-lg text-red-600">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="flex-1">

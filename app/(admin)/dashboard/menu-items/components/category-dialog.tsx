@@ -8,34 +8,51 @@ import {
   deleteCategory,
 } from "@/actions/Products";
 
+type StationInfo = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Category = {
   id: string;
   name: string;
   order: number;
   restaurantId: string;
+  station?: StationInfo | null;
+};
+
+type Station = {
+  id: string;
+  name: string;
+  color: string;
 };
 
 type CategoryDialogProps = {
   categories: Category[];
   restaurantId: string;
+  stations: Station[];
   onClose: () => void;
   onSuccess: () => void;
 };
 
 type OptimisticAction =
-  | { type: "create"; tempId: string; name: string }
-  | { type: "update"; id: string; name: string }
+  | { type: "create"; tempId: string; name: string; station: StationInfo | null }
+  | { type: "update"; id: string; name: string; station: StationInfo | null | undefined }
   | { type: "delete"; id: string };
 
 export function CategoryDialog({
   categories,
   restaurantId,
+  stations,
   onClose,
   onSuccess,
 }: CategoryDialogProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingStationId, setEditingStationId] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryStationId, setNewCategoryStationId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -52,11 +69,18 @@ export function CategoryDialog({
               name: action.name,
               order: state.length,
               restaurantId,
+              station: action.station,
             },
           ];
         case "update":
           return state.map((cat) =>
-            cat.id === action.id ? { ...cat, name: action.name } : cat,
+            cat.id === action.id
+              ? {
+                  ...cat,
+                  name: action.name,
+                  station: action.station === undefined ? cat.station : action.station,
+                }
+              : cat,
           );
         case "delete":
           return state.filter((cat) => cat.id !== action.id);
@@ -74,26 +98,26 @@ export function CategoryDialog({
 
     const tempId = `temp-${Date.now()}`;
     const name = newCategoryName.trim();
+    const stationId = newCategoryStationId || undefined;
+    const station = stationId ? (stations.find((s) => s.id === stationId) ?? null) : null;
 
-    // Clear input immediately for better UX
     setNewCategoryName("");
+    setNewCategoryStationId("");
     setError(null);
 
-    // Execute in transition for smoother UI
     startTransition(async () => {
-      // Optimistic update inside transition
-      setOptimisticCategories({ type: "create", tempId, name });
+      setOptimisticCategories({ type: "create", tempId, name, station });
 
       const result = await createCategory({
         name,
         restaurantId,
+        stationId,
       });
 
       if (result.success) {
         onSuccess();
       } else {
         setError(result.error || "Error al crear la categoría");
-        // On error, the optimistic update will be reverted automatically
       }
     });
   };
@@ -105,27 +129,27 @@ export function CategoryDialog({
     }
 
     const trimmedName = name.trim();
+    const stationId = editingStationId || null;
+    const station = stationId ? (stations.find((s) => s.id === stationId) ?? null) : null;
 
-    // Exit edit mode immediately
     setEditingId(null);
     setEditingName("");
+    setEditingStationId("");
     setError(null);
 
-    // Execute in transition
     startTransition(async () => {
-      // Optimistic update inside transition
-      setOptimisticCategories({ type: "update", id, name: trimmedName });
+      setOptimisticCategories({ type: "update", id, name: trimmedName, station });
 
       const result = await updateCategory({
         id,
         name: trimmedName,
+        stationId,
       });
 
       if (result.success) {
         onSuccess();
       } else {
         setError(result.error || "Error al actualizar la categoría");
-        // On error, the optimistic update will be reverted automatically
       }
     });
   };
@@ -137,9 +161,7 @@ export function CategoryDialog({
 
     setError(null);
 
-    // Execute in transition
     startTransition(async () => {
-      // Optimistic update inside transition
       setOptimisticCategories({ type: "delete", id });
 
       const result = await deleteCategory(id);
@@ -148,7 +170,6 @@ export function CategoryDialog({
         onSuccess();
       } else {
         setError(result.error || "Error al eliminar la categoría");
-        // On error, the optimistic update will be reverted automatically
       }
     });
   };
@@ -156,12 +177,14 @@ export function CategoryDialog({
   const startEditing = (category: Category) => {
     setEditingId(category.id);
     setEditingName(category.name);
+    setEditingStationId(category.station?.id ?? "");
     setError(null);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
     setEditingName("");
+    setEditingStationId("");
     setError(null);
   };
 
@@ -210,6 +233,21 @@ export function CategoryDialog({
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isPending}
               />
+              {stations.length > 0 && (
+                <select
+                  value={newCategoryStationId}
+                  onChange={(e) => setNewCategoryStationId(e.target.value)}
+                  disabled={isPending}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                >
+                  <option value="">Sin estación</option>
+                  {stations.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 onClick={handleCreate}
                 disabled={isPending || !newCategoryName.trim()}
@@ -219,6 +257,11 @@ export function CategoryDialog({
                 Agregar
               </button>
             </div>
+            {stations.length === 0 && (
+              <p className="text-xs text-amber-600">
+                No hay estaciones configuradas. Configura estaciones e impresoras para que las categorías puedan imprimir.
+              </p>
+            )}
           </div>
 
           {/* Categories list */}
@@ -254,6 +297,21 @@ export function CategoryDialog({
                           disabled={isPending}
                           autoFocus
                         />
+                        {stations.length > 0 && (
+                          <select
+                            value={editingStationId}
+                            onChange={(e) => setEditingStationId(e.target.value)}
+                            disabled={isPending}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                          >
+                            <option value="">Sin estación</option>
+                            {stations.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <button
                           onClick={() => handleUpdate(category.id, editingName)}
                           disabled={isPending || !editingName.trim()}
@@ -271,8 +329,31 @@ export function CategoryDialog({
                       </>
                     ) : (
                       <>
-                        <div className="flex-1 font-medium text-gray-900">
-                          {category.name}
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className="font-medium text-gray-900">
+                            {category.name}
+                          </span>
+                          {category.station ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                              style={{
+                                backgroundColor: `${category.station.color}20`,
+                                color: category.station.color,
+                              }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: category.station.color }}
+                              />
+                              {category.station.name}
+                            </span>
+                          ) : (
+                            stations.length > 0 && (
+                              <span className="text-xs text-gray-400">
+                                Sin estación
+                              </span>
+                            )
+                          )}
                         </div>
                         <button
                           onClick={() => startEditing(category)}

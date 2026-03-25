@@ -10,6 +10,7 @@ import {
   updateTableStatusForReservation,
 } from "./Table";
 import { sendReservationNotificationEmail } from "@/lib/send-reservation-email";
+import { upsertClientFromReservation } from "@/actions/clients";
 
 /**
  * Helper function to serialize reservation data for client components
@@ -194,6 +195,20 @@ export async function createReservation(data: {
       } catch (emailError) {
         // Log the error but don't fail the reservation
         console.error("Failed to send email notification:", emailError);
+      }
+    }
+
+    // Upsert client record so it's available for auto-assignment when the table is seated
+    if (data.customerEmail) {
+      try {
+        await upsertClientFromReservation(
+          data.branchId,
+          data.customerName,
+          data.customerEmail,
+          data.customerPhone
+        );
+      } catch (clientError) {
+        console.error("Error al registrar cliente desde reserva:", clientError);
       }
     }
 

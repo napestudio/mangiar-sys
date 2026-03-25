@@ -643,7 +643,7 @@ export function OrderDetailsSidebar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-orange-600"
+                className="text-white hover:bg-red-600"
                 onClick={handleEditClick}
                 title="Editar cliente y mesero"
               >
@@ -654,7 +654,7 @@ export function OrderDetailsSidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-white hover:bg-orange-600"
+                  className="text-white hover:bg-red-600"
                   onClick={handleCancelEdit}
                   disabled={isSaving}
                   title="Cancelar"
@@ -676,7 +676,7 @@ export function OrderDetailsSidebar({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-orange-600"
+              className="text-white hover:bg-red-600"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
@@ -973,7 +973,7 @@ export function OrderDetailsSidebar({
                     </div>
                     {item.originalPrice &&
                       item.originalPrice !== item.price && (
-                        <div className="text-xs text-orange-600">
+                        <div className="text-xs text-red-600">
                           Precio modificado (Original:{" "}
                           {formatCurrency(item.originalPrice)})
                         </div>
@@ -1003,7 +1003,7 @@ export function OrderDetailsSidebar({
 
           {/* Discount */}
           {isEditing ? (
-            <div className="flex justify-between items-center px-4 py-3 text-orange-600">
+            <div className="flex justify-between items-center px-4 py-3 text-red-600">
               <div className="flex items-center gap-1">
                 <span>Descuento</span>
               </div>
@@ -1040,7 +1040,7 @@ export function OrderDetailsSidebar({
                     className="h-8 pr-6 text-right"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-orange-600">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-red-600">
                     {discountTypeInput === "PERCENTAGE" ? "%" : "$"}
                   </span>
                 </div>
@@ -1048,7 +1048,7 @@ export function OrderDetailsSidebar({
             </div>
           ) : (
             order.discountPercentage > 0 && (
-              <div className="flex justify-between px-4 py-3 text-orange-600">
+              <div className="flex justify-between px-4 py-3 text-red-600">
                 <span>
                   Descuento (
                   {order.discountType === "FIXED"

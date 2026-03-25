@@ -62,7 +62,16 @@ export default function FloorPlanHandler({
   const selectedSector = externalSelectedSector ?? null;
 
   // 2. ALL useState hooks - must be called before any early returns
-  const [zoom, setZoom] = useState(1);
+  const ZOOM_STORAGE_KEY = "floor-plan-zoom";
+  const [zoom, setZoom] = useState<number>(() => {
+    if (typeof window === "undefined") return 1;
+    const saved = localStorage.getItem(ZOOM_STORAGE_KEY);
+    if (saved) {
+      const parsed = parseFloat(saved);
+      if (!isNaN(parsed)) return Math.min(1, Math.max(0.5, parsed));
+    }
+    return 1;
+  });
   const [showGrid, setShowGrid] = useState(editModeOnly);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number }>({
@@ -190,9 +199,17 @@ export default function FloorPlanHandler({
     editModeOnly,
   ]);
 
-  // Set initial zoom to 85% on mobile (runs once after hydration)
+  // Persist zoom to localStorage
   useEffect(() => {
-    if (!window.matchMedia("(min-width: 1024px)").matches) setZoom(0.85);
+    localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
+  }, [zoom]);
+
+  // Set initial zoom to 85% on mobile if no saved value (runs once after hydration)
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 1024px)").matches) {
+      const saved = localStorage.getItem(ZOOM_STORAGE_KEY);
+      if (!saved) setZoom(0.85);
+    }
   }, []);
 
   // Autosave with debounce (1.5s after last change)

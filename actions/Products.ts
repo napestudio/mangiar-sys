@@ -109,6 +109,16 @@ export async function createMenuItem(input: CreateMenuItemInput) {
         error.message.includes("restaurantId") &&
         error.message.includes("name")
       ) {
+        const inactive = await prisma.product.findFirst({
+          where: { restaurantId: input.restaurantId, name: input.name, isActive: false },
+          select: { id: true },
+        });
+        if (inactive) {
+          return {
+            success: false,
+            error: `INACTIVE_DUPLICATE:${inactive.id}`,
+          };
+        }
         return {
           success: false,
           error: "Ya existe un producto con este nombre en tu restaurante",
@@ -257,11 +267,17 @@ export async function deleteMenuItem(id: string) {
       select: { imageUrl: true },
     });
 
-    // Soft delete (mark as inactive)
-    await prisma.product.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    // Soft delete: cascade to all branch records in a transaction
+    await prisma.$transaction([
+      prisma.product.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+      prisma.productOnBranch.updateMany({
+        where: { productId: id },
+        data: { isActive: false },
+      }),
+    ]);
 
     // Clean up image if exists
     if (product?.imageUrl) {
@@ -271,6 +287,7 @@ export async function deleteMenuItem(id: string) {
     }
 
     revalidatePath("/dashboard/menu-items");
+    revalidatePath("/dashboard/stock");
     return { success: true };
   } catch (error) {
     console.error("Error deleting menu item:", error);
@@ -280,6 +297,37 @@ export async function deleteMenuItem(id: string) {
         error instanceof Error
           ? error.message
           : "Error al eliminar el producto",
+    };
+  }
+}
+
+/**
+ * Reactiva un producto inactivo y todos sus registros por sucursal
+ */
+export async function reactivateMenuItem(id: string) {
+  try {
+    await prisma.$transaction([
+      prisma.product.update({
+        where: { id },
+        data: { isActive: true },
+      }),
+      prisma.productOnBranch.updateMany({
+        where: { productId: id },
+        data: { isActive: true },
+      }),
+    ]);
+
+    revalidatePath("/dashboard/menu-items");
+    revalidatePath("/dashboard/stock");
+    return { success: true };
+  } catch (error) {
+    console.error("Error reactivating menu item:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al reactivar el producto",
     };
   }
 }
@@ -1494,9 +1542,25 @@ export async function getCategories(restaurantId: string) {
     const categories = await prisma.category.findMany({
       where: { restaurantId },
       orderBy: { order: "asc" },
+      include: {
+        stationCategories: {
+          include: {
+            station: { select: { id: true, name: true, color: true } },
+          },
+          take: 1,
+        },
+      },
     });
 
-    return { success: true, data: categories };
+    const data = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      order: cat.order,
+      restaurantId: cat.restaurantId,
+      station: cat.stationCategories[0]?.station ?? null,
+    }));
+
+    return { success: true, data };
   } catch (error) {
     console.error("Error fetching categories:", error);
     return {
@@ -1516,6 +1580,7 @@ export async function createCategory(input: {
   name: string;
   order?: number;
   restaurantId: string;
+  stationId?: string;
 }) {
   try {
     // Si no se especifica orden, obtener el siguiente disponible
@@ -1534,6 +1599,12 @@ export async function createCategory(input: {
         restaurantId: input.restaurantId,
       },
     });
+
+    if (input.stationId) {
+      await prisma.stationCategory.create({
+        data: { stationId: input.stationId, categoryId: category.id },
+      });
+    }
 
     revalidatePath("/dashboard/menu-items");
     return { success: true, data: category };
@@ -1554,6 +1625,7 @@ export async function updateCategory(input: {
   id: string;
   name?: string;
   order?: number;
+  stationId?: string | null;
 }) {
   try {
     const category = await prisma.category.update({
@@ -1563,6 +1635,15 @@ export async function updateCategory(input: {
         order: input.order,
       },
     });
+
+    if (input.stationId !== undefined) {
+      await prisma.stationCategory.deleteMany({ where: { categoryId: input.id } });
+      if (input.stationId) {
+        await prisma.stationCategory.create({
+          data: { stationId: input.stationId, categoryId: input.id },
+        });
+      }
+    }
 
     revalidatePath("/dashboard/menu-items");
     return { success: true, data: category };
