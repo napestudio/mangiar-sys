@@ -27,6 +27,20 @@ export function formatDateLongAR(isoString: string): string {
 }
 
 /**
+ * "viernes, 7 de marzo de 2026" — for email templates.
+ * Includes weekday, uses es-AR. Safe for date-only DB fields stored as UTC midnight.
+ */
+export function formatDateEmailAR(isoString: string): string {
+  const [year, month, day] = isoString.slice(0, 10).split("-").map(Number);
+  return new Intl.DateTimeFormat("es-AR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
+/**
  * "07 mar 2026" — for full UTC timestamps (e.g. createdAt).
  * Uses Argentina timezone to convert the UTC instant to local date.
  */

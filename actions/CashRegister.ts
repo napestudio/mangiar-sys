@@ -1380,6 +1380,7 @@ export async function getMovementWithOrderDetails(movementId: string) {
           customerEmail: movement.order.customerEmail,
           partySize: movement.order.partySize,
           discountPercentage: Number(movement.order.discountPercentage),
+          discountType: movement.order.discountType,
           deliveryFee: Number(movement.order.deliveryFee),
           description: movement.order.description,
           courierName: movement.order.courierName,
