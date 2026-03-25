@@ -1189,14 +1189,6 @@ export function ProductDialog({
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-xs text-blue-800">
-                    <strong>Nota:</strong> Los precios son por unidad base
-                    (unidad, kg, litro, etc.). Al menos un precio debe estar
-                    configurado.
-                  </p>
-                </div>
               </div>
             )}
           </div>
