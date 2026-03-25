@@ -19,7 +19,7 @@ type Category = {
   name: string;
   order: number;
   restaurantId: string;
-  station: StationInfo | null;
+  station?: StationInfo | null;
 };
 
 type Station = {

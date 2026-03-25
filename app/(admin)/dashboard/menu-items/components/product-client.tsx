@@ -89,7 +89,7 @@ type SerializedCategory = {
   name: string;
   order: number;
   restaurantId: string;
-  station: StationInfo | null;
+  station?: StationInfo | null;
 };
 
 type SerializedComboComponent = {

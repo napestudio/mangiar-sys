@@ -40,11 +40,18 @@ type SerializedProductOnBranch = {
   prices: SerializedProductPrice[];
 };
 
+type StationInfo = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type SerializedCategory = {
   id: string;
   name: string;
   order: number;
   restaurantId: string;
+  station?: StationInfo | null;
 };
 
 type MenuItemWithRelations = {
