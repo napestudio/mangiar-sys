@@ -1542,9 +1542,25 @@ export async function getCategories(restaurantId: string) {
     const categories = await prisma.category.findMany({
       where: { restaurantId },
       orderBy: { order: "asc" },
+      include: {
+        stationCategories: {
+          include: {
+            station: { select: { id: true, name: true, color: true } },
+          },
+          take: 1,
+        },
+      },
     });
 
-    return { success: true, data: categories };
+    const data = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      order: cat.order,
+      restaurantId: cat.restaurantId,
+      station: cat.stationCategories[0]?.station ?? null,
+    }));
+
+    return { success: true, data };
   } catch (error) {
     console.error("Error fetching categories:", error);
     return {
@@ -1564,6 +1580,7 @@ export async function createCategory(input: {
   name: string;
   order?: number;
   restaurantId: string;
+  stationId?: string;
 }) {
   try {
     // Si no se especifica orden, obtener el siguiente disponible
@@ -1582,6 +1599,12 @@ export async function createCategory(input: {
         restaurantId: input.restaurantId,
       },
     });
+
+    if (input.stationId) {
+      await prisma.stationCategory.create({
+        data: { stationId: input.stationId, categoryId: category.id },
+      });
+    }
 
     revalidatePath("/dashboard/menu-items");
     return { success: true, data: category };
@@ -1602,6 +1625,7 @@ export async function updateCategory(input: {
   id: string;
   name?: string;
   order?: number;
+  stationId?: string | null;
 }) {
   try {
     const category = await prisma.category.update({
@@ -1611,6 +1635,15 @@ export async function updateCategory(input: {
         order: input.order,
       },
     });
+
+    if (input.stationId !== undefined) {
+      await prisma.stationCategory.deleteMany({ where: { categoryId: input.id } });
+      if (input.stationId) {
+        await prisma.stationCategory.create({
+          data: { stationId: input.stationId, categoryId: input.id },
+        });
+      }
+    }
 
     revalidatePath("/dashboard/menu-items");
     return { success: true, data: category };
