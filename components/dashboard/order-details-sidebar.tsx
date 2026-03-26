@@ -9,6 +9,7 @@ import {
   getAvailableProductsForOrder,
   updateDeliveryFee,
   updateDiscount,
+  updateOrderItemPrice,
   updateOrderStatus,
   updateOrderType,
 } from "@/actions/Order";
@@ -567,6 +568,19 @@ export function OrderDetailsSidebar({
     }
   };
 
+  const handleUpdateItemPrice = async (itemId: string, price: number) => {
+    if (isNaN(price) || price < 0) return;
+    const result = await updateOrderItemPrice(itemId, price);
+    if (!result.success) {
+      toast({
+        title: "Error",
+        description: result.error || "Error al actualizar el precio",
+        variant: "destructive",
+      });
+    }
+    onOrderUpdated?.();
+  };
+
   const handleCloseOrderSuccess = () => {
     setIsCloseOrderDialogOpen(false);
     onOrderUpdated?.();
@@ -983,9 +997,28 @@ export function OrderDetailsSidebar({
                     <div className="font-semibold text-gray-900">
                       {formatCurrency(item.quantity * item.price)}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {formatCurrency(item.price)} c/u
-                    </div>
+                    {isEditing ? (
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        <span className="text-xs text-gray-400">$</span>
+                        <NumberInput
+                          defaultValue={item.price}
+                          onBlur={(e) =>
+                            handleUpdateItemPrice(
+                              item.id,
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="h-6 w-20 text-sm px-1 text-right"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="text-xs text-gray-400">c/u</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">
+                        {formatCurrency(item.price)} c/u
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
