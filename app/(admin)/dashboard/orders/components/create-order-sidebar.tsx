@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createOrderWithItems } from "@/actions/Order";
+import { createOrderWithItems, getAvailableProductsForOrder } from "@/actions/Order";
 import { OrderType } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +29,7 @@ import { WaiterPicker } from "@/components/dashboard/waiter-picker";
 import { CreateClientDialog } from "@/components/dashboard/create-client-dialog";
 import { ProductPicker } from "@/components/dashboard/product-picker";
 import { type ClientData } from "@/actions/clients";
-import { useProducts } from "@/contexts/products-context";
+import { type OrderProduct } from "@/types/products";
 
 interface CreateOrderSidebarProps {
   branchId: string;
@@ -82,19 +81,19 @@ export function CreateOrderSidebar({
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState("");
 
-  // Use products from context — load on demand when sidebar opens
-  const {
-    products,
-    isLoading: productsLoading,
-    refreshProducts,
-  } = useProducts();
+  // Products state — fetched locally so we always use the correct price type
+  const [products, setProducts] = useState<OrderProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
-  // Load products when the sidebar opens (if not already loaded)
+  // Fetch products whenever the sidebar opens, keyed on orderType for correct prices
   useEffect(() => {
-    if (open && products.length === 0 && !productsLoading) {
-      refreshProducts();
-    }
-  }, [open, products.length, productsLoading, refreshProducts]);
+    if (!open) return;
+    setProductsLoading(true);
+    getAvailableProductsForOrder(branchId, orderType)
+      .then(setProducts)
+      .catch(() => setProducts([]))
+      .finally(() => setProductsLoading(false));
+  }, [open, branchId, orderType]);
 
   // Update order type when initialOrderType changes
   useEffect(() => {
@@ -144,6 +143,15 @@ export function CreateOrderSidebar({
     setLocalItems(
       localItems.map((item) =>
         item.localId === localId ? { ...item, quantity } : item,
+      ),
+    );
+  };
+
+  const handleUpdatePrice = (localId: string, price: number) => {
+    if (isNaN(price) || price < 0) return;
+    setLocalItems(
+      localItems.map((item) =>
+        item.localId === localId ? { ...item, price } : item,
       ),
     );
   };
@@ -424,7 +432,7 @@ export function CreateOrderSidebar({
                 onSelectProduct={handleSelectProduct}
                 label=""
                 placeholder="Buscar producto..."
-                disabled={isLoading}
+                disabled={isLoading || productsLoading}
               />
             </div>
 
@@ -445,9 +453,23 @@ export function CreateOrderSidebar({
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.itemName}</p>
-                      <p className="text-sm text-gray-500">
-                        ${item.price.toFixed(2)} c/u
-                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-gray-400">$</span>
+                        <NumberInput
+                          value={item.price}
+                          onChange={(e) =>
+                            handleUpdatePrice(
+                              item.localId,
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="h-6 w-20 text-sm px-1"
+                          min="0"
+                          step="0.01"
+                          disabled={isLoading}
+                        />
+                        <span className="text-xs text-gray-400">c/u</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button

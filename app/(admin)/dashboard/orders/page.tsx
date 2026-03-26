@@ -1,7 +1,6 @@
 import { getOrders, getActiveOrderCounts } from "@/actions/Order";
 import { OrdersClient } from "./orders-client";
 import prisma from "@/lib/prisma";
-import { ProductsProvider } from "@/contexts/products-context";
 import { OrderType, UserRole } from "@/app/generated/prisma";
 import { requireRole } from "@/lib/permissions/middleware";
 import { isManagerOrHigher } from "@/lib/permissions/role-utils";
@@ -116,25 +115,20 @@ export default async function OrdersPage({
           <h1 className="text-3xl font-bold text-gray-900">Ordenes</h1>
         </div>
 
-        <ProductsProvider
+        <OrdersClient
           branchId={branchId}
-          orderType={orderType ?? OrderType.DINE_IN}
-        >
-          <OrdersClient
-            branchId={branchId}
-            initialOrders={orders}
-            tables={tables}
-            initialPagination={pagination}
-            initialTab={activeTab}
-            initialSearch={searchParam || ""}
-            initialStartDate={startDateParam || ""}
-            initialEndDate={endDateParam || ""}
-            initialPaymentMethod={paymentMethodParam || ""}
-            initialSortOrder={sortOrder}
-            activeOrderCounts={orderCounts}
-            canChangeOrderType={isManagerOrHigher(userRole)}
-          />
-        </ProductsProvider>
+          initialOrders={orders}
+          tables={tables}
+          initialPagination={pagination}
+          initialTab={activeTab}
+          initialSearch={searchParam || ""}
+          initialStartDate={startDateParam || ""}
+          initialEndDate={endDateParam || ""}
+          initialPaymentMethod={paymentMethodParam || ""}
+          initialSortOrder={sortOrder}
+          activeOrderCounts={orderCounts}
+          canChangeOrderType={isManagerOrHigher(userRole)}
+        />
       </main>
     </div>
   );
