@@ -498,7 +498,8 @@ model DeliveryConfig {
   allowTakeAway    Boolean  @default(false) // Whether customers can place take-away orders
   minOrderAmount   Decimal? @default(0) @db.Decimal(10, 2) // Minimum order amount
   deliveryFee      Decimal? @default(0) @db.Decimal(10, 2) // Delivery fee
-  estimatedMinutes Int?     @default(45) // Estimated delivery time in minutes
+  estimatedMinutes     Int?    @default(45) // Estimated delivery time in minutes
+  notificationWhatsapp String? // WhatsApp number dedicated to delivery order notifications
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

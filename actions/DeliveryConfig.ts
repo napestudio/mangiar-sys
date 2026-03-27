@@ -29,6 +29,7 @@ type SerializedDeliveryConfig = {
   minOrderAmount: number;
   deliveryFee: number;
   estimatedMinutes: number;
+  notificationWhatsapp: string | null;
   createdAt: string;
   updatedAt: string;
   menu?: {
@@ -85,6 +86,7 @@ export async function getDeliveryConfig(branchId: string): Promise<{
         minOrderAmount: config.minOrderAmount ? Number(config.minOrderAmount) : 0,
         deliveryFee: config.deliveryFee ? Number(config.deliveryFee) : 0,
         estimatedMinutes: config.estimatedMinutes ?? 45,
+        notificationWhatsapp: config.notificationWhatsapp,
         createdAt: config.createdAt.toISOString(),
         updatedAt: config.updatedAt.toISOString(),
         menu: config.menu,
@@ -123,6 +125,7 @@ export async function updateDeliveryConfig(data: {
   minOrderAmount?: number;
   deliveryFee?: number;
   estimatedMinutes?: number;
+  notificationWhatsapp?: string | null;
   windows: DeliveryWindowInput[];
 }): Promise<{
   success: boolean;
@@ -142,6 +145,7 @@ export async function updateDeliveryConfig(data: {
           minOrderAmount: data.minOrderAmount ?? 0,
           deliveryFee: data.deliveryFee ?? 0,
           estimatedMinutes: data.estimatedMinutes ?? 45,
+          notificationWhatsapp: data.notificationWhatsapp ?? null,
         },
         update: {
           menuId: data.menuId,
@@ -151,6 +155,7 @@ export async function updateDeliveryConfig(data: {
           minOrderAmount: data.minOrderAmount ?? 0,
           deliveryFee: data.deliveryFee ?? 0,
           estimatedMinutes: data.estimatedMinutes ?? 45,
+          notificationWhatsapp: data.notificationWhatsapp ?? null,
         },
       });
 

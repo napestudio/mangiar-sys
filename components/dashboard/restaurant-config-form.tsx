@@ -402,6 +402,9 @@ export default function RestaurantConfigForm({
             <p className="text-xs text-gray-500 mt-1">
               Código de país + número, sin espacios ni símbolos. Ej: 5491112345678
             </p>
+            <p className="text-xs text-amber-600 mt-1">
+              Si este número también está siendo usado para notificaciones de pedidos, deberás actualizarlo manualmente en la configuración de pedidos.
+            </p>
           </div>
         </div>
       </div>

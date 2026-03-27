@@ -116,7 +116,10 @@ export default async function PedidosPage() {
     }
   }
 
-  const phoneNumber = restaurant?.whatsappNumber || restaurant?.phone;
+  const phoneNumber =
+    config.notificationWhatsapp ||
+    restaurant?.whatsappNumber ||
+    restaurant?.phone;
   const whatsappUrl = phoneNumber
     ? `https://api.whatsapp.com/send/?phone=${phoneNumber}&app_absent=0`
     : "";

@@ -1,4 +1,5 @@
 import { getOrders, getActiveOrderCounts } from "@/actions/Order";
+import { getDeliveryConfig } from "@/actions/DeliveryConfig";
 import { OrdersClient } from "./orders-client";
 import prisma from "@/lib/prisma";
 import { OrderType, UserRole } from "@/app/generated/prisma";
@@ -54,7 +55,7 @@ export default async function OrdersPage({
       ? (sortOrderParam as "asc" | "desc")
       : "desc";
 
-  const [ordersResult, tables, orderCounts] = await Promise.all([
+  const [ordersResult, tables, orderCounts, deliveryConfigResult] = await Promise.all([
     getOrders({
       branchId,
       type: orderType,
@@ -81,7 +82,13 @@ export default async function OrdersPage({
       },
     }),
     getActiveOrderCounts(branchId),
+    getDeliveryConfig(branchId),
   ]);
+
+  const notificationWhatsapp =
+    deliveryConfigResult.success && deliveryConfigResult.data
+      ? deliveryConfigResult.data.notificationWhatsapp
+      : null;
 
   const rawOrders =
     ordersResult.success && ordersResult.data ? ordersResult.data : [];
@@ -128,6 +135,7 @@ export default async function OrdersPage({
           initialSortOrder={sortOrder}
           activeOrderCounts={orderCounts}
           canChangeOrderType={isManagerOrHigher(userRole)}
+          notificationWhatsapp={notificationWhatsapp}
         />
       </main>
     </div>

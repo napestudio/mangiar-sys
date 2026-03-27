@@ -32,6 +32,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Order } from "@/types/orders";
 import {
+  AlertCircle,
   ChevronDown,
   Loader2,
   Plus,
@@ -42,6 +43,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { CreateOrderSidebar } from "./components/create-order-sidebar";
@@ -70,6 +72,7 @@ interface OrdersClientProps {
     DELIVERY: number;
   };
   canChangeOrderType: boolean;
+  notificationWhatsapp?: string | null;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -102,6 +105,7 @@ export function OrdersClient({
   initialSortOrder,
   activeOrderCounts,
   canChangeOrderType,
+  notificationWhatsapp,
 }: OrdersClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -109,6 +113,7 @@ export function OrdersClient({
   const [pagination, setPagination] =
     useState<PaginationInfo>(initialPagination);
   const [isPending, startTransition] = useTransition();
+  const [whatsappBannerDismissed, setWhatsappBannerDismissed] = useState(false);
 
   // Sidebar state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -688,6 +693,25 @@ export function OrdersClient({
         </TabsList>
 
         <TabsContent value={currentTab} className="mt-6">
+          {currentTab === "DELIVERY" && !notificationWhatsapp && !whatsappBannerDismissed && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  No configuraste un número de WhatsApp para notificaciones de pedidos.{" "}
+                  <Link href="/dashboard/config/delivery" className="font-medium underline">
+                    Configurarlo ahora
+                  </Link>
+                </p>
+              </div>
+              <button
+                onClick={() => setWhatsappBannerDismissed(true)}
+                className="text-amber-600 hover:text-amber-800 shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           {isLoadingState ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
