@@ -18,7 +18,8 @@ import type {
 import { ReservationStatus } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { AlertCircle, Plus, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { CreateReservationSidebar } from "./create-reservation-sidebar";
 import { DeleteReservationDialog } from "./delete-reservation-dialog";
@@ -35,16 +36,19 @@ interface ReservationsManagerProps {
     totalCount: number;
   };
   branchId: string;
+  notificationEmail?: string | null;
 }
 
 export function ReservationsManager({
   initialReservations,
   initialPagination,
   branchId,
+  notificationEmail,
 }: ReservationsManagerProps) {
   // Reservations state
   const [reservations, setReservations] = useState(initialReservations);
   const [pagination, setPagination] = useState(initialPagination);
+  const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
 
   // Time slots — loaded lazily when the Create Reservation dialog is opened
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -445,6 +449,26 @@ export function ReservationsManager({
 
   return (
     <div className="space-y-6 relative">
+      {!notificationEmail && !emailBannerDismissed && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800">
+              No configuraste un email para notificaciones de reservas.{" "}
+              <Link href="/dashboard/config/slots" className="font-medium underline">
+                Configurarlo ahora
+              </Link>
+            </p>
+          </div>
+          <button
+            onClick={() => setEmailBannerDismissed(true)}
+            className="text-amber-600 hover:text-amber-800 shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {isPending && <LoadingToast />}
 
       <div className="mb-8 flex items-center justify-between">

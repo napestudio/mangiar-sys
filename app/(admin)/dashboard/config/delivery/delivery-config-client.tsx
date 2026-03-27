@@ -191,7 +191,7 @@ export default function DeliveryConfigClient({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-4">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
           Configuración de Delivery
@@ -334,7 +334,9 @@ export default function DeliveryConfigClient({
 
           {/* WhatsApp Notifications */}
           <div className="space-y-2">
-            <Label htmlFor="notificationWhatsapp">WhatsApp de notificaciones</Label>
+            <Label htmlFor="notificationWhatsapp">
+              WhatsApp de notificaciones
+            </Label>
             <Input
               id="notificationWhatsapp"
               type="tel"
@@ -404,7 +406,6 @@ export default function DeliveryConfigClient({
         onSave={editingWindow ? handleEditWindow : handleAddWindow}
         editingWindow={editingWindow}
       />
-
     </div>
   );
 }
