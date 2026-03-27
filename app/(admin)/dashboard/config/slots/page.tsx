@@ -1,5 +1,5 @@
 import { TimeSlotsManager } from "@/components/dashboard/time-slots-manager";
-import BranchNotificationEmailForm from "@/components/dashboard/branch-notification-email-form";
+import ReservationsConfigSidebar from "@/components/dashboard/reservations-config-sidebar";
 import { getTimeSlots } from "@/actions/TimeSlot";
 import { getBranch } from "@/actions/Branch";
 import { requireRole } from "@/lib/permissions/middleware";
@@ -24,11 +24,14 @@ export default async function TimeSlotsPage() {
 
   return (
     <div className="bg-gray-50 w-full">
-      <div className="px-4 sm:px-6 lg:px-8 pt-20 w-full ">
-        <BranchNotificationEmailForm
-          branchId={branchId}
-          initialEmail={notificationEmail}
-        />
+      <div className="px-4 sm:px-6 lg:px-8 pt-20 w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Reservas</h1>
+          <ReservationsConfigSidebar
+            branchId={branchId}
+            initialEmail={notificationEmail}
+          />
+        </div>
         <TimeSlotsManager initialTimeSlots={timeSlots} branchId={branchId} />
       </div>
     </div>
