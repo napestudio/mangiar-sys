@@ -1,4 +1,5 @@
 import { getFilteredReservations } from "@/actions/Reservation";
+import { getBranch } from "@/actions/Branch";
 import { ReservationsManager } from "@/components/dashboard/reservations-manager";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
@@ -7,10 +8,10 @@ export default async function ReservationsPage() {
   const { branchId } = await requireRole(UserRole.WAITER);
 
   // Time slots are NOT fetched here — they load lazily when the Create Reservation dialog opens
-  const reservationsResult = await getFilteredReservations(branchId, {
-    type: "today",
-    limit: 10,
-  });
+  const [reservationsResult, branchResult] = await Promise.all([
+    getFilteredReservations(branchId, { type: "today", limit: 10 }),
+    getBranch(branchId),
+  ]);
 
   const reservations =
     reservationsResult.success && reservationsResult.data
@@ -32,6 +33,7 @@ export default async function ReservationsPage() {
           initialReservations={reservations}
           initialPagination={pagination}
           branchId={branchId}
+          notificationEmail={branchResult.success ? branchResult.data?.notificationEmail ?? null : null}
         />
       </main>
     </div>

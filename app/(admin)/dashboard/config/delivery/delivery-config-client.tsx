@@ -63,12 +63,16 @@ interface DeliveryConfigClientProps {
   branchId: string;
   initialConfig: DeliveryConfig | null;
   availableMenus: Menu[];
+  restaurantWhatsapp: string | null;
+  initialNotificationWhatsapp: string | null;
 }
 
 export default function DeliveryConfigClient({
   branchId,
   initialConfig,
   availableMenus,
+  restaurantWhatsapp,
+  initialNotificationWhatsapp,
 }: DeliveryConfigClientProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -78,6 +82,9 @@ export default function DeliveryConfigClient({
   );
 
   // Form state
+  const [notificationWhatsapp, setNotificationWhatsapp] = useState(
+    initialNotificationWhatsapp || "",
+  );
   const [isActive, setIsActive] = useState(initialConfig?.isActive ?? true);
   const [allowDelivery, setAllowDelivery] = useState(
     initialConfig?.allowDelivery ?? true,
@@ -131,6 +138,7 @@ export default function DeliveryConfigClient({
         minOrderAmount: parseFloat(minOrderAmount) || 0,
         deliveryFee: parseFloat(deliveryFee) || 0,
         estimatedMinutes: parseInt(estimatedMinutes) || 45,
+        notificationWhatsapp: notificationWhatsapp || null,
         windows: windows.map((w) => ({
           name: w.name,
           startTime: w.startTime,
@@ -183,7 +191,7 @@ export default function DeliveryConfigClient({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-4">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
           Configuración de Delivery
@@ -323,6 +331,33 @@ export default function DeliveryConfigClient({
               Tiempo estimado de entrega en minutos
             </p>
           </div>
+
+          {/* WhatsApp Notifications */}
+          <div className="space-y-2">
+            <Label htmlFor="notificationWhatsapp">
+              WhatsApp de notificaciones
+            </Label>
+            <Input
+              id="notificationWhatsapp"
+              type="tel"
+              value={notificationWhatsapp}
+              onChange={(e) => setNotificationWhatsapp(e.target.value)}
+              placeholder="5491112345678"
+            />
+            <p className="text-sm text-gray-500">
+              Número al que se enviarán los pedidos de delivery y takeaway.
+            </p>
+            {restaurantWhatsapp && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setNotificationWhatsapp(restaurantWhatsapp)}
+              >
+                Usar número del restaurante
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -362,7 +397,7 @@ export default function DeliveryConfigClient({
         </Button>
       </div>
 
-      {/* Dialog */}
+      {/* Delivery Window Dialog */}
       <DeliveryWindowDialog
         open={isDialogOpen}
         onOpenChange={(open) => {
