@@ -167,3 +167,44 @@ export const REGISTER_STATUS_LABELS: Record<CashRegisterStatus, string> = {
   OPEN: "Abierta",
   CLOSED: "Cerrada",
 };
+
+// =============================================================================
+// GLOBAL MOVEMENTS (Movimientos Globales — not linked to any cash session)
+// =============================================================================
+
+export interface GlobalMovement {
+  id: string;
+  type: "INCOME" | "EXPENSE";
+  paymentMethod: PaymentMethodExtended;
+  amount: number;
+  description: string | null;
+  category: string | null;
+  createdAt: string;
+  createdBy: string;
+  createdByName: string;
+}
+
+export interface AddGlobalMovementForm {
+  type: "INCOME" | "EXPENSE";
+  paymentMethod: PaymentMethodExtended;
+  amount: string;
+  description: string;
+  category: string;
+}
+
+export const GLOBAL_MOVEMENT_CATEGORIES = [
+  "Proveedores",
+  "Servicios públicos",
+  "Alquiler",
+  "Limpieza e insumos",
+  "Mantenimiento y reparaciones",
+  "Personal / Sueldos",
+  "Impuestos y tasas",
+  "Publicidad y marketing",
+  "Equipamiento",
+  "Transporte y delivery",
+  "Gastos bancarios",
+  "Otros gastos",
+] as const;
+
+export type GlobalMovementCategory = (typeof GLOBAL_MOVEMENT_CATEGORIES)[number];

@@ -12,7 +12,7 @@ import {
   closeCashRegisterSession,
 } from "@/actions/CashRegister";
 import { ReopenSessionDialog } from "./reopen-session-dialog";
-import { SessionMovementDetailDialog } from "./session-movement-detail-dialog";
+import { MovementDetailsSidebar } from "./movement-details-sidebar";
 import { PAYMENT_METHOD_LABELS } from "@/types/cash-register";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ interface SerializedSession {
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
+  openedByName: string;
   openingAmount: number;
   closedAt: string | null;
   closedBy: string | null;
@@ -359,7 +360,7 @@ export function SessionDetailsSidebar({
           </div>
           <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
             <span className="text-gray-500">Creado Por</span>
-            <span className="font-medium">{session.openedBy}</span>
+            <span className="font-medium">{session.openedByName}</span>
           </div>
           <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
             <span className="text-gray-500">Estado</span>
@@ -693,13 +694,14 @@ export function SessionDetailsSidebar({
         />
       )}
 
-      <SessionMovementDetailDialog
+      <MovementDetailsSidebar
         movementId={selectedMovementId}
         open={movementDetailOpen}
-        onOpenChange={(open) => {
-          setMovementDetailOpen(open);
-          if (!open) setSelectedMovementId(null);
+        onClose={() => {
+          setMovementDetailOpen(false);
+          setSelectedMovementId(null);
         }}
+        userRole={userRole ?? "STAFF"}
       />
     </>
   );
