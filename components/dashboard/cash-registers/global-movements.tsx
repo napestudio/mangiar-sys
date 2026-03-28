@@ -1,6 +1,6 @@
 "use client";
 
-import { getManualMovements } from "@/actions/CashRegister";
+import { getGlobalMovements } from "@/actions/CashRegister";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,13 +15,13 @@ import { formatDateAR, formatTimeAR } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import {
-  CashRegisterWithStatus,
+  GLOBAL_MOVEMENT_CATEGORIES,
   MOVEMENT_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
 } from "@/types/cash-register";
+import type { GlobalMovement } from "@/types/cash-register";
 import {
   ArrowDown,
-  ArrowLeftRight,
   ArrowUp,
   ArrowUpDown,
   CalendarDays,
@@ -35,33 +35,20 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
-  AddMovementDialog,
-  type OptimisticMovement,
-} from "./add-movement-dialog";
+  AddGlobalMovementDialog,
+  type OptimisticGlobalMovement,
+} from "./add-global-movement-dialog";
 import { MovementDetailsSidebar } from "./movement-details-sidebar";
 
-interface Movement {
-  id: string;
-  type: "INCOME" | "EXPENSE" | "CORRECTION";
-  paymentMethod: string;
-  amount: number;
-  description: string | null;
-  createdAt: string;
-  createdBy: string;
-  createdByName: string;
-  sessionId: string;
-  cashRegister: {
-    id: string;
-    name: string;
-  };
+interface GlobalMovementRow extends GlobalMovement {
   isOptimistic?: boolean;
 }
 
-interface MovimientosCajaProps {
+interface GlobalMovementsProps {
   branchId: string;
-  cashRegisters: CashRegisterWithStatus[];
   userRole: string;
 }
 
@@ -69,40 +56,27 @@ type FilterType = "today" | "history" | "dateRange";
 type SortBy = "date" | "amount";
 type SortOrder = "asc" | "desc";
 
-export function MovimientosCaja({
-  branchId,
-  cashRegisters,
-  userRole,
-}: MovimientosCajaProps) {
-  const [movements, setMovements] = useState<Movement[]>([]);
+export function GlobalMovements({ branchId, userRole }: GlobalMovementsProps) {
+  const [movements, setMovements] = useState<GlobalMovementRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterType, setFilterType] = useState<FilterType>("today");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterCashRegister, setFilterCashRegister] = useState<string>("all");
   const [filterMovementType, setFilterMovementType] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchDescription, setSearchDescription] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
-  const [detailsSidebarOpen, setDetailsSidebarOpen] = useState(false);
-
-  // Pagination state
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const pageSize = 50;
+  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
+  const [detailsSidebarOpen, setDetailsSidebarOpen] = useState(false);
 
-  // Debounce timer ref
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PAGE_SIZE = 50;
 
-  // Calculate today's date for filters
-  const today = useMemo(() => {
-    const date = new Date();
-    return date.toISOString().split("T")[0];
-  }, []);
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Load movements based on current filter state
   const loadMovements = useCallback(
     async (pageNum: number = 0) => {
       setIsLoading(true);
@@ -118,31 +92,30 @@ export function MovimientosCaja({
           toDate = dateTo;
         }
 
-        const result = await getManualMovements({
+        const result = await getGlobalMovements({
           branchId,
           dateFrom: fromDate,
           dateTo: toDate,
-          cashRegisterId:
-            filterCashRegister !== "all" ? filterCashRegister : undefined,
           type:
             filterMovementType !== "all"
-              ? (filterMovementType as "INCOME" | "EXPENSE" | "CORRECTION")
+              ? (filterMovementType as "INCOME" | "EXPENSE")
               : undefined,
+          category: filterCategory !== "all" ? filterCategory : undefined,
           description: searchDescription.trim() || undefined,
           sortBy,
           sortOrder,
-          limit: pageSize,
-          offset: pageNum * pageSize,
+          limit: PAGE_SIZE,
+          offset: pageNum * PAGE_SIZE,
         });
 
         if (result.success && result.data) {
-          setMovements(result.data as Movement[]);
+          setMovements(result.data as GlobalMovementRow[]);
           setTotal(result.total ?? 0);
           setHasMore(result.hasMore ?? false);
           setPage(pageNum);
         }
       } catch (error) {
-        console.error("Error loading movements:", error);
+        console.error("Error loading global movements:", error);
       } finally {
         setIsLoading(false);
       }
@@ -151,7 +124,7 @@ export function MovimientosCaja({
       branchId,
       dateFrom,
       dateTo,
-      filterCashRegister,
+      filterCategory,
       filterMovementType,
       filterType,
       searchDescription,
@@ -161,33 +134,22 @@ export function MovimientosCaja({
     ],
   );
 
-  // Auto-trigger loadMovements with debounce when filters change
-  useEffect(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      loadMovements(0);
-    }, 300);
+  const debouncedLoad = useDebounce(() => loadMovements(0), 300);
 
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
+  useEffect(() => {
+    debouncedLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     filterType,
     dateFrom,
     dateTo,
-    filterCashRegister,
     filterMovementType,
+    filterCategory,
     searchDescription,
     sortBy,
     sortOrder,
   ]);
 
-  // Handle filter type change
   const handleSetToday = () => {
     setFilterType("today");
     setDateFrom("");
@@ -212,15 +174,9 @@ export function MovimientosCaja({
     setFilterType("today");
     setDateFrom("");
     setDateTo("");
-    setFilterCashRegister("all");
     setFilterMovementType("all");
+    setFilterCategory("all");
     setSearchDescription("");
-  };
-
-  const handleRowClick = (movement: Movement) => {
-    if (movement.isOptimistic) return;
-    setSelectedMovementId(movement.id);
-    setDetailsSidebarOpen(true);
   };
 
   const handleSortColumn = (column: SortBy) => {
@@ -232,9 +188,8 @@ export function MovimientosCaja({
     }
   };
 
-  // Optimistic update handlers
-  const handleMovementAdded = (optimistic: OptimisticMovement) => {
-    setMovements((prev) => [optimistic as Movement, ...prev]);
+  const handleMovementAdded = (optimistic: OptimisticGlobalMovement) => {
+    setMovements((prev) => [optimistic as GlobalMovementRow, ...prev]);
     setTotal((prev) => prev + 1);
   };
 
@@ -245,15 +200,11 @@ export function MovimientosCaja({
 
   const handleMovementConfirmed = (
     tempId: string,
-    real: OptimisticMovement,
+    real: OptimisticGlobalMovement,
   ) => {
     setMovements((prev) =>
-      prev.map((m) =>
-        m.id === tempId ? { ...real, isOptimistic: false } : m,
-      ),
+      prev.map((m) => (m.id === tempId ? { ...real, isOptimistic: false } : m)),
     );
-    // Reload to get fresh data from server
-    loadMovements(0);
   };
 
   const formatDateTime = (dateStr: string) =>
@@ -272,21 +223,22 @@ export function MovimientosCaja({
             row.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS
           ] || row.paymentMethod,
       },
-      { header: "Caja", accessor: (row) => row.cashRegister.name },
+      { header: "Categoría", accessor: (row) => row.category ?? "" },
       { header: "Descripción", accessor: (row) => row.description ?? "" },
       {
         header: "Monto",
         accessor: (row) =>
           row.type === "EXPENSE" ? -row.amount : row.amount,
       },
+      { header: "Registrado por", accessor: (row) => row.createdByName },
     ]);
-    downloadCSV(csv, `movimientos-caja-${formatDateAR(new Date().toISOString())}.csv`);
+    downloadCSV(csv, `movimientos-globales-${formatDateAR(new Date().toISOString())}.csv`);
   };
 
   const hasActiveFilters =
     filterType !== "today" ||
-    filterCashRegister !== "all" ||
     filterMovementType !== "all" ||
+    filterCategory !== "all" ||
     searchDescription !== "";
 
   const SortIcon = ({ column }: { column: SortBy }) => {
@@ -299,68 +251,40 @@ export function MovimientosCaja({
     );
   };
 
-  const getMovementBadge = (movement: Movement) => {
-    if (movement.type === "CORRECTION") {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-          <ArrowLeftRight className="h-3 w-3" />
-          {MOVEMENT_TYPE_LABELS.CORRECTION}
-        </span>
-      );
-    }
-    return (
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-          movement.type === "INCOME"
-            ? "bg-green-100 text-green-700"
-            : "bg-red-100 text-red-700",
-        )}
-      >
-        {movement.type === "INCOME" ? (
-          <TrendingUp className="h-3 w-3" />
-        ) : (
-          <TrendingDown className="h-3 w-3" />
-        )}
-        {MOVEMENT_TYPE_LABELS[movement.type]}
-      </span>
-    );
-  };
+  const getMovementBadge = (movement: GlobalMovementRow) => (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+        movement.type === "INCOME"
+          ? "bg-green-100 text-green-700"
+          : "bg-red-100 text-red-700",
+      )}
+    >
+      {movement.type === "INCOME" ? (
+        <TrendingUp className="h-3 w-3" />
+      ) : (
+        <TrendingDown className="h-3 w-3" />
+      )}
+      {MOVEMENT_TYPE_LABELS[movement.type]}
+    </span>
+  );
 
-  const getAmountDisplay = (movement: Movement) => {
-    if (movement.type === "CORRECTION") {
-      const isPositive = movement.amount >= 0;
-      return (
-        <span
-          className={cn(
-            "font-medium",
-            isPositive ? "text-green-600" : "text-red-600",
-          )}
-        >
-          {isPositive ? "+" : ""}
-          {formatCurrency(movement.amount)}
-        </span>
-      );
-    }
-    return (
-      <span
-        className={cn(
-          "font-medium",
-          movement.type === "INCOME" ? "text-green-600" : "text-red-600",
-        )}
-      >
-        {movement.type === "INCOME" ? "+" : "-"}
-        {formatCurrency(movement.amount)}
-      </span>
-    );
-  };
+  const getAmountDisplay = (movement: GlobalMovementRow) => (
+    <span
+      className={cn(
+        "font-medium",
+        movement.type === "INCOME" ? "text-green-600" : "text-red-600",
+      )}
+    >
+      {movement.type === "INCOME" ? "+" : "-"}
+      {formatCurrency(movement.amount)}
+    </span>
+  );
 
-  const getRowBorderClass = (movement: Movement) => {
-    if (movement.type === "CORRECTION") return "border-l-4 border-l-yellow-400";
-    return movement.type === "INCOME"
+  const getRowBorderClass = (movement: GlobalMovementRow) =>
+    movement.type === "INCOME"
       ? "border-l-4 border-l-green-500"
       : "border-l-4 border-l-red-500";
-  };
 
   return (
     <div>
@@ -368,8 +292,11 @@ export function MovimientosCaja({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
-            Movimientos de Caja
+            Movimientos Globales
           </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Ingresos y egresos no vinculados a ningún arqueo de caja
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -380,8 +307,7 @@ export function MovimientosCaja({
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
-          <AddMovementDialog
-            cashRegisters={cashRegisters}
+          <AddGlobalMovementDialog
             onMovementAdded={handleMovementAdded}
             onMovementFailed={handleMovementFailed}
             onMovementConfirmed={handleMovementConfirmed}
@@ -391,7 +317,6 @@ export function MovimientosCaja({
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Date Filter Tabs */}
         <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
           <Button
             variant={filterType === "today" ? "default" : "ghost"}
@@ -428,7 +353,6 @@ export function MovimientosCaja({
           </Button>
         </div>
 
-        {/* Date Range Inputs */}
         {filterType === "dateRange" && (
           <div className="flex items-center gap-2">
             <Input
@@ -447,25 +371,6 @@ export function MovimientosCaja({
           </div>
         )}
 
-        {/* Cash Register Filter */}
-        <Select
-          value={filterCashRegister}
-          onValueChange={setFilterCashRegister}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Caja" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las cajas</SelectItem>
-            {cashRegisters.map((register) => (
-              <SelectItem key={register.id} value={register.id}>
-                {register.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Movement Type Filter */}
         <Select
           value={filterMovementType}
           onValueChange={setFilterMovementType}
@@ -477,11 +382,23 @@ export function MovimientosCaja({
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="INCOME">Ingresos</SelectItem>
             <SelectItem value="EXPENSE">Egresos</SelectItem>
-            <SelectItem value="CORRECTION">Correcciones</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Description Search */}
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {GLOBAL_MOVEMENT_CATEGORIES.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -492,7 +409,6 @@ export function MovimientosCaja({
           />
         </div>
 
-        {/* Clear Filters */}
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -506,13 +422,12 @@ export function MovimientosCaja({
         )}
       </div>
 
-      {/* Movements Table */}
+      {/* Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
-        {/* Pagination info */}
         {total > 0 && (
           <div className="px-4 py-2 bg-gray-50 border-b text-sm text-gray-600">
-            Mostrando {page * pageSize + 1} -{" "}
-            {Math.min((page + 1) * pageSize, total)} de {total} movimientos
+            Mostrando {page * PAGE_SIZE + 1} –{" "}
+            {Math.min((page + 1) * PAGE_SIZE, total)} de {total} movimientos
           </div>
         )}
         <table className="w-full">
@@ -534,7 +449,7 @@ export function MovimientosCaja({
                 Medio de Pago
               </th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">
-                Caja
+                Categoría
               </th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">
                 Descripción
@@ -561,10 +476,10 @@ export function MovimientosCaja({
             ) : movements.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center">
-                  <p className="text-gray-500">No hay movimientos</p>
+                  <p className="text-gray-500">No hay movimientos globales</p>
                   <p className="text-sm text-gray-400 mt-1">
                     {filterType === "today"
-                      ? "No se registraron movimientos hoy"
+                      ? "No se registraron movimientos globales hoy"
                       : "No se encontraron movimientos con los filtros seleccionados"}
                   </p>
                 </td>
@@ -573,7 +488,11 @@ export function MovimientosCaja({
               movements.map((movement) => (
                 <tr
                   key={movement.id}
-                  onClick={() => handleRowClick(movement)}
+                  onClick={() => {
+                    if (movement.isOptimistic) return;
+                    setSelectedMovementId(movement.id);
+                    setDetailsSidebarOpen(true);
+                  }}
                   className={cn(
                     "transition-colors",
                     getRowBorderClass(movement),
@@ -582,32 +501,27 @@ export function MovimientosCaja({
                       : "hover:bg-gray-50 cursor-pointer",
                   )}
                 >
-                  {/* Date/Time */}
                   <td className="px-4 py-3 text-sm">
                     {formatDateTime(movement.createdAt)}
                   </td>
-
-                  {/* Type */}
                   <td className="px-4 py-3">{getMovementBadge(movement)}</td>
-
-                  {/* Payment Method */}
                   <td className="px-4 py-3 text-sm">
                     {PAYMENT_METHOD_LABELS[
                       movement.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS
                     ] || movement.paymentMethod}
                   </td>
-
-                  {/* Cash Register */}
-                  <td className="px-4 py-3 text-sm font-medium">
-                    {movement.cashRegister.name}
+                  <td className="px-4 py-3 text-sm">
+                    {movement.category ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                        {movement.category}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
-
-                  {/* Description */}
                   <td className="px-4 py-3 text-sm text-gray-500 max-w-50 truncate">
                     {movement.description || "—"}
                   </td>
-
-                  {/* Amount */}
                   <td className="px-4 py-3 text-right">
                     {getAmountDisplay(movement)}
                   </td>
@@ -617,11 +531,10 @@ export function MovimientosCaja({
           </tbody>
         </table>
 
-        {/* Pagination controls */}
-        {total > pageSize && (
+        {total > PAGE_SIZE && (
           <div className="px-4 py-3 bg-gray-50 border-t flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Página {page + 1} de {Math.ceil(total / pageSize)}
+              Página {page + 1} de {Math.ceil(total / PAGE_SIZE)}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -647,7 +560,6 @@ export function MovimientosCaja({
         )}
       </div>
 
-      {/* Movement Details Sidebar */}
       <MovementDetailsSidebar
         open={detailsSidebarOpen}
         onClose={() => {
@@ -655,8 +567,7 @@ export function MovimientosCaja({
           setSelectedMovementId(null);
         }}
         movementId={selectedMovementId}
-        cashRegisters={cashRegisters}
-        onMovementUpdated={() => loadMovements(0)}
+        onMovementUpdated={() => loadMovements(page)}
         userRole={userRole}
       />
     </div>

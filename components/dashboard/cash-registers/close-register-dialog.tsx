@@ -24,6 +24,7 @@ interface SerializedSession {
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
+  openedByName: string;
   openingAmount: number;
   closedAt: string | null;
   closedBy: string | null;

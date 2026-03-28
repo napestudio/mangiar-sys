@@ -48,7 +48,10 @@ interface AddMovementDialogProps {
   cashRegisters: CashRegisterWithStatus[];
   onMovementAdded?: (movement: OptimisticMovement) => void;
   onMovementFailed?: (tempId: string) => void;
-  onMovementConfirmed?: (tempId: string, realMovement: OptimisticMovement) => void;
+  onMovementConfirmed?: (
+    tempId: string,
+    realMovement: OptimisticMovement,
+  ) => void;
 }
 
 export function AddMovementDialog({
@@ -59,8 +62,12 @@ export function AddMovementDialog({
 }: AddMovementDialogProps) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState<"INCOME" | "EXPENSE" | "CORRECTION">("INCOME");
-  const [correctionSign, setCorrectionSign] = useState<"positive" | "negative">("positive");
+  const [type, setType] = useState<"INCOME" | "EXPENSE" | "CORRECTION">(
+    "INCOME",
+  );
+  const [correctionSign, setCorrectionSign] = useState<"positive" | "negative">(
+    "positive",
+  );
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const [cashRegisterId, setCashRegisterId] = useState("");
   const [description, setDescription] = useState("");
@@ -68,7 +75,7 @@ export function AddMovementDialog({
 
   // Get only registers with open sessions
   const registersWithOpenSessions = cashRegisters.filter(
-    (r) => r.hasOpenSession && r.isActive
+    (r) => r.hasOpenSession && r.isActive,
   );
 
   // Default to the first open register when dialog opens
@@ -81,14 +88,14 @@ export function AddMovementDialog({
   // Get the session ID for the selected register
   const getSessionId = () => {
     const register = registersWithOpenSessions.find(
-      (r) => r.id === cashRegisterId
+      (r) => r.id === cashRegisterId,
     );
     return register?.sessions[0]?.id;
   };
 
   const getSelectedRegisterName = () => {
     const register = registersWithOpenSessions.find(
-      (r) => r.id === cashRegisterId
+      (r) => r.id === cashRegisterId,
     );
     return register?.name ?? cashRegisterId;
   };
@@ -209,7 +216,7 @@ export function AddMovementDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          className="bg-red-600 hover:bg-red-700"
           disabled={registersWithOpenSessions.length === 0}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -238,7 +245,7 @@ export function AddMovementDialog({
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 className="pl-10"
-                              />
+              />
             </div>
           </div>
 
@@ -250,7 +257,7 @@ export function AddMovementDialog({
               onValueChange={(value) =>
                 setType(value as "INCOME" | "EXPENSE" | "CORRECTION")
               }
-                          >
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar tipo" />
               </SelectTrigger>
@@ -276,11 +283,11 @@ export function AddMovementDialog({
                 <button
                   type="button"
                   onClick={() => setCorrectionSign("positive")}
-                                    className={cn(
+                  className={cn(
                     "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border text-sm font-medium transition-colors",
                     correctionSign === "positive"
                       ? "bg-green-100 border-green-400 text-green-700"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50",
                   )}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -289,11 +296,11 @@ export function AddMovementDialog({
                 <button
                   type="button"
                   onClick={() => setCorrectionSign("negative")}
-                                    className={cn(
+                  className={cn(
                     "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border text-sm font-medium transition-colors",
                     correctionSign === "negative"
                       ? "bg-red-100 border-red-400 text-red-700"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50",
                   )}
                 >
                   <Minus className="h-3.5 w-3.5" />
@@ -306,10 +313,7 @@ export function AddMovementDialog({
           {/* Payment Method */}
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">Medio de Pago *</Label>
-            <Select
-              value={paymentMethod}
-              onValueChange={setPaymentMethod}
-                          >
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar medio de pago" />
               </SelectTrigger>
@@ -326,10 +330,7 @@ export function AddMovementDialog({
           {/* Cash Register */}
           <div className="space-y-2">
             <Label htmlFor="register">Caja *</Label>
-            <Select
-              value={cashRegisterId}
-              onValueChange={setCashRegisterId}
-                          >
+            <Select value={cashRegisterId} onValueChange={setCashRegisterId}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar caja" />
               </SelectTrigger>
@@ -369,7 +370,7 @@ export function AddMovementDialog({
                   : "Descripción del movimiento..."
               }
               rows={3}
-                          />
+            />
           </div>
 
           {/* Error */}
@@ -381,10 +382,7 @@ export function AddMovementDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancelar
           </Button>
           <Button

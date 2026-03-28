@@ -305,6 +305,7 @@ model Branch {
   userAccess     UserOnBranch[]
   menus          Menu[]
   cashRegisters  CashRegister[]
+  cashMovements  CashMovement[]
   clients        Client[]
   stations       Station[]
   printers       Printer[]
@@ -1254,16 +1255,21 @@ model CashRegisterSession {
   @@index([openedAt])
 }
 
-// Individual money movements within a session
+// Individual money movements within a session (or outside of any session)
 model CashMovement {
-  id        String              @id @default(cuid())
-  session   CashRegisterSession @relation(fields: [sessionId], references: [id])
-  sessionId String
+  id        String               @id @default(cuid())
+  session   CashRegisterSession? @relation(fields: [sessionId], references: [id])
+  sessionId String? // Nullable — null means out-of-session movement
+
+  // Direct branch link for out-of-session movements (also set for in-session ones going forward)
+  branch   Branch? @relation(fields: [branchId], references: [id])
+  branchId String?
 
   type          CashMovementType
   paymentMethod PaymentMethodExtended
   amount        Decimal @db.Decimal(10, 2) // Always positive; type determines direction
   description   String?
+  category      String? // e.g. "Proveedores", "Alquiler" — used for out-of-session movements
 
   // Link to order (for SALE/REFUND types)
   order   Order?  @relation(fields: [orderId], references: [id])
@@ -1274,6 +1280,7 @@ model CashMovement {
   createdBy String // User ID
 
   @@index([sessionId])
+  @@index([branchId])
   @@index([type])
   @@index([orderId])
 }

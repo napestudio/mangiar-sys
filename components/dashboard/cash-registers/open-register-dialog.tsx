@@ -30,6 +30,7 @@ interface SerializedSession {
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
+  openedByName: string;
   openingAmount: number;
   closedAt: string | null;
   closedBy: string | null;
@@ -56,6 +57,7 @@ interface OpenRegisterDialogProps {
   onOpenChange: (open: boolean) => void;
   cashRegisters: CashRegisterWithStatus[];
   onOpened: (session: SerializedSession) => void;
+  currentUserName: string;
 }
 
 export function OpenRegisterDialog({
@@ -63,6 +65,7 @@ export function OpenRegisterDialog({
   onOpenChange,
   cashRegisters,
   onOpened,
+  currentUserName,
 }: OpenRegisterDialogProps) {
   const now = new Date();
   const [date, setDate] = useState(now.toISOString().split("T")[0]);
@@ -118,6 +121,7 @@ export function OpenRegisterDialog({
           status: "OPEN",
           openedAt,
           openedBy: result.data.openedBy,
+          openedByName: currentUserName,
           openingAmount: Number(result.data.openingAmount),
           closedAt: null,
           closedBy: null,
