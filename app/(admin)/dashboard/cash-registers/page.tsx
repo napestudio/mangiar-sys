@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 
 export default async function CashRegistersPage() {
-  const { userRole, branchId } = await requireRole(UserRole.MANAGER, PermissionGrant.VIEW_CASH_REGISTERS);
+  const { userId, userRole, branchId } = await requireRole(UserRole.MANAGER, PermissionGrant.VIEW_CASH_REGISTERS);
 
   // Fetch cash registers with their current session status
   const cashRegistersResult = await getCashRegistersByBranch(branchId);
@@ -46,9 +46,25 @@ export default async function CashRegistersPage() {
     take: 50,
   });
 
+  // Resolve user names for openedBy fields
+  const userIds = [...new Set(sessions.map((s) => s.openedBy))];
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, name: true },
+  });
+  const userMap = new Map(users.map((u) => [u.id, u.name ?? u.id]));
+
+  // Get current user's name for new sessions opened in the UI
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+  const currentUserName = currentUser?.name ?? userId;
+
   // Serialize Decimal fields for client
   const serializedSessions = sessions.map((session) => ({
     ...session,
+    openedByName: userMap.get(session.openedBy) ?? session.openedBy,
     openingAmount: Number(session.openingAmount),
     expectedCash: session.expectedCash ? Number(session.expectedCash) : null,
     countedCash: session.countedCash ? Number(session.countedCash) : null,
@@ -87,6 +103,7 @@ export default async function CashRegistersPage() {
           cashRegisters={registersWithStatus}
           initialSessions={serializedSessions}
           userRole={userRole}
+          currentUserName={currentUserName}
         />
       </main>
     </div>

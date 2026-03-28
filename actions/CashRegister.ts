@@ -799,6 +799,7 @@ export async function addManualMovement(
       // Verify session exists and is open
       const session = await tx.cashRegisterSession.findUnique({
         where: { id: validatedData.sessionId },
+        include: { cashRegister: { select: { branchId: true } } },
       });
 
       if (!session) {
@@ -813,6 +814,7 @@ export async function addManualMovement(
       const movement = await tx.cashMovement.create({
         data: {
           sessionId: validatedData.sessionId,
+          branchId: session.cashRegister.branchId,
           type: validatedData.type,
           paymentMethod: validatedData.paymentMethod,
           amount: new Prisma.Decimal(validatedData.amount),
@@ -1228,7 +1230,7 @@ export async function getManualMovements(params: {
       createdBy: movement.createdBy,
       createdByName: userMap[movement.createdBy] ?? movement.createdBy,
       sessionId: movement.sessionId,
-      cashRegister: movement.session.cashRegister,
+      cashRegister: movement.session!.cashRegister,
     }));
 
     return {
@@ -1294,7 +1296,7 @@ export async function getMovementById(movementId: string) {
         createdBy: movement.createdBy,
         sessionId: movement.sessionId,
         orderId: movement.orderId,
-        cashRegister: movement.session.cashRegister,
+        cashRegister: movement.session!.cashRegister,
         order: movement.order,
       },
     };
@@ -1357,17 +1359,31 @@ export async function getMovementWithOrderDetails(movementId: string) {
       return { success: false, error: "Movimiento no encontrado" };
     }
 
+    const user = movement.createdBy
+      ? await prisma.user.findUnique({
+          where: { id: movement.createdBy },
+          select: { name: true, username: true },
+        })
+      : null;
+
     const serializedMovement = {
       id: movement.id,
       type: movement.type,
       paymentMethod: movement.paymentMethod,
       amount: Number(movement.amount),
       description: movement.description,
+      category: movement.category,
       createdAt: movement.createdAt.toISOString(),
       createdBy: movement.createdBy,
+      createdByName: user?.name ?? user?.username ?? null,
       sessionId: movement.sessionId,
       orderId: movement.orderId,
-      cashRegisterName: movement.session.cashRegister.name,
+      cashRegister: movement.session
+        ? {
+            id: movement.session.cashRegister.id,
+            name: movement.session.cashRegister.name,
+          }
+        : null,
     };
 
     const serializedOrder = movement.order
@@ -1475,6 +1491,224 @@ export async function getOpenCashRegistersForBranch(branchId: string) {
       success: false,
       error: "Error al obtener las cajas abiertas",
       data: [],
+    };
+  }
+}
+
+// =============================================================================
+// GLOBAL MOVEMENTS (Movimientos Globales — not linked to any cash session)
+// =============================================================================
+
+const addGlobalMovementSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE"]),
+  paymentMethod: z.enum([
+    "CASH",
+    "CARD_DEBIT",
+    "CARD_CREDIT",
+    "ACCOUNT",
+    "TRANSFER",
+    "PAYMENT_LINK",
+    "QR_CODE",
+  ]),
+  amount: z.number().positive("El monto debe ser mayor a cero"),
+  description: z.string().optional(),
+  category: z.string().optional(),
+});
+
+export async function addGlobalMovement(
+  data: z.infer<typeof addGlobalMovementSchema>
+) {
+  try {
+    const { userId, branchId } = await authorizeAction(UserRole.MANAGER);
+    const validatedData = addGlobalMovementSchema.parse(data);
+
+    const movement = await prisma.cashMovement.create({
+      data: {
+        sessionId: null,
+        branchId,
+        type: validatedData.type,
+        paymentMethod: validatedData.paymentMethod,
+        amount: new Prisma.Decimal(validatedData.amount),
+        description: validatedData.description || null,
+        category: validatedData.category || null,
+        createdBy: userId,
+      },
+    });
+
+    revalidatePath("/dashboard/cash-registers");
+
+    return {
+      success: true,
+      data: serializeForClient(movement),
+    };
+  } catch (error) {
+    console.error("Error adding out-of-session movement:", error);
+    if (error instanceof ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Error al registrar el gasto" };
+  }
+}
+
+const updateGlobalMovementSchema = z.object({
+  movementId: z.string().min(1),
+  paymentMethod: z.enum([
+    "CASH",
+    "CARD_DEBIT",
+    "CARD_CREDIT",
+    "ACCOUNT",
+    "TRANSFER",
+    "PAYMENT_LINK",
+    "QR_CODE",
+  ]),
+  category: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export async function updateGlobalMovement(
+  data: z.infer<typeof updateGlobalMovementSchema>
+) {
+  try {
+    await authorizeAction(UserRole.MANAGER);
+    const validatedData = updateGlobalMovementSchema.parse(data);
+
+    const movement = await prisma.cashMovement.findUnique({
+      where: { id: validatedData.movementId },
+    });
+
+    if (!movement) {
+      return { success: false, error: "Movimiento no encontrado" };
+    }
+
+    if (movement.sessionId !== null) {
+      return {
+        success: false,
+        error: "Este movimiento pertenece a una sesión de caja",
+      };
+    }
+
+    await prisma.cashMovement.update({
+      where: { id: validatedData.movementId },
+      data: {
+        paymentMethod: validatedData.paymentMethod,
+        category: validatedData.category ?? null,
+        description: validatedData.description || null,
+      },
+    });
+
+    revalidatePath("/dashboard/cash-registers");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating global movement:", error);
+    if (error instanceof ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Error al actualizar el movimiento" };
+  }
+}
+
+export async function getGlobalMovements(params: {
+  branchId: string;
+  dateFrom?: string;
+  dateTo?: string;
+  type?: "INCOME" | "EXPENSE";
+  category?: string;
+  description?: string;
+  sortBy?: "date" | "amount";
+  sortOrder?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}) {
+  try {
+    const {
+      branchId,
+      dateFrom,
+      dateTo,
+      type,
+      category,
+      description,
+      sortBy = "date",
+      sortOrder = "desc",
+      limit = 50,
+      offset = 0,
+    } = params;
+
+    const dateFilter: { gte?: Date; lt?: Date } = {};
+    if (dateFrom) {
+      dateFilter.gte = dateStringToTimestampBoundsAR(dateFrom).start;
+    }
+    if (dateTo) {
+      dateFilter.lt = dateStringToTimestampBoundsAR(dateTo).end;
+    }
+
+    const whereClause = {
+      branchId,
+      sessionId: null,
+      ...(type && { type }),
+      ...(category && { category }),
+      ...(description && {
+        description: { contains: description, mode: "insensitive" as const },
+      }),
+      ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
+    };
+
+    const orderBy =
+      sortBy === "amount"
+        ? { amount: sortOrder }
+        : { createdAt: sortOrder };
+
+    const [movements, total] = await Promise.all([
+      prisma.cashMovement.findMany({
+        where: whereClause,
+        orderBy,
+        take: limit,
+        skip: offset,
+      }),
+      prisma.cashMovement.count({ where: whereClause }),
+    ]);
+
+    const userIds = [...new Set(movements.map((m) => m.createdBy))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, username: true },
+    });
+    const userMap = Object.fromEntries(
+      users.map((u) => [u.id, u.name || u.username || u.id])
+    );
+
+    const serializedMovements = movements.map((movement) => ({
+      id: movement.id,
+      type: movement.type as "INCOME" | "EXPENSE",
+      paymentMethod: movement.paymentMethod,
+      amount: Number(movement.amount),
+      description: movement.description,
+      category: movement.category,
+      createdAt: movement.createdAt.toISOString(),
+      createdBy: movement.createdBy,
+      createdByName: userMap[movement.createdBy] ?? movement.createdBy,
+    }));
+
+    return {
+      success: true,
+      data: serializedMovements,
+      total,
+      hasMore: offset + movements.length < total,
+    };
+  } catch (error) {
+    console.error("Error fetching out-of-session movements:", error);
+    return {
+      success: false,
+      error: "Error al obtener los gastos",
+      data: [],
+      total: 0,
+      hasMore: false,
     };
   }
 }

@@ -3,6 +3,7 @@
 import { CloseRegisterDialog } from "@/components/dashboard/cash-registers/close-register-dialog";
 import { MovimientosCaja } from "@/components/dashboard/cash-registers/movimientos-caja";
 import { OpenRegisterDialog } from "@/components/dashboard/cash-registers/open-register-dialog";
+import { GlobalMovements } from "@/components/dashboard/cash-registers/global-movements";
 import { SessionDetailsSidebar } from "@/components/dashboard/cash-registers/session-details-sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ interface SerializedSession {
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
+  openedByName: string;
   openingAmount: number;
   closedAt: string | null;
   closedBy: string | null;
@@ -51,6 +53,7 @@ interface CashRegistersClientProps {
   cashRegisters: CashRegisterWithStatus[];
   initialSessions: SerializedSession[];
   userRole: string;
+  currentUserName: string;
 }
 
 export function CashRegistersClient({
@@ -58,6 +61,7 @@ export function CashRegistersClient({
   cashRegisters,
   initialSessions,
   userRole,
+  currentUserName,
 }: CashRegistersClientProps) {
   const [sessions, setSessions] =
     useState<SerializedSession[]>(initialSessions);
@@ -97,7 +101,7 @@ export function CashRegistersClient({
 
   const handleSessionClosed = (closedSession: SerializedSession) => {
     setSessions((prev) =>
-      prev.map((s) => (s.id === closedSession.id ? closedSession : s))
+      prev.map((s) => (s.id === closedSession.id ? closedSession : s)),
     );
     setCloseDialogOpen(false);
     setSelectedSession(null);
@@ -120,20 +124,20 @@ export function CashRegistersClient({
 
   const handleSidebarSessionClosed = (closedSession: SerializedSession) => {
     setSessions((prev) =>
-      prev.map((s) => (s.id === closedSession.id ? closedSession : s))
+      prev.map((s) => (s.id === closedSession.id ? closedSession : s)),
     );
   };
 
   const handleSessionReopened = (reopenedSession: SerializedSession) => {
     setSessions((prev) =>
-      prev.map((s) => (s.id === reopenedSession.id ? reopenedSession : s))
+      prev.map((s) => (s.id === reopenedSession.id ? reopenedSession : s)),
     );
     setSelectedSession(reopenedSession);
   };
 
   // Get registers that can be opened (active and no open session)
   const availableRegisters = cashRegisters.filter(
-    (r) => r.isActive && !r.hasOpenSession
+    (r) => r.isActive && !r.hasOpenSession,
   );
 
   // Format date/time
@@ -160,7 +164,7 @@ export function CashRegistersClient({
       </div> */}
 
       {/* Tabs */}
-      <Tabs defaultValue="arqueos" className="w-full bg-white">
+      <Tabs defaultValue="arqueos" className="w-full ">
         <TabsList>
           <TabsTrigger
             value="arqueos"
@@ -173,12 +177,16 @@ export function CashRegistersClient({
             <Wallet className="h-4 w-4" />
             Movimientos de Caja
           </TabsTrigger>
+          <TabsTrigger value="movimientos-globales" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Movimientos Globales
+          </TabsTrigger>
         </TabsList>
 
         {/* Arqueos Tab */}
-        <TabsContent value="arqueos" className="bg-white">
+        <TabsContent value="arqueos" className="">
           {/* Header with Action Button */}
-          <div className="flex items-center justify-between mb-6 bg-white">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
                 Arqueos de Caja
@@ -335,7 +343,7 @@ export function CashRegistersClient({
                       className={cn(
                         "hover:bg-gray-50 transition-colors cursor-pointer",
                         session.status === "OPEN" &&
-                          "border-l-4 border-l-green-500"
+                          "border-l-4 border-l-green-500",
                       )}
                     >
                       {/* Opening time */}
@@ -378,8 +386,8 @@ export function CashRegistersClient({
                               session.variance < 0
                                 ? "text-red-600 bg-red-50"
                                 : session.variance > 0
-                                ? "text-green-600 bg-green-50"
-                                : "text-gray-600"
+                                  ? "text-green-600 bg-green-50"
+                                  : "text-gray-600",
                             )}
                           >
                             {formatCurrency(session.variance)}
@@ -432,7 +440,16 @@ export function CashRegistersClient({
 
         {/* Movimientos Tab */}
         <TabsContent value="movimientos">
-          <MovimientosCaja branchId={branchId} cashRegisters={cashRegisters} userRole={userRole} />
+          <MovimientosCaja
+            branchId={branchId}
+            cashRegisters={cashRegisters}
+            userRole={userRole}
+          />
+        </TabsContent>
+
+        {/* Gastos Tab */}
+        <TabsContent value="movimientos-globales">
+          <GlobalMovements branchId={branchId} userRole={userRole} />
         </TabsContent>
       </Tabs>
 
@@ -442,6 +459,7 @@ export function CashRegistersClient({
         onOpenChange={setOpenDialogOpen}
         cashRegisters={availableRegisters}
         onOpened={handleSessionOpened}
+        currentUserName={currentUserName}
       />
 
       {selectedSession && (

@@ -100,6 +100,8 @@ TypeScript is configured with `@/*` mapping to the root directory. Use `@/lib/pr
 
 - Place implementations in their corresponding folders (`actions/`, `lib/`, API routes in `app/api/`, etc.)
 - **NEVER** add usage examples in the main `app/` codebase
+- Create components in english
+- **NEVER** use spanish to name components
 - Create usage examples in `/demo` or `/showcase` folders to demonstrate how to use the new features
 - This keeps the main application clean and separates reusable code from example implementations
 - **NEVER** Use :any to type
