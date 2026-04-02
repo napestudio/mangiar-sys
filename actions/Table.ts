@@ -134,18 +134,31 @@ async function batchGetRemainingCapacityWithFCFS(
     "saturday",
   ][date.getDay()];
 
-  // Find ALL time slots that overlap with current slot's time range
-  const overlappingSlots = await prisma.timeSlot.findMany({
+  // Fetch all active slots for this day, then filter for time overlap in JS
+  // (DB-level time comparison breaks for cross-midnight slots)
+  const slotsForDay = await prisma.timeSlot.findMany({
     where: {
       branchId: currentSlot.branchId,
       isActive: true,
       daysOfWeek: { has: dayOfWeek },
-      AND: [
-        { startTime: { lt: currentSlot.endTime } },
-        { endTime: { gt: currentSlot.startTime } },
-      ],
     },
-    select: { id: true },
+    select: { id: true, startTime: true, endTime: true },
+  });
+
+  const toMin = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
+  const curS = toMin(currentSlot.startTime);
+  let curE = toMin(currentSlot.endTime);
+  if (curE <= curS) curE += 1440;
+
+  const overlappingSlots = slotsForDay.filter((slot) => {
+    const slotS = toMin(slot.startTime);
+    let slotE = toMin(slot.endTime);
+    if (slotE <= slotS) slotE += 1440;
+    return (
+      (curS < slotE && slotS < curE) ||
+      (curS + 1440 < slotE && slotS < curE + 1440) ||
+      (curS < slotE + 1440 && slotS + 1440 < curE)
+    );
   });
 
   const overlappingSlotIds = overlappingSlots.map((s) => s.id);

@@ -84,17 +84,14 @@ function generateFifteenMinuteIntervals(
   // Extract hours and minutes from slot times using UTC
   const startHour = startDate.getUTCHours();
   const startMin = startDate.getUTCMinutes();
-  let endHour = endDate.getUTCHours();
+  const rawEndHour = endDate.getUTCHours();
   const endMin = endDate.getUTCMinutes();
 
-  // Handle slots that span midnight (e.g., 23:00 - 00:00)
-  // If end hour is less than start hour, it means the slot crosses midnight
-  if (
-    endHour < startHour ||
-    (endHour === startHour && endMin <= startMin && endHour === 0)
-  ) {
-    endHour = 24; // Treat as 24:00 for loop purposes
-  }
+  // Detect cross-midnight: if end is before start (e.g. 20:00 → 00:30), add 24 to end hour
+  const isCrossMidnight =
+    rawEndHour < startHour ||
+    (rawEndHour === startHour && endMin < startMin);
+  const endHour = isCrossMidnight ? rawEndHour + 24 : rawEndHour;
 
   let currentHour = startHour;
   let currentMin = startMin;
@@ -103,12 +100,13 @@ function generateFifteenMinuteIntervals(
     currentHour < endHour ||
     (currentHour === endHour && currentMin < endMin)
   ) {
+    const displayHour = currentHour % 24;
     // Create date in local timezone
     const intervalTime = new Date(
       year,
       month - 1,
       day,
-      currentHour,
+      displayHour,
       currentMin,
       0,
       0,
@@ -116,7 +114,7 @@ function generateFifteenMinuteIntervals(
 
     intervals.push({
       value: intervalTime.toISOString(),
-      label: `${currentHour.toString().padStart(2, "0")}:${currentMin
+      label: `${displayHour.toString().padStart(2, "0")}:${currentMin
         .toString()
         .padStart(2, "0")}`,
       isPast: intervalTime < now,
