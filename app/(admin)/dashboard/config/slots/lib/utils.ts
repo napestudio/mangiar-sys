@@ -43,9 +43,17 @@ export function getDayBadges(days: string[]): string {
     .join(", ");
 }
 
+function _toMinutes(t: Date | string): number {
+  if (typeof t === 'string') {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+  return t.getUTCHours() * 60 + t.getUTCMinutes();
+}
+
 /**
- * Checks if two time ranges overlap
- * Times overlap if: startTime1 < endTime2 AND startTime2 < endTime1
+ * Checks if two time ranges overlap, correctly handling cross-midnight ranges
+ * (e.g. 20:00–00:30). Uses minutes-since-midnight with 24h-shift alignment.
  */
 export function doTimesOverlap(
   start1: Date | string,
@@ -53,12 +61,21 @@ export function doTimesOverlap(
   start2: Date | string,
   end2: Date | string
 ): boolean {
-  const s1 = typeof start1 === 'string' ? new Date(`1970-01-01T${start1}:00.000Z`) : start1;
-  const e1 = typeof end1 === 'string' ? new Date(`1970-01-01T${end1}:00.000Z`) : end1;
-  const s2 = typeof start2 === 'string' ? new Date(`1970-01-01T${start2}:00.000Z`) : start2;
-  const e2 = typeof end2 === 'string' ? new Date(`1970-01-01T${end2}:00.000Z`) : end2;
+  const s1 = _toMinutes(start1);
+  let e1 = _toMinutes(end1);
+  const s2 = _toMinutes(start2);
+  let e2 = _toMinutes(end2);
 
-  return s1 < e2 && s2 < e1;
+  // Normalize cross-midnight ranges
+  if (e1 <= s1) e1 += 1440;
+  if (e2 <= s2) e2 += 1440;
+
+  // Check overlap in direct alignment and both 24h-shifted alignments
+  return (
+    (s1 < e2 && s2 < e1) ||
+    (s1 + 1440 < e2 && s2 < e1 + 1440) ||
+    (s1 < e2 + 1440 && s2 + 1440 < e1)
+  );
 }
 
 /**

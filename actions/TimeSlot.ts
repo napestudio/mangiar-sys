@@ -534,10 +534,21 @@ export async function getAvailableTablesForTimeSlot(params: {
       },
     });
 
-    // Filter to only slots that actually have time overlap
+    // Filter to only slots that actually have time overlap (handles cross-midnight ranges)
+    const toMin = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
+    const reqS = toMin(requestStartTime);
+    let reqE = toMin(requestEndTime);
+    if (reqE <= reqS) reqE += 1440;
+
     const conflictingSlots = overlappingTimeSlots.filter((slot) => {
-      // Check if time ranges overlap: start1 < end2 AND start2 < end1
-      return requestStartTime < slot.endTime && slot.startTime < requestEndTime;
+      const slotS = toMin(slot.startTime);
+      let slotE = toMin(slot.endTime);
+      if (slotE <= slotS) slotE += 1440;
+      return (
+        (reqS < slotE && slotS < reqE) ||
+        (reqS + 1440 < slotE && slotS < reqE + 1440) ||
+        (reqS < slotE + 1440 && slotS + 1440 < reqE)
+      );
     });
 
     // Build a map of table ID to conflicting time slot

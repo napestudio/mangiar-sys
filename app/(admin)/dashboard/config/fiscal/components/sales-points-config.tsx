@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import {
-  FiscalConfigInput,
   FiscalConfigData,
-  updateFiscalConfig,
+  FiscalConfigInput,
   syncSalesPoints,
+  updateFiscalConfig,
 } from "@/actions/FiscalConfig";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, CheckCircle } from "lucide-react";
+import { CheckCircle, RefreshCw } from "lucide-react";
+import { useState } from "react";
 
 interface SalesPointsConfigProps {
   initialConfig: FiscalConfigData | null;
