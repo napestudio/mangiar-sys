@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 import {
-  DeliveryWindow,
   DAYS,
+  DeliveryWindow,
   validateDeliveryWindow,
 } from "../lib/delivery-windows";
-import { useToast } from "@/hooks/use-toast";
 
 interface DeliveryWindowDialogProps {
   open: boolean;
@@ -67,7 +66,7 @@ export function DeliveryWindowDialog({
 
   const toggleDay = (day: string) => {
     setDaysOfWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
   };
 
@@ -139,7 +138,9 @@ export function DeliveryWindowDialog({
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
-              <p className="text-xs text-gray-500">Clientes pueden empezar a ordenar</p>
+              <p className="text-xs text-gray-500">
+                Clientes pueden empezar a ordenar
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="deliveryStartTime">Inicio de Entregas</Label>
@@ -224,7 +225,8 @@ export function DeliveryWindowDialog({
               onChange={(e) => setMaxOrders(e.target.value)}
             />
             <p className="text-sm text-gray-500">
-              Cantidad máxima de órdenes que se pueden aceptar en esta ventana horaria
+              Cantidad máxima de órdenes que se pueden aceptar en esta ventana
+              horaria
             </p>
           </div>
 
