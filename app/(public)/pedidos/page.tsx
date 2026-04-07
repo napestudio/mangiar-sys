@@ -3,24 +3,30 @@ import {
   getDeliveryConfig,
   isDeliveryAvailable,
 } from "@/actions/DeliveryConfig";
-
-export const metadata: Metadata = {
-  title: "Pedidos",
-  description: "Realizá tu pedido para delivery o takeaway",
-  openGraph: {
-    title: "Pedidos",
-    description: "Realizá tu pedido para delivery o takeaway",
-    images: [
-      {
-        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
-      },
-    ],
-  },
-};
 import { getProductsForDeliveryMenu } from "@/actions/Order";
 import { getRestaurantByBranchId } from "@/actions/Restaurant";
 import { OrderType } from "@/app/generated/prisma";
-import { getPublicBranchId } from "@/lib/public-branch";
+import { getPublicBranchId, getPublicRestaurantAndBranch } from "@/lib/public-branch";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await getPublicRestaurantAndBranch();
+  const title = data ? `Pedidos - ${data.restaurant.name}` : "Pedidos";
+  const description = "Realizá tu pedido para delivery o takeaway";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
+        },
+      ],
+    },
+  };
+}
 import { notFound } from "next/navigation";
 import DeliveryPage from "./components/delivery-page-client";
 import DeliveryClosedPage from "./components/delivery-closed-page";

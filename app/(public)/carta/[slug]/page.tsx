@@ -17,7 +17,11 @@ export async function generateMetadata({
 }: CartaPageProps): Promise<Metadata> {
   const { slug } = await params;
   const data = await getMenuBySlug(slug);
-  const title = data ? data.menu.name : "Carta";
+  const menuName = data?.menu.name;
+  const restaurantName = data?.restaurant.name;
+  const title = menuName && restaurantName
+    ? `Carta ${menuName} - ${restaurantName}`
+    : menuName ?? "Carta";
   const description = data?.menu.description || "Descubrí nuestra carta";
 
   return {
@@ -46,13 +50,16 @@ export default async function CartaPage({ params }: CartaPageProps) {
   const { menu, restaurant } = data;
 
   return (
-    <div className="min-h-svh bg-white text-neutral-900 py-16">
+    <div
+      className="min-h-svh py-16"
+      style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+    >
       <div className="max-w-4xl mx-auto px-4 md:px-8">
         <div className="flex flex-col items-center gap-6">
           <Avatar alt={restaurant.name} src={restaurant.logoUrl} />
         </div>
 
-        <div className="text-neutral-900 py-12 px-4 md:px-8 ">
+        <div className="py-12 px-4 md:px-8">
           <div className="text-center space-y-2 mb-8">
             <h1 className="text-4xl font-bold">{menu.name}</h1>
             {menu.description && (
@@ -83,7 +90,8 @@ export default async function CartaPage({ params }: CartaPageProps) {
         <div className="mt-8 text-center">
           <Link
             href="/"
-            className="text-neutral-800 font-semibold inline-flex items-center gap-2 hover:text-neutral-900 transition-colors"
+            className="font-semibold inline-flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+            style={{ color: "var(--rt-text)" }}
           >
             <ArrowLeft className="h-4 w-4" />
             Volver al inicio
