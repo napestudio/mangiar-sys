@@ -143,7 +143,10 @@ export default function DeliveryPage({
   };
 
   return (
-    <div className="min-h-svh bg-white text-neutral-900">
+    <div
+      className="min-h-svh"
+      style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+    >
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -161,7 +164,7 @@ export default function DeliveryPage({
         </div>
 
         {/* Step Content */}
-        <div className="bg-white p-2 rounded-xl">
+        <div className="p-2 rounded-xl">
           {/* Order type selection step */}
           {step === "orderType" && (
             <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
@@ -284,7 +287,8 @@ export default function DeliveryPage({
         <div className="mt-12 text-center">
           <Link
             href="/"
-            className="text-gray-400 hover:text-white inline-flex items-center gap-2 transition-colors"
+            className="inline-flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity"
+            style={{ color: "var(--rt-text)" }}
           >
             <ArrowLeft className="h-4 w-4" />
             Volver al inicio
