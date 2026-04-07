@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { generateCreditNote } from "@/actions/Invoice";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,15 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { Textarea } from "@/components/ui/textarea";
-import { generateCreditNote } from "@/actions/Invoice";
-import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatTimestampDateAR } from "@/lib/date-utils";
+import { Plus, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 
 interface Invoice {
   id: string;
@@ -55,7 +55,9 @@ export function CreateCreditNoteDialog({
   onSuccess,
 }: CreateCreditNoteDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [creditNoteType, setCreditNoteType] = useState<"full" | "partial">("full");
+  const [creditNoteType, setCreditNoteType] = useState<"full" | "partial">(
+    "full",
+  );
   const [reason, setReason] = useState("");
   const [items, setItems] = useState<LineItem[]>([
     { id: "1", description: "", quantity: 1, unitPrice: 0, vatRate: 21 },
@@ -163,7 +165,8 @@ export function CreateCreditNoteDialog({
       if (totals.total > invoice.totalAmount) {
         toast({
           title: "Monto excedido",
-          description: "El monto de la NC no puede superar el de la factura original",
+          description:
+            "El monto de la NC no puede superar el de la factura original",
           variant: "destructive",
         });
         return;
@@ -244,7 +247,9 @@ export function CreateCreditNoteDialog({
               </div>
               <div>
                 <span className="text-gray-600">Fecha:</span>{" "}
-                {formatTimestampDateAR(new Date(invoice.invoiceDate).toISOString())}
+                {formatTimestampDateAR(
+                  new Date(invoice.invoiceDate).toISOString(),
+                )}
               </div>
               <div>
                 <span className="text-gray-600">Total:</span> $
@@ -264,7 +269,9 @@ export function CreateCreditNoteDialog({
                   name="creditNoteType"
                   value="full"
                   checked={creditNoteType === "full"}
-                  onChange={(e) => setCreditNoteType(e.target.value as "full" | "partial")}
+                  onChange={(e) =>
+                    setCreditNoteType(e.target.value as "full" | "partial")
+                  }
                   className="h-4 w-4"
                 />
                 <Label htmlFor="full" className="font-normal cursor-pointer">
@@ -278,7 +285,9 @@ export function CreateCreditNoteDialog({
                   name="creditNoteType"
                   value="partial"
                   checked={creditNoteType === "partial"}
-                  onChange={(e) => setCreditNoteType(e.target.value as "full" | "partial")}
+                  onChange={(e) =>
+                    setCreditNoteType(e.target.value as "full" | "partial")
+                  }
                   className="h-4 w-4"
                 />
                 <Label htmlFor="partial" className="font-normal cursor-pointer">
@@ -315,7 +324,11 @@ export function CreateCreditNoteDialog({
                       <Input
                         value={item.description}
                         onChange={(e) =>
-                          handleItemChange(item.id, "description", e.target.value)
+                          handleItemChange(
+                            item.id,
+                            "description",
+                            e.target.value,
+                          )
                         }
                         placeholder="Descripción del ítem"
                       />
