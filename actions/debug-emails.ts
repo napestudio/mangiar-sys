@@ -34,5 +34,9 @@ export async function sendTestReservationEmails(params: {
     pricePerPerson: 3500,
   });
 
+  if ("error" in result) {
+    return { success: false, error: result.error };
+  }
+
   return { success: true, data: result };
 }
