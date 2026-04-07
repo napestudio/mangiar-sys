@@ -61,9 +61,9 @@ export function doTimesOverlap(
   start2: Date | string,
   end2: Date | string
 ): boolean {
-  let s1 = _toMinutes(start1);
+  const s1 = _toMinutes(start1);
   let e1 = _toMinutes(end1);
-  let s2 = _toMinutes(start2);
+  const s2 = _toMinutes(start2);
   let e2 = _toMinutes(end2);
 
   // Normalize cross-midnight ranges
