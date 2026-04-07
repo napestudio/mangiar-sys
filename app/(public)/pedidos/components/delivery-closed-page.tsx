@@ -47,7 +47,10 @@ export default function DeliveryClosedPage({
   restaurantLogo,
 }: DeliveryClosedPageProps) {
   return (
-    <div className="min-h-svh bg-black text-white flex items-center justify-center px-4">
+    <div
+      className="min-h-svh flex items-center justify-center px-4"
+      style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+    >
       <div className="max-w-md w-full text-center">
         <div className="flex justify-center mb-6">
           <Avatar alt={restaurantName} src={restaurantLogo} />
@@ -75,7 +78,7 @@ export default function DeliveryClosedPage({
               {windows.map((w, i) => (
                 <li key={i} className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-medium text-white">{w.name}</p>
+                    <p className="font-medium" style={{ color: "var(--rt-text)" }}>{w.name}</p>
                     <p className="text-sm text-gray-400">
                       {formatDays(w.daysOfWeek)}
                     </p>

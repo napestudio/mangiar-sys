@@ -5,19 +5,25 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
 
-export const metadata: Metadata = {
-  title: "Reservas",
-  description: "Reservá tu mesa online",
-  openGraph: {
-    title: "Reservas",
-    description: "Reservá tu mesa online",
-    images: [
-      {
-        url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
-      },
-    ],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await getPublicRestaurantAndBranch();
+  const title = data ? `Reservas - ${data.restaurant.name}` : "Reservas";
+  const description = "Reservá tu mesa online";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: "https://res.cloudinary.com/dztzomvin/image/upload/v1773611104/logo_repmwv.svg",
+        },
+      ],
+    },
+  };
+}
 
 export default async function ReservationPage() {
   const data = await getPublicRestaurantAndBranch();
@@ -30,15 +36,22 @@ export default async function ReservationPage() {
 
   return (
     <>
-      <div className="min-h-svh text-center place-content-center py-16 space-y-6 bg-black">
+      <div
+        className="min-h-svh text-center place-content-center py-16 space-y-6"
+        style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+      >
         <div className="max-w-125 mx-auto px-4 md:px-0 flex justify-center flex-col items-center gap-4">
           <Avatar src={restaurant.logoUrl} alt={restaurant.name} />
-          <h1 className="text-4xl text-white leading-none">Reservá tu mesa</h1>
+          <h1 className="text-4xl leading-none">Reservá tu mesa</h1>
           <div className="bg-white rounded-md w-full py-6 px-2">
             <ReservationWizard branchId={branchId} />
           </div>
           <div>
-            <Link href="/" className="text-neutral-200 font-semibold">
+            <Link
+              href="/"
+              className="font-semibold opacity-70 hover:opacity-100 transition-opacity"
+              style={{ color: "var(--rt-text)" }}
+            >
               <ArrowLeft className="inline-block mr-2 h-4 w-4" />
               Inicio
             </Link>
