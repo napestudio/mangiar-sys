@@ -1,6 +1,6 @@
 "use client";
 
-import { getManualMovements } from "@/actions/CashRegister";
+import { getManualMovements, getSessionHistory } from "@/actions/CashRegister";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +18,7 @@ import {
   CashRegisterWithStatus,
   MOVEMENT_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
+  SerializedCashRegisterSession,
 } from "@/types/cash-register";
 import {
   ArrowDown,
@@ -30,6 +31,7 @@ import {
   Clock,
   Download,
   History,
+  Layers,
   Search,
   TrendingDown,
   TrendingUp,
@@ -65,7 +67,7 @@ interface MovimientosCajaProps {
   userRole: string;
 }
 
-type FilterType = "today" | "history" | "dateRange";
+type FilterType = "today" | "session" | "history" | "dateRange";
 type SortBy = "date" | "amount";
 type SortOrder = "asc" | "desc";
 
@@ -76,16 +78,29 @@ export function MovimientosCaja({
 }: MovimientosCajaProps) {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterType, setFilterType] = useState<FilterType>("today");
+  const [filterType, setFilterType] = useState<FilterType>("session");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterCashRegister, setFilterCashRegister] = useState<string>("all");
+  const [filterCashRegister, setFilterCashRegister] = useState<string>(
+    () => cashRegisters[0]?.id ?? "all",
+  );
   const [filterMovementType, setFilterMovementType] = useState<string>("all");
   const [searchDescription, setSearchDescription] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
+  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(
+    null,
+  );
   const [detailsSidebarOpen, setDetailsSidebarOpen] = useState(false);
+
+  // Session filter state
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null,
+  );
+  const [availableSessions, setAvailableSessions] = useState<
+    SerializedCashRegisterSession[]
+  >([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -102,9 +117,50 @@ export function MovimientosCaja({
     return date.toISOString().split("T")[0];
   }, []);
 
+  // Load sessions when switching to session mode or when the selected register changes
+  useEffect(() => {
+    if (filterType !== "session") return;
+    if (filterCashRegister === "all") {
+      setAvailableSessions([]);
+      setSelectedSessionId(null);
+      return;
+    }
+
+    const loadSessions = async () => {
+      setIsLoadingSessions(true);
+      try {
+        const result = await getSessionHistory(filterCashRegister, {
+          limit: 20,
+        });
+        if (result.success && result.data) {
+          const sessions = result.data as SerializedCashRegisterSession[];
+          setAvailableSessions(sessions);
+          // Auto-select the open session, or the most recent one
+          const openSession = sessions.find((s) => s.status === "OPEN");
+          setSelectedSessionId(openSession?.id ?? sessions[0]?.id ?? null);
+        }
+      } catch (error) {
+        console.error("Error loading sessions:", error);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+
+    loadSessions();
+  }, [filterType, filterCashRegister]);
+
   // Load movements based on current filter state
   const loadMovements = useCallback(
     async (pageNum: number = 0) => {
+      // In session mode with no session selected, clear the table
+      if (filterType === "session" && !selectedSessionId) {
+        setMovements([]);
+        setTotal(0);
+        setHasMore(false);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         let fromDate: string | undefined;
@@ -120,10 +176,14 @@ export function MovimientosCaja({
 
         const result = await getManualMovements({
           branchId,
-          dateFrom: fromDate,
-          dateTo: toDate,
-          cashRegisterId:
-            filterCashRegister !== "all" ? filterCashRegister : undefined,
+          ...(filterType === "session" && selectedSessionId
+            ? { sessionId: selectedSessionId }
+            : {
+                dateFrom: fromDate,
+                dateTo: toDate,
+                cashRegisterId:
+                  filterCashRegister !== "all" ? filterCashRegister : undefined,
+              }),
           type:
             filterMovementType !== "all"
               ? (filterMovementType as "INCOME" | "EXPENSE" | "CORRECTION")
@@ -158,6 +218,7 @@ export function MovimientosCaja({
       sortBy,
       sortOrder,
       today,
+      selectedSessionId,
     ],
   );
 
@@ -185,6 +246,7 @@ export function MovimientosCaja({
     searchDescription,
     sortBy,
     sortOrder,
+    selectedSessionId,
   ]);
 
   // Handle filter type change
@@ -192,6 +254,15 @@ export function MovimientosCaja({
     setFilterType("today");
     setDateFrom("");
     setDateTo("");
+  };
+
+  const handleSetSession = () => {
+    setFilterType("session");
+    setDateFrom("");
+    setDateTo("");
+    if (filterCashRegister === "all" && cashRegisters.length > 0) {
+      setFilterCashRegister(cashRegisters[0].id);
+    }
   };
 
   const handleSetHistory = () => {
@@ -209,12 +280,14 @@ export function MovimientosCaja({
   };
 
   const handleClearFilters = () => {
-    setFilterType("today");
+    setFilterType("session");
     setDateFrom("");
     setDateTo("");
     setFilterCashRegister("all");
     setFilterMovementType("all");
     setSearchDescription("");
+    setSelectedSessionId(null);
+    setAvailableSessions([]);
   };
 
   const handleRowClick = (movement: Movement) => {
@@ -248,9 +321,7 @@ export function MovimientosCaja({
     real: OptimisticMovement,
   ) => {
     setMovements((prev) =>
-      prev.map((m) =>
-        m.id === tempId ? { ...real, isOptimistic: false } : m,
-      ),
+      prev.map((m) => (m.id === tempId ? { ...real, isOptimistic: false } : m)),
     );
     // Reload to get fresh data from server
     loadMovements(0);
@@ -258,6 +329,23 @@ export function MovimientosCaja({
 
   const formatDateTime = (dateStr: string) =>
     `${formatDateAR(dateStr)} ${formatTimeAR(dateStr)}`;
+
+  const getExportFilename = () => {
+    if (filterType === "session" && selectedSession) {
+      const register = cashRegisters.find((r) => r.id === filterCashRegister);
+      const registerSlug =
+        register?.name.replace(/\s+/g, "-").toLowerCase() ?? "caja";
+      const sessionDate = selectedSession.openedAt.split("T")[0];
+      return `movimientos-${registerSlug}-sesion-${sessionDate}.csv`;
+    }
+    if (filterType === "dateRange" && dateFrom && dateTo) {
+      return `movimientos-caja-${dateFrom}-${dateTo}.csv`;
+    }
+    if (filterType === "history") {
+      return `movimientos-caja-historial-${new Date().toISOString().split("T")[0]}.csv`;
+    }
+    return `movimientos-caja-${formatDateAR(new Date().toISOString())}.csv`;
+  };
 
   const handleExportCSV = () => {
     const exportable = movements.filter((m) => !m.isOptimistic);
@@ -276,15 +364,14 @@ export function MovimientosCaja({
       { header: "Descripción", accessor: (row) => row.description ?? "" },
       {
         header: "Monto",
-        accessor: (row) =>
-          row.type === "EXPENSE" ? -row.amount : row.amount,
+        accessor: (row) => (row.type === "EXPENSE" ? -row.amount : row.amount),
       },
     ]);
-    downloadCSV(csv, `movimientos-caja-${formatDateAR(new Date().toISOString())}.csv`);
+    downloadCSV(csv, getExportFilename());
   };
 
   const hasActiveFilters =
-    filterType !== "today" ||
+    filterType !== "session" ||
     filterCashRegister !== "all" ||
     filterMovementType !== "all" ||
     searchDescription !== "";
@@ -362,6 +449,10 @@ export function MovimientosCaja({
       : "border-l-4 border-l-red-500";
   };
 
+  const selectedSession = availableSessions.find(
+    (s) => s.id === selectedSessionId,
+  );
+
   return (
     <div>
       {/* Header */}
@@ -391,8 +482,19 @@ export function MovimientosCaja({
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Date Filter Tabs */}
+        {/* Date / Session Filter Tabs */}
         <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+          <Button
+            variant={filterType === "session" ? "default" : "ghost"}
+            size="sm"
+            onClick={handleSetSession}
+            className={
+              filterType === "session" ? "bg-red-600 hover:bg-red-700" : ""
+            }
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            Por sesión
+          </Button>
           <Button
             variant={filterType === "today" ? "default" : "ghost"}
             size="sm"
@@ -404,6 +506,7 @@ export function MovimientosCaja({
             <Clock className="h-4 w-4 mr-1" />
             Hoy
           </Button>
+
           <Button
             variant={filterType === "history" ? "default" : "ghost"}
             size="sm"
@@ -447,23 +550,25 @@ export function MovimientosCaja({
           </div>
         )}
 
-        {/* Cash Register Filter */}
-        <Select
-          value={filterCashRegister}
-          onValueChange={setFilterCashRegister}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Caja" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las cajas</SelectItem>
-            {cashRegisters.map((register) => (
-              <SelectItem key={register.id} value={register.id}>
-                {register.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Cash Register Filter — hidden in session mode (register picked via session selector) */}
+        {filterType !== "session" && (
+          <Select
+            value={filterCashRegister}
+            onValueChange={setFilterCashRegister}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Caja" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las cajas</SelectItem>
+              {cashRegisters.map((register) => (
+                <SelectItem key={register.id} value={register.id}>
+                  {register.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Movement Type Filter */}
         <Select
@@ -505,6 +610,143 @@ export function MovimientosCaja({
           </Button>
         )}
       </div>
+
+      {/* Session Picker — only shown in session mode */}
+      {filterType === "session" && (
+        <div className="mb-4 border rounded-lg bg-gray-50 p-3">
+          {/* Register selector */}
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-sm font-medium text-gray-700">Caja:</span>
+            <Select
+              value={filterCashRegister}
+              onValueChange={(v) => {
+                setFilterCashRegister(v);
+                setSelectedSessionId(null);
+                setAvailableSessions([]);
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Seleccionar caja..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Seleccionar caja...</SelectItem>
+                {cashRegisters.map((register) => (
+                  <SelectItem key={register.id} value={register.id}>
+                    {register.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Session list */}
+          {filterCashRegister === "all" ? (
+            <p className="text-sm text-gray-500 text-center py-2">
+              Seleccioná una caja para ver sus sesiones
+            </p>
+          ) : isLoadingSessions ? (
+            <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+              Cargando sesiones...
+            </div>
+          ) : availableSessions.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-2">
+              Esta caja no tiene sesiones registradas
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+              {availableSessions.map((session) => {
+                const isOpen = session.status === "OPEN";
+                const isSelected = session.id === selectedSessionId;
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => setSelectedSessionId(session.id)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-left text-sm transition-colors",
+                      isSelected
+                        ? "bg-white border border-gray-300 shadow-sm"
+                        : "hover:bg-white hover:border hover:border-gray-200",
+                    )}
+                  >
+                    {/* Status indicator */}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0",
+                        isOpen
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          isOpen ? "bg-green-500" : "bg-gray-400",
+                        )}
+                      />
+                      {isOpen ? "Abierta" : "Cerrada"}
+                    </span>
+                    {/* Date */}
+                    <span className="text-gray-700">
+                      {formatDateAR(session.openedAt)}{" "}
+                      {formatTimeAR(session.openedAt)}
+                    </span>
+                    {/* Opening amount */}
+                    <span className="text-gray-500 ml-auto shrink-0">
+                      Apertura: {formatCurrency(session.openingAmount)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session metadata banner — shown when a session is selected */}
+      {filterType === "session" && selectedSession && (
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-4 px-4 py-2.5 rounded-lg border text-sm mb-4",
+            selectedSession.status === "OPEN"
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-gray-50 border-gray-200 text-gray-600",
+          )}
+        >
+          <span className="font-medium">
+            {selectedSession.status === "OPEN"
+              ? "Sesión abierta"
+              : "Sesión cerrada"}
+          </span>
+          <span>
+            Apertura: {formatDateAR(selectedSession.openedAt)}{" "}
+            {formatTimeAR(selectedSession.openedAt)}
+          </span>
+          {selectedSession.closedAt && (
+            <span>
+              Cierre: {formatDateAR(selectedSession.closedAt)}{" "}
+              {formatTimeAR(selectedSession.closedAt)}
+            </span>
+          )}
+          <span>
+            Saldo inicial: {formatCurrency(selectedSession.openingAmount)}
+          </span>
+          {selectedSession.variance !== null && (
+            <span
+              className={cn(
+                "font-medium",
+                selectedSession.variance >= 0
+                  ? "text-green-700"
+                  : "text-red-700",
+              )}
+            >
+              Diferencia: {selectedSession.variance >= 0 ? "+" : ""}
+              {formatCurrency(selectedSession.variance)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Movements Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
@@ -565,7 +807,9 @@ export function MovimientosCaja({
                   <p className="text-sm text-gray-400 mt-1">
                     {filterType === "today"
                       ? "No se registraron movimientos hoy"
-                      : "No se encontraron movimientos con los filtros seleccionados"}
+                      : filterType === "session" && !selectedSessionId
+                        ? "Seleccioná una sesión para ver sus movimientos"
+                        : "No se encontraron movimientos con los filtros seleccionados"}
                   </p>
                 </td>
               </tr>
