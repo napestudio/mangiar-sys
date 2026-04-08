@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getClientByEmail, createClient } from "@/actions/clients";
 import { createOrderWithItems } from "@/actions/Order";
@@ -24,6 +24,7 @@ interface CustomerInfoFormProps {
   onOrderComplete: (publicCode: string, whatsappUrl: string) => void;
   restaurantName: string;
   whatsappUrl: string;
+  windowEndTime?: string;
 }
 
 export function CustomerInfoForm({
@@ -36,9 +37,12 @@ export function CustomerInfoForm({
   onOrderComplete,
   restaurantName,
   whatsappUrl,
+  windowEndTime,
 }: CustomerInfoFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -96,6 +100,15 @@ export function CustomerInfoForm({
       toast({
         title: "Campos requeridos",
         description: "Por favor completa todos los campos requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isScheduled && !scheduledTime) {
+      toast({
+        title: "Hora requerida",
+        description: "Por favor seleccioná la hora de entrega / retiro",
         variant: "destructive",
       });
       return;
@@ -176,6 +189,12 @@ export function CustomerInfoForm({
         clientId,
         description: formData.notes || undefined,
         deliveryFee: isDelivery ? deliveryFee : 0,
+        scheduledAt:
+          isScheduled && scheduledTime
+            ? new Date(
+                `${new Date().toISOString().slice(0, 10)}T${scheduledTime}`,
+              )
+            : null,
         items: cart.map((item) => ({
           productId: item.productId,
           itemName: item.name,
@@ -228,6 +247,9 @@ export function CustomerInfoForm({
               `Nombre: ${formData.name}`,
               `Teléfono: ${formData.phone}`,
               `Dirección: ${address}`,
+              isScheduled && scheduledTime
+                ? `Hora de entrega: ${scheduledTime}`
+                : null,
               formData.notes ? `Notas: ${formData.notes}` : null,
               ``,
               `Código de pedido: ${orderResult.data.publicCode}`,
@@ -247,6 +269,9 @@ export function CustomerInfoForm({
               `*Datos de contacto:*`,
               `Nombre: ${formData.name}`,
               `Teléfono: ${formData.phone}`,
+              isScheduled && scheduledTime
+                ? `Hora de retiro: ${scheduledTime}`
+                : null,
               formData.notes ? `Notas: ${formData.notes}` : null,
               ``,
               `Código de pedido: ${orderResult.data.publicCode}`,
@@ -428,6 +453,48 @@ export function CustomerInfoForm({
           </CardContent>
         </Card>
       )}
+
+      <Card className="bg-white text-black">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            {isDelivery ? "¿Cuándo querés recibir tu pedido?" : "¿Cuándo querés retirarlo?"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={!isScheduled ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setIsScheduled(false);
+                setScheduledTime("");
+              }}
+            >
+              Lo antes posible
+            </Button>
+            <Button
+              type="button"
+              variant={isScheduled ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsScheduled(true)}
+            >
+              Programar para hoy
+            </Button>
+          </div>
+          {isScheduled && (
+            <input
+              type="time"
+              value={scheduledTime}
+              onChange={(e) => setScheduledTime(e.target.value)}
+              min={new Date().toTimeString().slice(0, 5)}
+              max={windowEndTime}
+              className="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xl font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="bg-white text-black">
         <CardHeader>

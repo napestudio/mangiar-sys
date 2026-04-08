@@ -861,6 +861,9 @@ model Order {
   deliveryWindow   DeliveryWindow? @relation(fields: [deliveryWindowId], references: [id])
   deliveryWindowId String?
 
+  // Scheduled pickup/delivery time (null = ASAP, only for TAKE_AWAY and DELIVERY)
+  scheduledAt DateTime?
+
   // Optional delivery address (if different from client address)
   deliveryAddressStreet    String?
   deliveryAddressNumber    String?
@@ -904,6 +907,7 @@ model Order {
   @@index([branchId, createdAt])
   @@index([branchId, type]) // Performance: Filter orders by branch and type
   @@index([type, status]) // Performance: Filter delivery orders by status
+  @@index([branchId, scheduledAt]) // Performance: Query scheduled orders by branch
 }
 
 model OrderItem {

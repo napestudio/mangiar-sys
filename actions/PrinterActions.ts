@@ -239,7 +239,9 @@ export async function prepareOrderItemsPrint(
       const orderData = {
         orderNumber: orderInfo.orderCode,
         tableName: orderInfo.tableName,
+        orderType: orderInfo.orderType,
         stationName: printer.station?.name,
+        scheduledAt: orderInfo.scheduledAt,
         items: stationItems.map((item) => ({
           name: item.itemName,
           quantity: item.quantity,
@@ -361,6 +363,7 @@ export async function prepareControlTicketPrint(
         deliveryNotes: ticketInfo.deliveryNotes,
         paymentMethod: ticketInfo.paymentMethod,
         orderCreatedAt: ticketInfo.orderCreatedAt,
+        scheduledAt: ticketInfo.scheduledAt,
       };
 
       const escPosData = generateFullOrderData(config, fullOrderData);
@@ -439,6 +442,8 @@ export async function preparePreOrderTicketPrint(
       const orderData = {
         orderNumber: orderInfo.orderCode,
         tableName: orderInfo.tableName,
+        orderType: orderInfo.orderType,
+        scheduledAt: orderInfo.scheduledAt,
         items: items.map((item) => ({
           name: item.itemName,
           quantity: item.quantity,

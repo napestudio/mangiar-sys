@@ -122,6 +122,20 @@ export default async function PedidosPage() {
     }
   }
 
+  // Find the active delivery window for today to constrain the time picker
+  const TZ = "America/Argentina/Buenos_Aires";
+  const localDate = new Date(new Date().toLocaleString("en-US", { timeZone: TZ }));
+  const dayOfWeek = localDate
+    .toLocaleDateString("en-US", { weekday: "long" })
+    .toLowerCase();
+  const activeWindow = config.deliveryWindows.find((w) =>
+    w.daysOfWeek.includes(dayOfWeek),
+  );
+  // Times are stored as UTC ISO strings where HH:mm = the "as-entered" wall clock time
+  const windowEndTime = activeWindow
+    ? activeWindow.endTime.slice(11, 16)
+    : undefined;
+
   const phoneNumber =
     config.notificationWhatsapp ||
     restaurant?.whatsappNumber ||
@@ -142,6 +156,7 @@ export default async function PedidosPage() {
       allowTakeAway={allowTakeAway}
       restaurantName={restaurant?.name ?? ""}
       whatsappUrl={whatsappUrl}
+      windowEndTime={windowEndTime}
     />
   );
 }
