@@ -128,6 +128,7 @@ export async function createOrder(data: {
   clientId?: string | null;
   assignedToId?: string | null;
   description?: string | null;
+  scheduledAt?: Date | null;
 }) {
   try {
     const {
@@ -138,6 +139,7 @@ export async function createOrder(data: {
       clientId,
       assignedToId,
       description,
+      scheduledAt,
     } = data;
 
     // Validation based on order type
@@ -185,6 +187,7 @@ export async function createOrder(data: {
           discountPercentage: clientDiscount.discountPercentage,
           discountType: clientDiscount.discountType as "PERCENTAGE" | "FIXED",
           description: description || null,
+          scheduledAt: scheduledAt ?? null,
         },
         include: {
           items: {
@@ -248,6 +251,7 @@ export async function createOrderWithItems(data: {
   description?: string | null;
   items: OrderItemInput[];
   deliveryFee?: number;
+  scheduledAt?: Date | null;
 }) {
   try {
     const {
@@ -260,6 +264,7 @@ export async function createOrderWithItems(data: {
       description,
       items,
       deliveryFee,
+      scheduledAt,
     } = data;
 
     // Validation: at least one item required
@@ -316,6 +321,7 @@ export async function createOrderWithItems(data: {
           discountType: clientDiscount.discountType as "PERCENTAGE" | "FIXED",
           deliveryFee: deliveryFee ?? 0,
           description: description || null,
+          scheduledAt: scheduledAt ?? null,
         },
       });
 

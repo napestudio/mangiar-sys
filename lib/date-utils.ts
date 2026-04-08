@@ -71,6 +71,17 @@ export function formatDateTimeAR(isoString: string): string {
   }).format(new Date(isoString));
 }
 
+/** "7 mar 20:30" — short timestamp without year, 24h, for compact UI displays. */
+export function formatDateTimeShortAR(isoString: string): string {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(isoString));
+}
+
 // ─── Server-side helpers (safe to use on Vercel UTC) ─────────────────────────
 
 /**
