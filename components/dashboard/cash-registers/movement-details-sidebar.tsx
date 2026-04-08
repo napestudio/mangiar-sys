@@ -106,6 +106,7 @@ export function MovementDetailsSidebar({
   const [cashRegisterId, setCashRegisterId] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">("INCOME");
   const [isPending, setIsPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -140,6 +141,9 @@ export function MovementDetailsSidebar({
           setCashRegisterId(mv.cashRegister?.id ?? "");
           setCategory(mv.category ?? "");
           setDescription(mv.description ?? "");
+          if (mv.type === "INCOME" || mv.type === "EXPENSE") {
+            setMovementType(mv.type);
+          }
         } else {
           setFetchError(result.error ?? "Error al cargar el detalle");
         }
@@ -191,6 +195,7 @@ export function MovementDetailsSidebar({
           })
         : await updateManualMovement({
             movementId: data.movement.id,
+            type: canToggleType ? movementType : undefined,
             paymentMethod: pm,
             cashRegisterId,
             description: description.trim() || undefined,
@@ -254,6 +259,11 @@ export function MovementDetailsSidebar({
     });
 
   const isGlobalMovement = movement?.sessionId === null;
+  const sessionIsOpen = movement?.sessionStatus === "OPEN";
+  const canToggleType =
+    !isGlobalMovement &&
+    sessionIsOpen &&
+    (movement?.type === "INCOME" || movement?.type === "EXPENSE");
 
   const showEditForm =
     canEdit &&
@@ -638,6 +648,41 @@ export function MovementDetailsSidebar({
                   <p className="text-sm font-medium text-gray-700">
                     Editar movimiento
                   </p>
+
+                  {/* Tipo de movimiento — solo INCOME/EXPENSE en sesión abierta */}
+                  {canToggleType && (
+                    <div className="space-y-1.5">
+                      <Label>Tipo de movimiento</Label>
+                      <div className="flex rounded-lg border overflow-hidden">
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => setMovementType("INCOME")}
+                          className={cn(
+                            "flex-1 py-2 text-sm font-medium transition-colors",
+                            movementType === "INCOME"
+                              ? "bg-green-600 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          Ingreso
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => setMovementType("EXPENSE")}
+                          className={cn(
+                            "flex-1 py-2 text-sm font-medium transition-colors",
+                            movementType === "EXPENSE"
+                              ? "bg-red-600 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          Egreso
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment Method */}
                   <div className="space-y-1.5">

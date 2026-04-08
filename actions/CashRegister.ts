@@ -69,6 +69,7 @@ const addMovementSchema = z
 
 const updateMovementSchema = z.object({
   movementId: z.string().min(1, "El movimiento es requerido"),
+  type: z.enum(["INCOME", "EXPENSE"]).optional(),
   paymentMethod: z.enum([
     "CASH",
     "CARD_DEBIT",
@@ -879,6 +880,10 @@ export async function updateManualMovement(
         throw new Error("Solo se pueden editar movimientos manuales");
       }
 
+      if (validatedData.type && movement.type === "CORRECTION") {
+        throw new Error("No se puede cambiar el tipo de una corrección");
+      }
+
       const session = await tx.cashRegisterSession.findFirst({
         where: {
           cashRegisterId: validatedData.cashRegisterId,
@@ -896,6 +901,10 @@ export async function updateManualMovement(
           paymentMethod: validatedData.paymentMethod,
           sessionId: session.id,
           description: validatedData.description || null,
+          ...(validatedData.type &&
+          (movement.type === "INCOME" || movement.type === "EXPENSE")
+            ? { type: validatedData.type }
+            : {}),
         },
       });
     });
@@ -1119,9 +1128,10 @@ export async function calculateExpectedCash(sessionId: string) {
   }
 }
 
-// Get manual movements (INCOME/EXPENSE/CORRECTION only, not SALE/REFUND from orders) with date filters
+// Get manual movements (INCOME/EXPENSE/CORRECTION only, not SALE/REFUND from orders) with date or session filters
 export async function getManualMovements(params: {
   branchId: string;
+  sessionId?: string;
   dateFrom?: string;
   dateTo?: string;
   cashRegisterId?: string;
@@ -1135,6 +1145,7 @@ export async function getManualMovements(params: {
   try {
     const {
       branchId,
+      sessionId,
       dateFrom,
       dateTo,
       cashRegisterId,
@@ -1146,40 +1157,54 @@ export async function getManualMovements(params: {
       offset = 0,
     } = params;
 
-    // Build date filter — use Argentina-aware boundaries (midnight AR = 03:00 UTC)
-    const dateFilter: { gte?: Date; lte?: Date; lt?: Date } = {};
-    if (dateFrom) {
-      dateFilter.gte = dateStringToTimestampBoundsAR(dateFrom).start;
-    }
-    if (dateTo) {
-      dateFilter.lt = dateStringToTimestampBoundsAR(dateTo).end;
-    }
+    const typeFilter = type
+      ? type
+      : {
+          in: ["INCOME", "EXPENSE", "CORRECTION"] as (
+            | "INCOME"
+            | "EXPENSE"
+            | "CORRECTION"
+          )[],
+        };
 
-    const whereClause = {
-      // Only manual movements (INCOME/EXPENSE/CORRECTION), not SALE/REFUND from orders
-      type: type
-        ? type
-        : {
-            in: ["INCOME", "EXPENSE", "CORRECTION"] as (
-              | "INCOME"
-              | "EXPENSE"
-              | "CORRECTION"
-            )[],
+    const descriptionFilter = description
+      ? { description: { contains: description, mode: "insensitive" as const } }
+      : {};
+
+    let whereClause;
+
+    if (sessionId) {
+      // Session-based filter: fetch movements for a specific session
+      whereClause = {
+        type: typeFilter,
+        sessionId,
+        // Security: still verify the session belongs to this branch
+        session: { cashRegister: { branchId } },
+        ...descriptionFilter,
+      };
+    } else {
+      // Date-based filter (legacy behaviour)
+      const dateFilter: { gte?: Date; lte?: Date; lt?: Date } = {};
+      if (dateFrom) {
+        dateFilter.gte = dateStringToTimestampBoundsAR(dateFrom).start;
+      }
+      if (dateTo) {
+        dateFilter.lt = dateStringToTimestampBoundsAR(dateTo).end;
+      }
+
+      whereClause = {
+        type: typeFilter,
+        // Filter by branch through session -> cashRegister
+        session: {
+          cashRegister: {
+            branchId,
+            ...(cashRegisterId && { id: cashRegisterId }),
           },
-      // Filter by branch through session -> cashRegister
-      session: {
-        cashRegister: {
-          branchId,
-          ...(cashRegisterId && { id: cashRegisterId }),
         },
-      },
-      // Date filter
-      ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
-      // Description search
-      ...(description && {
-        description: { contains: description, mode: "insensitive" as const },
-      }),
-    };
+        ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
+        ...descriptionFilter,
+      };
+    }
 
     const orderBy =
       sortBy === "amount"
@@ -1384,6 +1409,7 @@ export async function getMovementWithOrderDetails(movementId: string) {
             name: movement.session.cashRegister.name,
           }
         : null,
+      sessionStatus: movement.session?.status ?? null,
     };
 
     const serializedOrder = movement.order
