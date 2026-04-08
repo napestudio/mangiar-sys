@@ -49,6 +49,7 @@ interface DeliveryPageProps {
   restaurantName: string;
   whatsappUrl: string;
   restaurantLogo?: string;
+  windowEndTime?: string;
 }
 
 export default function DeliveryPage({
@@ -63,6 +64,7 @@ export default function DeliveryPage({
   restaurantName,
   whatsappUrl,
   restaurantLogo,
+  windowEndTime,
 }: DeliveryPageProps) {
   const bothEnabled = allowDelivery && allowTakeAway;
 
@@ -254,6 +256,7 @@ export default function DeliveryPage({
                 onOrderComplete={handleOrderComplete}
                 restaurantName={restaurantName}
                 whatsappUrl={whatsappUrl}
+                windowEndTime={windowEndTime}
               />
             </div>
           )}

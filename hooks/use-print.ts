@@ -38,6 +38,8 @@ export interface UsePrintReturn {
       orderCode: string;
       tableName: string;
       branchId: string;
+      orderType?: string;
+      scheduledAt?: string;
     },
     items: Array<{
       productId: string;
@@ -72,12 +74,15 @@ export interface UsePrintReturn {
     deliveryNotes?: string | null;
     paymentMethod?: string;
     orderCreatedAt?: string;
+    scheduledAt?: string;
   }) => Promise<boolean>;
   printPreOrderTicket: (orderInfo: {
     orderId: string;
     orderCode: string;
     tableName: string;
     branchId: string;
+    orderType?: string;
+    scheduledAt?: string;
     items: Array<{
       itemName: string;
       quantity: number;
@@ -352,6 +357,8 @@ export function usePrint(): UsePrintReturn {
         orderCode: string;
         tableName: string;
         branchId: string;
+        orderType?: string;
+        scheduledAt?: string;
       },
       items: Array<{
         productId: string;
@@ -425,6 +432,7 @@ export function usePrint(): UsePrintReturn {
       deliveryNotes?: string | null;
       paymentMethod?: string;
       orderCreatedAt?: string;
+      scheduledAt?: string;
     }): Promise<boolean> => {
       // Guard against rapid double-clicks — ref is synchronous, immune to render batching
       if (printControlTicketLock.current) return false;
@@ -496,6 +504,8 @@ export function usePrint(): UsePrintReturn {
       orderCode: string;
       tableName: string;
       branchId: string;
+      orderType?: string;
+      scheduledAt?: string;
       items: Array<{
         itemName: string;
         quantity: number;

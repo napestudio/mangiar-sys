@@ -20,14 +20,13 @@ import {
   ShoppingBag,
   UtensilsCrossed,
   Truck,
-  Minus,
-  Plus,
-  Trash2,
+  Clock,
 } from "lucide-react";
 import { ClientPicker } from "@/components/dashboard/client-picker";
 import { WaiterPicker } from "@/components/dashboard/waiter-picker";
 import { CreateClientDialog } from "@/components/dashboard/create-client-dialog";
 import { ProductPicker } from "@/components/dashboard/product-picker";
+import { PreOrderItemsList, type PreOrderItem } from "@/components/dashboard/pre-order-items-list";
 import { type ClientData } from "@/actions/clients";
 import { type OrderProduct } from "@/types/products";
 
@@ -44,15 +43,6 @@ interface CreateOrderSidebarProps {
   initialOrderType?: OrderType | null;
 }
 
-// Local item - used for all order types before order is created
-type LocalItem = {
-  localId: string;
-  productId: string;
-  itemName: string;
-  quantity: number;
-  price: number;
-  originalPrice: number;
-};
 
 export function CreateOrderSidebar({
   branchId,
@@ -74,8 +64,16 @@ export function CreateOrderSidebar({
   const [selectedWaiterId, setSelectedWaiterId] = useState<string | null>(null);
   const [description, setDescription] = useState<string>("");
 
+  // Scheduling state - only for TAKE_AWAY and DELIVERY
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState<string>("");
+  const [scheduledDate, setScheduledDate] = useState<string>(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   // Local items state - unified for all order types
-  const [localItems, setLocalItems] = useState<LocalItem[]>([]);
+  const [localItems, setLocalItems] = useState<PreOrderItem[]>([]);
 
   // Create client dialog state
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
@@ -104,60 +102,37 @@ export function CreateOrderSidebar({
 
   // ==================== PRODUCT MANAGEMENT (Local State) ====================
 
-  const handleSelectProduct = (product: {
-    id: string;
-    name: string;
-    price: number;
-  }) => {
-    // Check if product already exists
-    const existingItem = localItems.find(
+  const handleSelectProduct = (product: OrderProduct) => {
+    const existingIndex = localItems.findIndex(
       (item) => item.productId === product.id,
     );
-    if (existingItem) {
-      // Increment quantity
+    if (existingIndex >= 0) {
       setLocalItems(
-        localItems.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+        localItems.map((item, i) =>
+          i === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
         ),
       );
     } else {
-      // Add new item
       setLocalItems([
         ...localItems,
         {
-          localId: `local-${Date.now()}`,
           productId: product.id,
           itemName: product.name,
           quantity: 1,
           price: Number(product.price),
           originalPrice: Number(product.price),
+          categoryId: product.categoryId,
         },
       ]);
     }
   };
 
-  const handleUpdateQuantity = (localId: string, quantity: number) => {
-    if (quantity < 1) return;
-    setLocalItems(
-      localItems.map((item) =>
-        item.localId === localId ? { ...item, quantity } : item,
-      ),
-    );
+  const handleUpdateItem = (index: number, item: PreOrderItem) => {
+    setLocalItems(localItems.map((existing, i) => (i === index ? item : existing)));
   };
 
-  const handleUpdatePrice = (localId: string, price: number) => {
-    if (isNaN(price) || price < 0) return;
-    setLocalItems(
-      localItems.map((item) =>
-        item.localId === localId ? { ...item, price } : item,
-      ),
-    );
-  };
-
-  const handleRemoveItem = (localId: string) => {
-    setLocalItems(localItems.filter((item) => item.localId !== localId));
+  const handleRemoveItem = (index: number) => {
+    setLocalItems(localItems.filter((_, i) => i !== index));
   };
 
   // ==================== ORDER CREATION (Single Transaction) ====================
@@ -175,6 +150,11 @@ export function CreateOrderSidebar({
       return;
     }
 
+    if (isScheduled && !scheduledTime) {
+      alert("Por favor selecciona la hora de retiro/entrega");
+      return;
+    }
+
     setIsLoading(true);
 
     // Create order with all items in a single transaction
@@ -186,12 +166,17 @@ export function CreateOrderSidebar({
       clientId: selectedClient?.id || null,
       assignedToId: selectedWaiterId || null,
       description: description.trim() || null,
+      scheduledAt:
+        isScheduled && scheduledTime
+          ? new Date(`${scheduledDate}T${scheduledTime}`)
+          : null,
       items: localItems.map((item) => ({
         productId: item.productId,
         itemName: item.itemName,
         quantity: item.quantity,
         price: item.price,
         originalPrice: item.originalPrice,
+        notes: item.notes,
       })),
     });
 
@@ -219,6 +204,10 @@ export function CreateOrderSidebar({
     setDescription("");
     setClientSearchQuery("");
     setLocalItems([]);
+    setIsScheduled(false);
+    setScheduledTime("");
+    setScheduledDate(new Date().toISOString().slice(0, 10));
+    setShowDatePicker(false);
   };
 
   const handleCreateNewClient = (searchQuery: string) => {
@@ -419,6 +408,76 @@ export function CreateOrderSidebar({
             />
           </div>
 
+          {/* Scheduled Time - TAKE_AWAY and DELIVERY only */}
+          {orderType !== OrderType.DINE_IN && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Hora de entrega / retiro
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={!isScheduled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setIsScheduled(false);
+                    setScheduledTime("");
+                    setScheduledDate(new Date().toISOString().slice(0, 10));
+                    setShowDatePicker(false);
+                  }}
+                  disabled={isLoading}
+                >
+                  Lo antes posible
+                </Button>
+                <Button
+                  type="button"
+                  variant={isScheduled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsScheduled(true)}
+                  disabled={isLoading}
+                >
+                  Programar
+                </Button>
+              </div>
+              {isScheduled && (
+                <div className="space-y-2">
+                  <input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    disabled={isLoading}
+                    className="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xl font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <div>
+                    {!showDatePicker ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowDatePicker(true)}
+                        className="text-sm text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        {new Date(`${scheduledDate}T00:00`).toLocaleDateString(
+                          "es-AR",
+                          { weekday: "long", day: "numeric", month: "long" },
+                        )}{" "}
+                        ›
+                      </button>
+                    ) : (
+                      <input
+                        type="date"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
+                        disabled={isLoading}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Products Section - All order types */}
           <div className="border-t pt-4">
             <h3 className="font-semibold text-gray-900 mb-4">
@@ -445,76 +504,12 @@ export function CreateOrderSidebar({
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {localItems.map((item) => (
-                  <div
-                    key={item.localId}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{item.itemName}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs text-gray-400">$</span>
-                        <NumberInput
-                          value={item.price}
-                          onChange={(e) =>
-                            handleUpdatePrice(
-                              item.localId,
-                              parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="h-6 w-20 text-sm px-1"
-                          min="0"
-                          step="0.01"
-                          disabled={isLoading}
-                        />
-                        <span className="text-xs text-gray-400">c/u</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          handleUpdateQuantity(item.localId, item.quantity - 1)
-                        }
-                        disabled={item.quantity <= 1 || isLoading}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-8 text-center font-medium">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          handleUpdateQuantity(item.localId, item.quantity + 1)
-                        }
-                        disabled={isLoading}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-right min-w-20">
-                      <p className="font-semibold">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleRemoveItem(item.localId)}
-                      disabled={isLoading}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <PreOrderItemsList
+                items={localItems}
+                onUpdateItem={handleUpdateItem}
+                onRemoveItem={handleRemoveItem}
+                disabled={isLoading}
+              />
             )}
 
             {/* Subtotal */}

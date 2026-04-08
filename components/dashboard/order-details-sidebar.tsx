@@ -36,8 +36,7 @@ import { formatCurrency } from "@/lib/currency";
 import { calculateDiscountAmount } from "@/lib/discount";
 import { cn } from "@/lib/utils";
 import type { OrderProduct } from "@/types/products";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { formatDateTimeShortAR } from "@/lib/date-utils";
 import {
   ArrowLeftRight,
   Banknote,
@@ -77,6 +76,7 @@ type Order = {
   description: string | null;
   courierName: string | null;
   createdAt: Date;
+  scheduledAt?: Date | string | null;
   tableId: string | null;
   paymentMethod: string;
   discountPercentage: number;
@@ -331,7 +331,18 @@ export function OrderDetailsSidebar({
       // Auto-print station comandas (fire and forget)
       const tableName = order.table?.number?.toString() || "—";
       printOrderItems(
-        { orderId: order.id, orderCode: order.publicCode, tableName, branchId },
+        {
+          orderId: order.id,
+          orderCode: order.publicCode,
+          tableName,
+          branchId,
+          orderType: order.type,
+          scheduledAt: order.scheduledAt
+            ? order.scheduledAt instanceof Date
+              ? order.scheduledAt.toISOString()
+              : String(order.scheduledAt)
+            : undefined,
+        },
         itemsToPrint.map((item) => ({
           productId: item.productId,
           itemName: item.itemName,
@@ -532,6 +543,11 @@ export function OrderDetailsSidebar({
         order.createdAt instanceof Date
           ? order.createdAt.toISOString()
           : order.createdAt,
+      scheduledAt: order.scheduledAt
+        ? order.scheduledAt instanceof Date
+          ? order.scheduledAt.toISOString()
+          : String(order.scheduledAt)
+        : undefined,
     });
 
     if (!success) {
@@ -552,6 +568,12 @@ export function OrderDetailsSidebar({
       orderCode: order.publicCode,
       tableName,
       branchId,
+      orderType: order.type,
+      scheduledAt: order.scheduledAt
+        ? order.scheduledAt instanceof Date
+          ? order.scheduledAt.toISOString()
+          : String(order.scheduledAt)
+        : undefined,
       items: order.items.map((item) => ({
         itemName: item.itemName,
         quantity: item.quantity,
@@ -758,9 +780,33 @@ export function OrderDetailsSidebar({
           <div className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-gray-400" />
             <span className="text-gray-600">
-              {format(new Date(order.createdAt), "PPp", { locale: es })}
+              {formatDateTimeShortAR(
+                order.createdAt instanceof Date
+                  ? order.createdAt.toISOString()
+                  : String(order.createdAt),
+              )}{" "}
+              hs
             </span>
           </div>
+
+          {/* Scheduled Time */}
+          {order.scheduledAt && order.type !== OrderType.DINE_IN && (
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-orange-500" />
+              <div className="flex flex-col">
+                <span className="text-xs text-orange-600">Programado</span>
+                <span className="font-medium text-orange-600">
+                  Retira:{" "}
+                  {formatDateTimeShortAR(
+                    order.scheduledAt instanceof Date
+                      ? order.scheduledAt.toISOString()
+                      : String(order.scheduledAt),
+                  )}{" "}
+                  hs
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Table Info */}
           {order.table && (

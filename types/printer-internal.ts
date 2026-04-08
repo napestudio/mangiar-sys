@@ -13,6 +13,8 @@ export interface OrderInfoForPrint {
   orderCode: string;
   tableName: string;
   branchId: string;
+  orderType?: string;
+  scheduledAt?: string;
 }
 
 export interface ControlTicketItem {
@@ -42,4 +44,5 @@ export interface ControlTicketInfo {
   deliveryNotes?: string | null;
   paymentMethod?: string;
   orderCreatedAt?: string;
+  scheduledAt?: string;
 }

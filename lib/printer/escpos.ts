@@ -549,8 +549,10 @@ export interface OrderItem {
 export interface OrderData {
   orderNumber: string;
   tableName: string;
+  orderType?: string;
   waiterName?: string; // Optional - not shown on station comandas
   stationName?: string;
+  scheduledAt?: string;
   items: OrderItem[];
   notes?: string;
 }
@@ -579,7 +581,16 @@ export async function printOrder(
   content += separator(width, "=") + "\n";
 
   content += Commands.DOUBLE_HEIGHT_ON;
-  content += formatLine(`MESA ${order.tableName}`, width, "center") + "\n";
+  if (!order.orderType || order.orderType === "DINE_IN") {
+    content += formatLine(`MESA ${order.tableName}`, width, "center") + "\n";
+  } else {
+    content +=
+      formatLine(
+        order.orderType === "DELIVERY" ? "DELIVERY" : "PARA LLEVAR",
+        width,
+        "center",
+      ) + "\n";
+  }
   content += Commands.NORMAL_SIZE;
 
   content += separator(width, "=") + "\n";
@@ -589,11 +600,7 @@ export async function printOrder(
   content +=
     formatTwoColumns("Fecha:", formatTicketDateAR(nowISO), width) + "\n";
   content +=
-    formatTwoColumns(
-      "Hora:",
-      formatTicketTimeAR(nowISO),
-      width,
-    ) + "\n";
+    formatTwoColumns("Hora:", formatTicketTimeAR(nowISO), width) + "\n";
   if (order.waiterName) {
     content += formatTwoColumns("Mozo:", order.waiterName, width) + "\n";
   }
@@ -665,6 +672,7 @@ export interface FullOrderData {
   deliveryNotes?: string | null;
   paymentMethod?: string;
   orderCreatedAt?: string;
+  scheduledAt?: string;
 }
 
 /**
@@ -1017,7 +1025,16 @@ export function generateOrderData(
   content += separator(width, "=") + "\n";
 
   content += Commands.DOUBLE_HEIGHT_ON;
-  content += formatLine(`MESA ${order.tableName}`, width, "center") + "\n";
+  if (!order.orderType || order.orderType === "DINE_IN") {
+    content += formatLine(`MESA ${order.tableName}`, width, "center") + "\n";
+  } else {
+    content +=
+      formatLine(
+        order.orderType === "DELIVERY" ? "DELIVERY" : "PARA LLEVAR",
+        width,
+        "center",
+      ) + "\n";
+  }
   content += Commands.NORMAL_SIZE;
 
   content += separator(width, "=") + "\n";
@@ -1027,13 +1044,24 @@ export function generateOrderData(
   content +=
     formatTwoColumns("Fecha:", formatTicketDateAR(nowISO), width) + "\n";
   content +=
-    formatTwoColumns(
-      "Hora:",
-      formatTicketTimeAR(nowISO),
-      width,
-    ) + "\n";
+    formatTwoColumns("Hora:", formatTicketTimeAR(nowISO), width) + "\n";
   if (order.waiterName) {
     content += formatTwoColumns("Mozo:", order.waiterName, width) + "\n";
+  }
+
+  if (order.scheduledAt) {
+    content += separator(width, "*") + "\n";
+    content += Commands.BOLD_ON;
+    content += Commands.DOUBLE_HEIGHT_ON;
+    content +=
+      formatLine(
+        `RETIRA: ${formatTicketTimeAR(order.scheduledAt)}`,
+        width,
+        "center",
+      ) + "\n";
+    content += Commands.NORMAL_SIZE;
+    content += Commands.BOLD_OFF;
+    content += separator(width, "*") + "\n";
   }
 
   content += separator(width) + "\n";
@@ -1116,7 +1144,12 @@ export function generateFullOrderData(
   if (isDineIn) {
     content += formatLine(`MESA ${order.tableName}`, width, "center") + "\n";
   } else {
-    content += formatLine(order.orderType === "DELIVERY" ? "DELIVERY" : "PARA LLEVAR", width, "center") + "\n";
+    content +=
+      formatLine(
+        order.orderType === "DELIVERY" ? "DELIVERY" : "PARA LLEVAR",
+        width,
+        "center",
+      ) + "\n";
   }
   content += Commands.NORMAL_SIZE;
 
@@ -1133,6 +1166,16 @@ export function generateFullOrderData(
         `${formatTicketDateAR(order.orderCreatedAt)} ${formatTicketTimeAR(order.orderCreatedAt)}`,
         width,
       ) + "\n";
+  }
+  if (order.scheduledAt) {
+    content += Commands.BOLD_ON;
+    content +=
+      formatTwoColumns(
+        "Programado:",
+        `${formatTicketDateAR(order.scheduledAt)} ${formatTicketTimeAR(order.scheduledAt)}`,
+        width,
+      ) + "\n";
+    content += Commands.BOLD_OFF;
   }
   content +=
     formatTwoColumns(
@@ -1161,11 +1204,12 @@ export function generateFullOrderData(
     };
     for (const p of order.payments) {
       const label = paymentLabels[p.method] ?? p.method;
-      content += formatTwoColumns(
-        `${label}:`,
-        `$${p.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`,
-        width,
-      ) + "\n";
+      content +=
+        formatTwoColumns(
+          `${label}:`,
+          `$${p.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`,
+          width,
+        ) + "\n";
     }
   } else if (order.paymentMethod) {
     content += formatTwoColumns("Pago:", order.paymentMethod, width) + "\n";
