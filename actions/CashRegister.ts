@@ -69,6 +69,7 @@ const addMovementSchema = z
 
 const updateMovementSchema = z.object({
   movementId: z.string().min(1, "El movimiento es requerido"),
+  type: z.enum(["INCOME", "EXPENSE"]).optional(),
   paymentMethod: z.enum([
     "CASH",
     "CARD_DEBIT",
@@ -879,6 +880,10 @@ export async function updateManualMovement(
         throw new Error("Solo se pueden editar movimientos manuales");
       }
 
+      if (validatedData.type && movement.type === "CORRECTION") {
+        throw new Error("No se puede cambiar el tipo de una corrección");
+      }
+
       const session = await tx.cashRegisterSession.findFirst({
         where: {
           cashRegisterId: validatedData.cashRegisterId,
@@ -896,6 +901,10 @@ export async function updateManualMovement(
           paymentMethod: validatedData.paymentMethod,
           sessionId: session.id,
           description: validatedData.description || null,
+          ...(validatedData.type &&
+          (movement.type === "INCOME" || movement.type === "EXPENSE")
+            ? { type: validatedData.type }
+            : {}),
         },
       });
     });
@@ -1384,6 +1393,7 @@ export async function getMovementWithOrderDetails(movementId: string) {
             name: movement.session.cashRegister.name,
           }
         : null,
+      sessionStatus: movement.session?.status ?? null,
     };
 
     const serializedOrder = movement.order
