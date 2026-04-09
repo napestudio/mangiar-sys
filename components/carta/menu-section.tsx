@@ -29,7 +29,7 @@ export function MenuSection({ section, showPrices = true }: MenuSectionProps) {
   const hasContent = elements.length > 0;
 
   return (
-    <div className="not-first:mt-12 bg-white rounded-xl md:p-6 px-0 py-6">
+    <div className="not-first:mt-12 bg-white rounded-xl md:p-6 px-4 py-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-neutral-900">{section.name}</h2>
         {section.description && (
