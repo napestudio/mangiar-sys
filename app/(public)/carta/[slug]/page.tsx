@@ -4,7 +4,7 @@ import { getMenuBySlug } from "@/actions/menus";
 import { MenuSection } from "@/components/carta/menu-section";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 interface CartaPageProps {
   params: Promise<{
@@ -44,7 +44,7 @@ export default async function CartaPage({ params }: CartaPageProps) {
   const data = await getMenuBySlug(slug);
 
   if (!data) {
-    notFound();
+    return redirect("/");
   }
 
   const { menu, restaurant } = data;
