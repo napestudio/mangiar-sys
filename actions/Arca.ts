@@ -1,7 +1,11 @@
 "use server";
 
 import { Arca } from "@arcasdk/core";
-import { getArcaConfig, getCurrentArcaEnvironment } from "@/lib/arca-config";
+import {
+  getArcaConfig,
+  getActiveArcaConfig,
+  getCurrentArcaEnvironment,
+} from "@/lib/arca-config";
 import { authorizeAction } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 import type {
@@ -31,16 +35,29 @@ type ServerStatus = {
 };
 
 /**
+ * Resolve ARCA config: use per-restaurant DB config if restaurantId is provided,
+ * otherwise fall back to global environment variables.
+ */
+async function resolveArcaConfig(restaurantId?: string) {
+  if (restaurantId) {
+    return getActiveArcaConfig(restaurantId);
+  }
+  const environment = getCurrentArcaEnvironment();
+  return getArcaConfig(environment);
+}
+
+/**
  * Test connection to ARCA servers
  *
  * Verifies that credentials are valid and ARCA servers are accessible.
  * This should be the first test when setting up ARCA integration.
  *
+ * @param restaurantId - Optional restaurant ID to use per-restaurant config
  * @returns Server status information or error
  */
-export async function testArcaConnection(): Promise<
-  ActionResult<ServerStatus>
-> {
+export async function testArcaConnection(
+  restaurantId?: string,
+): Promise<ActionResult<ServerStatus>> {
   try {
     // Authorization check - MANAGER and above
     await authorizeAction(UserRole.MANAGER);
@@ -48,7 +65,7 @@ export async function testArcaConnection(): Promise<
     const environment = getCurrentArcaEnvironment();
     console.log(`[ARCA] Testing connection to ${environment} environment...`);
 
-    const config = getArcaConfig(environment);
+    const config = await resolveArcaConfig(restaurantId);
     const arca = new Arca(config);
 
     // Get actual server status from ARCA
@@ -87,21 +104,22 @@ export async function testArcaConnection(): Promise<
  *
  * @param ptoVta - Sales point number (Punto de Venta)
  * @param cbteTipo - Invoice type code (6 for Factura B, etc.)
+ * @param restaurantId - Optional restaurant ID to use per-restaurant config
  * @returns Last invoice number or 0 if no invoices exist
  */
 export async function getLastInvoiceNumber(
   ptoVta: number,
   cbteTipo: number,
+  restaurantId?: string,
 ): Promise<ActionResult<ArcaLastVoucherResponse>> {
   try {
     await authorizeAction(UserRole.MANAGER);
 
-    const environment = getCurrentArcaEnvironment();
     console.log(
       `[ARCA] Getting last invoice number for PtoVta ${ptoVta}, Type ${cbteTipo}...`,
     );
 
-    const config = getArcaConfig(environment);
+    const config = await resolveArcaConfig(restaurantId);
     const arca = new Arca(config);
 
     // Get last voucher number
@@ -132,16 +150,18 @@ export async function getLastInvoiceNumber(
 }
 
 /**
- * Emit a test invoice to ARCA
+ * Emit an invoice to ARCA
  *
  * Creates an electronic invoice in ARCA's system and returns the CAE
  * (Código de Autorización Electrónico) if successful.
  *
  * @param invoiceData - Invoice parameters
+ * @param restaurantId - Optional restaurant ID to use per-restaurant config
  * @returns CAE and expiration date or error
  */
 export async function emitTestInvoice(
   invoiceData: ArcaInvoiceInput,
+  restaurantId?: string,
 ): Promise<ActionResult<ArcaCreateVoucherResponse>> {
   try {
     await authorizeAction(UserRole.MANAGER);
@@ -154,7 +174,7 @@ export async function emitTestInvoice(
       ImpTotal: invoiceData.ImpTotal,
     });
 
-    const config = getArcaConfig(environment);
+    const config = await resolveArcaConfig(restaurantId);
     const arca = new Arca(config);
 
     // Create voucher (invoice)
@@ -216,11 +236,12 @@ type SalesPointsResult = {
  * Returns the list of authorized sales points that can be used for
  * invoice emission.
  *
+ * @param restaurantId - Optional restaurant ID to use per-restaurant config
  * @returns List of sales points or error
  */
-export async function getSalesPoints(): Promise<
-  ActionResult<SalesPointsResult>
-> {
+export async function getSalesPoints(
+  restaurantId?: string,
+): Promise<ActionResult<SalesPointsResult>> {
   try {
     await authorizeAction(UserRole.MANAGER);
 
@@ -229,7 +250,7 @@ export async function getSalesPoints(): Promise<
       `[ARCA] Getting sales points for ${environment} environment...`,
     );
 
-    const config = getArcaConfig(environment);
+    const config = await resolveArcaConfig(restaurantId);
     const arca = new Arca(config);
 
     // Get sales points
@@ -278,11 +299,12 @@ type VoucherTypesResult = {
  *
  * Returns the list of invoice types that this CUIT is authorized to emit.
  *
+ * @param restaurantId - Optional restaurant ID to use per-restaurant config
  * @returns List of invoice types or error
  */
-export async function getInvoiceTypes(): Promise<
-  ActionResult<VoucherTypesResult>
-> {
+export async function getInvoiceTypes(
+  restaurantId?: string,
+): Promise<ActionResult<VoucherTypesResult>> {
   try {
     await authorizeAction(UserRole.MANAGER);
 
@@ -291,7 +313,7 @@ export async function getInvoiceTypes(): Promise<
       `[ARCA] Getting invoice types for ${environment} environment...`,
     );
 
-    const config = getArcaConfig(environment);
+    const config = await resolveArcaConfig(restaurantId);
     const arca = new Arca(config);
 
     // Get invoice types

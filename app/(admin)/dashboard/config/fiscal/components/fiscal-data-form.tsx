@@ -42,8 +42,8 @@ export function FiscalDataForm({
     autoIssue: initialConfig?.autoIssue ?? false,
     // Include other fields with defaults
     environment: initialConfig?.environment ?? "test",
-    certificatePath: initialConfig?.certificatePath ?? "",
-    privateKeyPath: initialConfig?.privateKeyPath ?? "",
+    certificateContent: initialConfig?.certificateContent ?? "",
+    privateKeyContent: initialConfig?.privateKeyContent ?? "",
     defaultPtoVta: initialConfig?.defaultPtoVta ?? 1,
   });
 
@@ -186,12 +186,19 @@ export function FiscalDataForm({
         <Label htmlFor="taxStatus">Situación ante el impuesto</Label>
         <Select
           value={formData.taxStatus || ""}
-          onValueChange={(value) =>
-            setFormData({
-              ...formData,
-              taxStatus: value as typeof formData.taxStatus,
-            })
-          }
+          onValueChange={(value) => {
+            const newStatus = value as typeof formData.taxStatus;
+            // Auto-correct invoice type based on new tax status
+            let newInvoiceType = formData.defaultInvoiceType;
+            if (newStatus === "Monotributo" || newStatus === "Exento") {
+              newInvoiceType = 11;
+            } else if (newStatus === "Responsable Inscripto") {
+              if (newInvoiceType === 11) newInvoiceType = 6;
+            } else if (newStatus === "No Responsable") {
+              newInvoiceType = 6;
+            }
+            setFormData({ ...formData, taxStatus: newStatus, defaultInvoiceType: newInvoiceType });
+          }}
         >
           <SelectTrigger id="taxStatus">
             <SelectValue placeholder="Selecciona situación fiscal" />
@@ -208,7 +215,7 @@ export function FiscalDataForm({
         </Select>
       </div>
 
-      {/* Default Invoice Type */}
+      {/* Default Invoice Type — filtered by taxStatus */}
       <div>
         <Label htmlFor="defaultInvoiceType">
           Tipo de factura predeterminado
@@ -223,11 +230,41 @@ export function FiscalDataForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Factura A</SelectItem>
-            <SelectItem value="6">Factura B</SelectItem>
-            <SelectItem value="11">Factura C</SelectItem>
+            {/* Responsable Inscripto: can emit A and B */}
+            {formData.taxStatus === "Responsable Inscripto" && (
+              <>
+                <SelectItem value="1">Factura A (para Responsables Inscriptos)</SelectItem>
+                <SelectItem value="6">Factura B (para Consumidores Finales / Monotributistas)</SelectItem>
+              </>
+            )}
+            {/* Monotributo and Exento: only C */}
+            {(formData.taxStatus === "Monotributo" || formData.taxStatus === "Exento") && (
+              <SelectItem value="11">Factura C (régimen simplificado / exento)</SelectItem>
+            )}
+            {/* No Responsable: only B */}
+            {formData.taxStatus === "No Responsable" && (
+              <SelectItem value="6">Factura B</SelectItem>
+            )}
+            {/* No taxStatus selected: show all */}
+            {!formData.taxStatus && (
+              <>
+                <SelectItem value="1">Factura A</SelectItem>
+                <SelectItem value="6">Factura B</SelectItem>
+                <SelectItem value="11">Factura C</SelectItem>
+              </>
+            )}
           </SelectContent>
         </Select>
+        {formData.taxStatus === "Monotributo" && (
+          <p className="text-xs text-blue-600 mt-1">
+            Los monotributistas solo pueden emitir Factura C.
+          </p>
+        )}
+        {formData.taxStatus === "Responsable Inscripto" && (
+          <p className="text-xs text-blue-600 mt-1">
+            Factura A para clientes con CUIT (Responsables Inscriptos). Factura B para el resto.
+          </p>
+        )}
       </div>
 
       {/* Auto Issue */}

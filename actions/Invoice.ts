@@ -358,7 +358,7 @@ export async function generateInvoiceForOrder(
           );
 
     // Get next invoice number from ARCA
-    const lastInvoiceResult = await getLastInvoiceNumber(ptoVta, invoiceType);
+    const lastInvoiceResult = await getLastInvoiceNumber(ptoVta, invoiceType, restaurantId);
     if (!lastInvoiceResult.success) {
       return {
         success: false,
@@ -386,8 +386,8 @@ export async function generateInvoiceForOrder(
       totals,
     );
 
-    // Emit invoice to ARCA
-    const afipResult = await emitTestInvoice(afipPayload);
+    // Emit invoice to ARCA using per-restaurant config
+    const afipResult = await emitTestInvoice(afipPayload, restaurantId);
 
     if (!afipResult.success) {
       // Save as FAILED status for retry later
@@ -1023,7 +1023,8 @@ export async function generateManualInvoice(params: {
           );
 
     // Get next invoice number from ARCA
-    const lastInvoiceResult = await getLastInvoiceNumber(ptoVta, invoiceType);
+    const manualRestaurantId = branch.restaurantId;
+    const lastInvoiceResult = await getLastInvoiceNumber(ptoVta, invoiceType, manualRestaurantId);
     if (!lastInvoiceResult.success) {
       return {
         success: false,
@@ -1082,8 +1083,8 @@ export async function generateManualInvoice(params: {
       }),
     };
 
-    // Emit invoice to ARCA
-    const afipResult = await emitTestInvoice(afipPayload);
+    // Emit invoice to ARCA using per-restaurant config
+    const afipResult = await emitTestInvoice(afipPayload, manualRestaurantId);
 
     if (!afipResult.success) {
       // Save as FAILED status for retry later
@@ -1372,7 +1373,7 @@ export async function cancelInvoiceWithCreditNote(
           );
 
     // Get next credit note number
-    const lastCreditNoteResult = await getLastInvoiceNumber(ptoVta, creditNoteType);
+    const lastCreditNoteResult = await getLastInvoiceNumber(ptoVta, creditNoteType, restaurantId);
     if (!lastCreditNoteResult.success) {
       return {
         success: false,
@@ -1429,7 +1430,7 @@ export async function cancelInvoiceWithCreditNote(
     };
 
     // Emit credit note to ARCA
-    const afipResult = await emitTestInvoice(afipPayload);
+    const afipResult = await emitTestInvoice(afipPayload, restaurantId);
 
     if (!afipResult.success) {
       return {
@@ -1667,7 +1668,7 @@ export async function generateCreditNote(params: {
           );
 
     // Get next credit note number
-    const lastCreditNoteResult = await getLastInvoiceNumber(ptoVta, creditNoteType);
+    const lastCreditNoteResult = await getLastInvoiceNumber(ptoVta, creditNoteType, restaurantId);
     if (!lastCreditNoteResult.success) {
       return {
         success: false,
@@ -1735,7 +1736,7 @@ export async function generateCreditNote(params: {
     };
 
     // Emit credit note to ARCA
-    const afipResult = await emitTestInvoice(afipPayload);
+    const afipResult = await emitTestInvoice(afipPayload, restaurantId);
 
     if (!afipResult.success) {
       return {
@@ -1959,7 +1960,7 @@ export async function generateDebitNote(params: {
           );
 
     // Get next debit note number
-    const lastDebitNoteResult = await getLastInvoiceNumber(ptoVta, debitNoteType);
+    const lastDebitNoteResult = await getLastInvoiceNumber(ptoVta, debitNoteType, restaurantId);
     if (!lastDebitNoteResult.success) {
       return {
         success: false,
@@ -2027,7 +2028,7 @@ export async function generateDebitNote(params: {
     };
 
     // Emit debit note to ARCA
-    const afipResult = await emitTestInvoice(afipPayload);
+    const afipResult = await emitTestInvoice(afipPayload, restaurantId);
 
     if (!afipResult.success) {
       return {

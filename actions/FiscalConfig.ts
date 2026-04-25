@@ -34,8 +34,8 @@ const fiscalConfigSchema = z.object({
 
   // ARCA credentials
   environment: z.enum(["test", "production"]),
-  certificatePath: z.string().optional().nullable(),
-  privateKeyPath: z.string().optional().nullable(),
+  certificateContent: z.string().optional().nullable(),
+  privateKeyContent: z.string().optional().nullable(),
 
   // Sales points
   defaultPtoVta: z.coerce.number().int().min(1).max(9999),
@@ -158,20 +158,16 @@ export async function updateFiscalConfig(
 
 export async function testFiscalConnection(
   restaurantId: string,
-): Promise<ActionResult<{ message: string }>> {
+): Promise<ActionResult<{ message: string; cuit?: number; environment?: string }>> {
   try {
     const session = await auth();
     if (!session?.user) {
       return { success: false, error: "No autorizado" };
     }
 
-    // Get active config (DB or .env)
-    const { getActiveArcaConfig } = await import("@/lib/arca-config");
-    const arcaConfig = await getActiveArcaConfig(restaurantId);
-
-    // Test ARCA connection
+    // Test ARCA connection using per-restaurant config
     const { testArcaConnection } = await import("@/actions/Arca");
-    const result = await testArcaConnection();
+    const result = await testArcaConnection(restaurantId);
 
     if (!result.success) {
       // Update last test result in DB
@@ -199,7 +195,11 @@ export async function testFiscalConnection(
 
     return {
       success: true,
-      data: { message: "Conexión exitosa con ARCA" },
+      data: {
+        message: "Conexión exitosa con ARCA",
+        cuit: result.data?.cuit,
+        environment: result.data?.environment,
+      },
     };
   } catch (error) {
     console.error("[testFiscalConnection] Error:", error);
@@ -223,9 +223,9 @@ export async function syncSalesPoints(
       return { success: false, error: "No autorizado" };
     }
 
-    // Get sales points from ARCA
+    // Get sales points from ARCA using per-restaurant config
     const { getSalesPoints } = await import("@/actions/Arca");
-    const result = await getSalesPoints();
+    const result = await getSalesPoints(restaurantId);
 
     if (!result.success) {
       return {

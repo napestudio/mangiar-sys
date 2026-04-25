@@ -6,6 +6,7 @@ export interface RestaurantTheme {
   primaryColor: string;
   backgroundColor: string;
   textColor: string;
+  cardColor: string;
   buttonShape: ButtonShape;
   buttonVariant: ButtonVariant;
   fontFamily: FontFamily;
@@ -15,6 +16,7 @@ export const DEFAULT_THEME: RestaurantTheme = {
   primaryColor: "#bc0012",
   backgroundColor: "#ffffff",
   textColor: "#171717",
+  cardColor: "#ffffff",
   buttonShape: "pill",
   buttonVariant: "outline",
   fontFamily: "geist",

@@ -1002,8 +1002,8 @@ model FiscalConfiguration {
 
   // ========== ARCA CREDENTIALS ==========
   environment          String    @default("test") // "test" or "production"
-  certificatePath      String?   // Path to .crt file (NOT contents)
-  privateKeyPath       String?   // Path to .key file (NOT contents)
+  certificateContent   String?   @db.Text // PEM content of the .crt certificate
+  privateKeyContent    String?   @db.Text // PEM content of the private key .key
   certificateExpiresAt DateTime? // Track expiration for alerts
 
   // ========== SALES POINTS ==========

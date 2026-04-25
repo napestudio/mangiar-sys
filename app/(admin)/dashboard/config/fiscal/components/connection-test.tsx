@@ -18,6 +18,8 @@ export function ConnectionTest({
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
+    cuit?: number;
+    environment?: string;
   } | null>(null);
 
   const handleTest = async () => {
@@ -30,6 +32,8 @@ export function ConnectionTest({
       setTestResult({
         success: true,
         message: result.data?.message || "Conexión exitosa",
+        cuit: result.data?.cuit,
+        environment: result.data?.environment,
       });
     } else {
       setTestResult({
@@ -118,6 +122,14 @@ export function ConnectionTest({
                 >
                   {testResult.message}
                 </p>
+                {testResult.success && testResult.cuit && (
+                  <p className="text-xs mt-2 text-green-700">
+                    CUIT: <span className="font-mono font-semibold">{testResult.cuit}</span>
+                    {testResult.environment && (
+                      <> · Ambiente: <span className="font-semibold capitalize">{testResult.environment === "production" ? "Producción" : "Prueba"}</span></>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -147,8 +159,8 @@ export function ConnectionTest({
         <p className="mt-2">Verifica lo siguiente:</p>
         <ul className="list-decimal list-inside mt-2 space-y-1">
           <li>El CUIT configurado es correcto (11 dígitos)</li>
-          <li>Las rutas a los certificados son correctas</li>
-          <li>Los archivos de certificado existen en el servidor</li>
+          <li>El contenido del certificado (.crt) fue pegado completo, incluyendo las líneas BEGIN/END</li>
+          <li>El contenido de la clave privada (.key) fue pegado completo, incluyendo las líneas BEGIN/END</li>
           <li>Los certificados no están vencidos</li>
           <li>El servidor tiene conexión a internet</li>
           <li>El firewall permite conexiones a los servidores de ARCA</li>

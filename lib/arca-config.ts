@@ -224,68 +224,37 @@ export async function getActiveArcaConfig(
     // Use DB config if enabled and has valid credentials
     if (
       fiscalConfig?.isEnabled &&
-      fiscalConfig.certificatePath &&
-      fiscalConfig.privateKeyPath &&
+      fiscalConfig.certificateContent &&
+      fiscalConfig.privateKeyContent &&
       fiscalConfig.cuit
     ) {
       const isProduction = fiscalConfig.environment === "production";
 
-      // Resolve paths relative to project root
-      const resolvedCertPath = path.resolve(
-        process.cwd(),
-        fiscalConfig.certificatePath,
+      // Validate CUIT is a valid number
+      const cuitNumber = Number(fiscalConfig.cuit);
+      if (isNaN(cuitNumber) || cuitNumber <= 0) {
+        console.warn(
+          `[getActiveArcaConfig] Invalid CUIT in database: ${fiscalConfig.cuit}. Falling back to .env`,
+        );
+        return getArcaConfig(getCurrentArcaEnvironment());
+      }
+
+      console.log(
+        `[getActiveArcaConfig] Using database configuration for restaurant ${restaurantId} (${isProduction ? "PRODUCTION" : "TEST"})`,
       );
-      const resolvedKeyPath = path.resolve(
-        process.cwd(),
-        fiscalConfig.privateKeyPath,
-      );
 
-      // Check if files exist
-      if (!fs.existsSync(resolvedCertPath)) {
-        console.warn(
-          `[getActiveArcaConfig] Certificate file not found at: ${resolvedCertPath}. Falling back to .env`,
-        );
-        return getArcaConfig(getCurrentArcaEnvironment());
-      }
+      // Use /tmp for serverless environments (Vercel, Lambda, etc.)
+      const ticketPath = process.env.VERCEL
+        ? "/tmp/arca-tickets"
+        : path.resolve(process.cwd(), "storage", "arca-tickets");
 
-      if (!fs.existsSync(resolvedKeyPath)) {
-        console.warn(
-          `[getActiveArcaConfig] Private key file not found at: ${resolvedKeyPath}. Falling back to .env`,
-        );
-        return getArcaConfig(getCurrentArcaEnvironment());
-      }
-
-      try {
-        // Read certificate and key files
-        const cert = fs.readFileSync(resolvedCertPath, "utf-8");
-        const key = fs.readFileSync(resolvedKeyPath, "utf-8");
-
-        // Validate CUIT is a valid number
-        const cuitNumber = Number(fiscalConfig.cuit);
-        if (isNaN(cuitNumber) || cuitNumber <= 0) {
-          console.warn(
-            `[getActiveArcaConfig] Invalid CUIT in database: ${fiscalConfig.cuit}. Falling back to .env`,
-          );
-          return getArcaConfig(getCurrentArcaEnvironment());
-        }
-
-        console.log(
-          `[getActiveArcaConfig] Using database configuration for restaurant ${restaurantId} (${isProduction ? "PRODUCTION" : "TEST"})`,
-        );
-
-        return {
-          cuit: cuitNumber,
-          cert,
-          key,
-          production: isProduction,
-        };
-      } catch (fileError) {
-        console.warn(
-          `[getActiveArcaConfig] Failed to read DB certificate files. Falling back to .env:`,
-          fileError instanceof Error ? fileError.message : String(fileError),
-        );
-        return getArcaConfig(getCurrentArcaEnvironment());
-      }
+      return {
+        cuit: cuitNumber,
+        cert: fiscalConfig.certificateContent,
+        key: fiscalConfig.privateKeyContent,
+        production: isProduction,
+        ticketPath,
+      };
     }
 
     // 2. Fallback to environment variables (test/dev)
