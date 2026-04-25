@@ -184,6 +184,7 @@ const themeUpdateSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Color de fondo inválido"),
   textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color de texto inválido"),
+  cardColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color de tarjeta inválido"),
   buttonShape: z.enum(["pill", "rounded", "sharp"]),
   buttonVariant: z.enum(["solid", "outline"]),
   fontFamily: z.enum(["geist", "poppins", "serif"]),

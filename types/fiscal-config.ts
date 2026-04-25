@@ -15,8 +15,8 @@ export interface FiscalConfigData {
 
   // ARCA credentials
   environment: "test" | "production";
-  certificatePath?: string | null;
-  privateKeyPath?: string | null;
+  certificateContent?: string | null;
+  privateKeyContent?: string | null;
 
   // Sales points
   defaultPtoVta: number;

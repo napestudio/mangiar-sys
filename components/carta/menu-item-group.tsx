@@ -16,11 +16,11 @@ export function MenuItemGroup({ group }: MenuItemGroupProps) {
     <div className="space-y-2 py-2 mt-4">
       {/* Group header */}
       <div className="md:pl-4">
-        <h3 className="text-2xl font-bold text-neutral-200 font-serif">
+        <h3 className="text-2xl font-bold font-serif" style={{ color: "var(--rt-card-text)" }}>
           {group.name}
         </h3>
         {group.description && (
-          <p className="text-sm text-neutral-400 mt-1">{group.description}</p>
+          <p className="text-sm mt-1" style={{ color: "var(--rt-card-text-muted)" }}>{group.description}</p>
         )}
       </div>
 

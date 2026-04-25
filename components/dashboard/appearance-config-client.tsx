@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type {
@@ -27,7 +28,7 @@ interface AppearanceConfigClientProps {
 
 const BUTTON_SHAPES: { value: ButtonShape; label: string; preview: string }[] =
   [
-    { value: "pill", label: "Pill", preview: "rounded-full" },
+    { value: "pill", label: "Pildora", preview: "rounded-full" },
     { value: "rounded", label: "Redondeado", preview: "rounded-md" },
     { value: "sharp", label: "Cuadrado", preview: "rounded-none" },
   ];
@@ -124,7 +125,7 @@ export default function AppearanceConfigClient({
             Define la paleta de colores de tu página principal
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <ColorField
             label="Color principal"
             description="Botones, íconos y acentos"
@@ -139,9 +140,15 @@ export default function AppearanceConfigClient({
           />
           <ColorField
             label="Color de texto"
-            description="Títulos y cuerpo"
+            description="Títulos y cuerpo de la página"
             value={theme.textColor}
             onChange={(v) => update("textColor", v)}
+          />
+          <ColorField
+            label="Color de tarjeta"
+            description="Fondo de las secciones del menú"
+            value={theme.cardColor}
+            onChange={(v) => update("cardColor", v)}
           />
         </CardContent>
       </Card>
@@ -237,33 +244,46 @@ export default function AppearanceConfigClient({
         <CardHeader>
           <CardTitle>Vista previa</CardTitle>
           <CardDescription>
-            Así se verán los botones en tu página principal
+            Así se verá tu página principal con los colores y estilos elegidos
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            className="rounded-lg p-8 flex flex-col items-center gap-4"
-            style={{ backgroundColor: theme.backgroundColor }}
-          >
-            <p
-              className="text-2xl font-bold"
-              style={{
-                color: theme.textColor,
-                fontFamily: previewBtnStyle.fontFamily,
-              }}
-            >
-              Mi Restaurante
-            </p>
-            {["Ver Menú", "Reservar Mesa", "Hacer un Pedido"].map((label) => (
+          <Tabs defaultValue="botones">
+            <TabsList className="mb-4">
+              <TabsTrigger value="botones">Página principal</TabsTrigger>
+              <TabsTrigger value="menu">Menú</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="botones">
               <div
-                key={label}
-                className="w-full max-w-sm py-2 text-center font-bold uppercase text-sm"
-                style={previewBtnStyle}
+                className="rounded-lg p-8 flex flex-col items-center gap-4"
+                style={{ backgroundColor: theme.backgroundColor }}
               >
-                {label}
+                <p
+                  className="text-2xl font-bold"
+                  style={{
+                    color: theme.textColor,
+                    fontFamily: previewBtnStyle.fontFamily,
+                  }}
+                >
+                  Mi Restaurante
+                </p>
+                {["Ver Menú", "Reservar Mesa", "Hacer un Pedido"].map((label) => (
+                  <div
+                    key={label}
+                    className="w-full max-w-sm py-2 text-center font-bold uppercase text-sm"
+                    style={previewBtnStyle}
+                  >
+                    {label}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="menu">
+              <MenuPreview theme={theme} fontFamily={previewBtnStyle.fontFamily as string} />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -273,6 +293,89 @@ export default function AppearanceConfigClient({
           {isPending ? "Guardando..." : "Guardar cambios"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function cardTextColor(cardHex: string): string {
+  const r = parseInt(cardHex.slice(1, 3), 16) / 255;
+  const g = parseInt(cardHex.slice(3, 5), 16) / 255;
+  const b = parseInt(cardHex.slice(5, 7), 16) / 255;
+  const lin = (c: number) =>
+    c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return L > 0.179 ? "#171717" : "#f5f5f5";
+}
+
+interface PreviewItem { name: string; description?: string; price: string }
+interface PreviewSection { name: string; description?: string; items: PreviewItem[] }
+
+const PREVIEW_SECTIONS: PreviewSection[] = [
+  {
+    name: "Entradas",
+    description: "Para comenzar",
+    items: [
+      { name: "Empanadas", description: "Al horno, masa casera", price: "$1.500" },
+      { name: "Tabla de fiambres", description: "Selección de la casa", price: "$3.200" },
+    ],
+  },
+  {
+    name: "Platos principales",
+    items: [
+      { name: "Milanesa napolitana", description: "Con papas fritas", price: "$4.800" },
+      { name: "Lomo al champignon", price: "$5.500" },
+    ],
+  },
+];
+
+function MenuPreview({ theme, fontFamily }: { theme: RestaurantTheme; fontFamily: string }) {
+  const cardText = cardTextColor(theme.cardColor);
+  const cardMuted = `color-mix(in srgb, ${cardText} 55%, transparent)`;
+
+  return (
+    <div
+      className="rounded-lg p-6 space-y-4"
+      style={{ backgroundColor: theme.backgroundColor, fontFamily }}
+    >
+      <div className="text-center space-y-1 mb-6">
+        <p className="text-2xl font-bold" style={{ color: theme.textColor }}>Carta</p>
+        <p className="text-sm" style={{ color: `color-mix(in srgb, ${theme.textColor} 55%, transparent)` }}>
+          Descubrí nuestros platos
+        </p>
+      </div>
+
+      {PREVIEW_SECTIONS.map((section) => (
+        <div
+          key={section.name}
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: theme.cardColor }}
+        >
+          <div>
+            <p className="font-bold text-lg" style={{ color: cardText }}>{section.name}</p>
+            {section.description && (
+              <p className="text-xs" style={{ color: cardMuted }}>{section.description}</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            {section.items.map((item) => (
+              <div key={item.name}>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold text-sm flex-1" style={{ color: cardText }}>
+                    {item.name}
+                  </span>
+                  <div className="flex-1 h-px self-center" style={{ background: cardText, opacity: 0.2 }} />
+                  <span className="font-bold text-sm shrink-0" style={{ color: cardText }}>
+                    {item.price}
+                  </span>
+                </div>
+                {item.description && (
+                  <p className="text-xs mt-0.5" style={{ color: cardMuted }}>{item.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

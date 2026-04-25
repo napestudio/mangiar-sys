@@ -12,14 +12,12 @@ export function Navbar() {
 
   return (
     <nav className="bg-transparent border-0 fixed inset-x-0 z-50 font-sans">
-      {/* Main bar */}
       <div className="flex items-center justify-between gap-8 pt-10 py-4 px-6 lg:px-32">
         <Link href="/" className="text-2xl font-bold text-black shrink-0">
           <Logo />
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-8 uppercase font-medium text-sm">
+        {/* <div className="hidden md:flex items-center gap-8 uppercase font-medium text-sm">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -29,7 +27,7 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-3">
           <Link
@@ -42,18 +40,16 @@ export function Navbar() {
             Ingresar
           </Link>
 
-          {/* Mobile hamburger */}
-          <button
+          {/* <button
             className="md:hidden p-2 rounded-full bg-white shadow-md text-black"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menú"
           >
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          </button> */}
         </div>
       </div>
 
-      {/* Mobile dropdown */}
       {open && (
         <div className="md:hidden mx-4 mt-1 rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden">
           <div className="flex flex-col p-4 gap-1">
