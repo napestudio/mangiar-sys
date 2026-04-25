@@ -1,6 +1,6 @@
 export type ButtonShape = "pill" | "rounded" | "sharp";
 export type ButtonVariant = "solid" | "outline";
-export type FontFamily = "geist" | "poppins" | "serif";
+export type FontFamily = "geist" | "poppins" | "serif" | "nunito" | "playfair";
 
 export interface RestaurantTheme {
   primaryColor: string;

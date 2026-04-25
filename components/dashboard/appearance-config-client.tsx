@@ -54,9 +54,19 @@ const FONT_FAMILIES: {
     style: { fontFamily: "var(--font-poppins), sans-serif" },
   },
   {
+    value: "nunito",
+    label: "Nunito",
+    style: { fontFamily: "var(--font-nunito), sans-serif" },
+  },
+  {
     value: "serif",
     label: "Serif",
     style: { fontFamily: "Georgia, 'Times New Roman', serif" },
+  },
+  {
+    value: "playfair",
+    label: "Playfair Display",
+    style: { fontFamily: "var(--font-playfair), serif" },
   },
 ];
 
@@ -96,6 +106,10 @@ export default function AppearanceConfigClient({
     });
   }
 
+  const fontFamilyValue = (FONT_FAMILIES.find(
+    (f) => f.value === theme.fontFamily,
+  )?.style.fontFamily ?? "inherit") as string;
+
   const previewBtnStyle: React.CSSProperties = {
     borderRadius: SHAPE_RADIUS[theme.buttonShape],
     backgroundColor:
@@ -107,16 +121,11 @@ export default function AppearanceConfigClient({
         ? theme.backgroundColor
         : theme.primaryColor,
     border: `2px solid ${theme.primaryColor}`,
-    fontFamily:
-      theme.fontFamily === "geist"
-        ? "var(--font-geist-sans), sans-serif"
-        : theme.fontFamily === "poppins"
-          ? "var(--font-poppins), sans-serif"
-          : "Georgia, 'Times New Roman', serif",
+    fontFamily: fontFamilyValue,
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {/* Colors */}
       <Card>
         <CardHeader>
@@ -268,20 +277,22 @@ export default function AppearanceConfigClient({
                 >
                   Mi Restaurante
                 </p>
-                {["Ver Menú", "Reservar Mesa", "Hacer un Pedido"].map((label) => (
-                  <div
-                    key={label}
-                    className="w-full max-w-sm py-2 text-center font-bold uppercase text-sm"
-                    style={previewBtnStyle}
-                  >
-                    {label}
-                  </div>
-                ))}
+                {["Ver Menú", "Reservar Mesa", "Hacer un Pedido"].map(
+                  (label) => (
+                    <div
+                      key={label}
+                      className="w-full max-w-sm py-2 text-center font-bold uppercase text-sm"
+                      style={previewBtnStyle}
+                    >
+                      {label}
+                    </div>
+                  ),
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="menu">
-              <MenuPreview theme={theme} fontFamily={previewBtnStyle.fontFamily as string} />
+              <MenuPreview theme={theme} fontFamily={fontFamilyValue} />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -307,28 +318,54 @@ function cardTextColor(cardHex: string): string {
   return L > 0.179 ? "#171717" : "#f5f5f5";
 }
 
-interface PreviewItem { name: string; description?: string; price: string }
-interface PreviewSection { name: string; description?: string; items: PreviewItem[] }
+interface PreviewItem {
+  name: string;
+  description?: string;
+  price: string;
+}
+interface PreviewSection {
+  name: string;
+  description?: string;
+  items: PreviewItem[];
+}
 
 const PREVIEW_SECTIONS: PreviewSection[] = [
   {
     name: "Entradas",
     description: "Para comenzar",
     items: [
-      { name: "Empanadas", description: "Al horno, masa casera", price: "$1.500" },
-      { name: "Tabla de fiambres", description: "Selección de la casa", price: "$3.200" },
+      {
+        name: "Empanadas",
+        description: "Al horno, masa casera",
+        price: "$1.500",
+      },
+      {
+        name: "Tabla de fiambres",
+        description: "Selección de la casa",
+        price: "$3.200",
+      },
     ],
   },
   {
     name: "Platos principales",
     items: [
-      { name: "Milanesa napolitana", description: "Con papas fritas", price: "$4.800" },
+      {
+        name: "Milanesa napolitana",
+        description: "Con papas fritas",
+        price: "$4.800",
+      },
       { name: "Lomo al champignon", price: "$5.500" },
     ],
   },
 ];
 
-function MenuPreview({ theme, fontFamily }: { theme: RestaurantTheme; fontFamily: string }) {
+function MenuPreview({
+  theme,
+  fontFamily,
+}: {
+  theme: RestaurantTheme;
+  fontFamily: string;
+}) {
   const cardText = cardTextColor(theme.cardColor);
   const cardMuted = `color-mix(in srgb, ${cardText} 55%, transparent)`;
 
@@ -338,8 +375,15 @@ function MenuPreview({ theme, fontFamily }: { theme: RestaurantTheme; fontFamily
       style={{ backgroundColor: theme.backgroundColor, fontFamily }}
     >
       <div className="text-center space-y-1 mb-6">
-        <p className="text-2xl font-bold" style={{ color: theme.textColor }}>Carta</p>
-        <p className="text-sm" style={{ color: `color-mix(in srgb, ${theme.textColor} 55%, transparent)` }}>
+        <p className="text-2xl font-bold" style={{ color: theme.textColor }}>
+          Carta
+        </p>
+        <p
+          className="text-sm"
+          style={{
+            color: `color-mix(in srgb, ${theme.textColor} 55%, transparent)`,
+          }}
+        >
           Descubrí nuestros platos
         </p>
       </div>
@@ -351,25 +395,40 @@ function MenuPreview({ theme, fontFamily }: { theme: RestaurantTheme; fontFamily
           style={{ background: theme.cardColor }}
         >
           <div>
-            <p className="font-bold text-lg" style={{ color: cardText }}>{section.name}</p>
+            <p className="font-bold text-lg" style={{ color: cardText }}>
+              {section.name}
+            </p>
             {section.description && (
-              <p className="text-xs" style={{ color: cardMuted }}>{section.description}</p>
+              <p className="text-xs" style={{ color: cardMuted }}>
+                {section.description}
+              </p>
             )}
           </div>
           <div className="space-y-3">
             {section.items.map((item) => (
               <div key={item.name}>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-semibold text-sm flex-1" style={{ color: cardText }}>
+                  <span
+                    className="font-semibold text-sm flex-1"
+                    style={{ color: cardText }}
+                  >
                     {item.name}
                   </span>
-                  <div className="flex-1 h-px self-center" style={{ background: cardText, opacity: 0.2 }} />
-                  <span className="font-bold text-sm shrink-0" style={{ color: cardText }}>
+                  <div
+                    className="flex-1 h-px self-center"
+                    style={{ background: cardText, opacity: 0.2 }}
+                  />
+                  <span
+                    className="font-bold text-sm shrink-0"
+                    style={{ color: cardText }}
+                  >
                     {item.price}
                   </span>
                 </div>
                 {item.description && (
-                  <p className="text-xs mt-0.5" style={{ color: cardMuted }}>{item.description}</p>
+                  <p className="text-xs mt-0.5" style={{ color: cardMuted }}>
+                    {item.description}
+                  </p>
                 )}
               </div>
             ))}

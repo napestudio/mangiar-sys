@@ -135,7 +135,7 @@ export default function HomePageConfigClient({
 
       <Tabs defaultValue="contenido">
         <TabsList>
-          <TabsTrigger value="contenido">Contenido</TabsTrigger>
+          <TabsTrigger value="contenido">Links</TabsTrigger>
           <TabsTrigger value="apariencia">Diseño</TabsTrigger>
         </TabsList>
 
