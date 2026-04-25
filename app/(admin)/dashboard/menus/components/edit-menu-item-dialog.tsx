@@ -12,54 +12,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 
 interface EditMenuItemDialogProps {
   item: SerializedMenuItem;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: () => void;
+  onItemUpdated: (data: Partial<SerializedMenuItem>) => void;
 }
 
 export function EditMenuItemDialog({
   item,
   open,
   onOpenChange,
-  onUpdate,
+  onItemUpdated,
 }: EditMenuItemDialogProps) {
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
 
-  // Form state
   const [customPrice, setCustomPrice] = useState<string>(
     item.customPrice?.toString() || "",
+  );
+  const [customDescription, setCustomDescription] = useState<string>(
+    item.customDescription || "",
   );
   const [isAvailable, setIsAvailable] = useState(item.isAvailable);
   const [isFeatured, setIsFeatured] = useState(item.isFeatured);
 
+  // Reset form state every time the dialog opens so it reflects the current item
+  useEffect(() => {
+    if (open) {
+      setCustomPrice(item.customPrice?.toString() || "");
+      setCustomDescription(item.customDescription || "");
+      setIsAvailable(item.isAvailable);
+      setIsFeatured(item.isFeatured);
+    }
+  }, [open, item]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    startTransition(async () => {
-      const result = await updateMenuItem(item.id, {
-        customPrice: customPrice ? Number(customPrice) : null,
-        isAvailable,
-        isFeatured,
-      });
+    const newCustomPrice = customPrice ? Number(customPrice) : null;
+    const newCustomDescription = customDescription.trim() || null;
+    const update = { customPrice: newCustomPrice, customDescription: newCustomDescription, isAvailable, isFeatured };
 
-      if (result.success) {
-        toast({
-          title: "Éxito",
-          description: "Producto actualizado correctamente",
+    // Optimistic: close immediately and update parent
+    onItemUpdated(update);
+    onOpenChange(false);
+
+    // Fire server action in background
+    updateMenuItem(item.id, update).then((result) => {
+      if (!result.success) {
+        // Revert
+        onItemUpdated({
+          customPrice: item.customPrice,
+          customDescription: item.customDescription,
+          isAvailable: item.isAvailable,
+          isFeatured: item.isFeatured,
         });
-        onUpdate();
-        onOpenChange(false);
-      } else {
         toast({
           variant: "destructive",
           title: "Error",
@@ -70,7 +83,6 @@ export function EditMenuItemDialog({
   };
 
   const basePrice = item.product?.basePrice;
-  const displayPrice = customPrice || basePrice?.toString() || "0";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,20 +94,6 @@ export function EditMenuItemDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Base Price Info */}
-            {basePrice && (
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-600">
-                  <strong>Precio base del producto:</strong> $
-                  {basePrice.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Este es el precio configurado según el tipo de menú. Puedes
-                  sobrescribirlo con un precio personalizado.
-                </p>
-              </div>
-            )}
-
             {/* Custom Price */}
             <div className="space-y-2">
               <Label htmlFor="customPrice">
@@ -115,29 +113,21 @@ export function EditMenuItemDialog({
               </p>
             </div>
 
-            {/* Price Preview */}
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900">
-                <strong>Precio que se mostrará:</strong> $
-                {Number(displayPrice).toFixed(2)}
-              </p>
-            </div>
-
-            {/* Available Toggle */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isAvailable"
-                checked={isAvailable}
-                onCheckedChange={(checked) =>
-                  setIsAvailable(checked as boolean)
-                }
-              />
-              <Label
-                htmlFor="isAvailable"
-                className="font-normal cursor-pointer"
-              >
-                Disponible en el menú
+            {/* Custom Description */}
+            <div className="space-y-2">
+              <Label htmlFor="customDescription">
+                Descripción Personalizada (opcional)
               </Label>
+              <Textarea
+                id="customDescription"
+                value={customDescription}
+                onChange={(e) => setCustomDescription(e.target.value)}
+                placeholder={item.product?.description || "Descripción del producto"}
+                rows={3}
+              />
+              <p className="text-xs text-gray-500">
+                Deja vacío para usar la descripción base del producto
+              </p>
             </div>
 
             {/* Featured Toggle */}
@@ -154,6 +144,22 @@ export function EditMenuItemDialog({
                 Producto destacado
               </Label>
             </div>
+            {/* Available Toggle */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isAvailable"
+                checked={isAvailable}
+                onCheckedChange={(checked) =>
+                  setIsAvailable(checked as boolean)
+                }
+              />
+              <Label
+                htmlFor="isAvailable"
+                className="font-normal cursor-pointer"
+              >
+                Disponible
+              </Label>
+            </div>
           </div>
 
           <DialogFooter>
@@ -161,14 +167,10 @@ export function EditMenuItemDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Guardar Cambios
-            </Button>
+            <Button type="submit">Guardar Cambios</Button>
           </DialogFooter>
         </form>
       </DialogContent>

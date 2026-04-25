@@ -54,6 +54,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, FolderPlus } from "lucide-react";
 import { SortableItem } from "./sortable-item";
 import { SortableGroup } from "./sortable-group";
@@ -62,6 +63,7 @@ interface SectionContentManagerProps {
   section: SerializedMenuSection;
   restaurantId: string;
   onUpdate: () => void;
+  onItemCountChanged?: (count: number) => void;
 }
 
 // Union type for items that can be in the sortable list
@@ -73,45 +75,41 @@ export function SectionContentManager({
   section,
   restaurantId,
   onUpdate,
+  onItemCountChanged,
 }: SectionContentManagerProps) {
+  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const isOptimisticPending = useRef(false);
 
-  // Only render DndContext on client to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Build a unified list of items and groups sorted by order
   const buildSortedElements = useCallback((): SectionElement[] => {
     const elements: SectionElement[] = [];
-
-    // Add ungrouped items
-    (section.menuItems || []).forEach((item) => {
-      elements.push({ type: "item", data: item });
-    });
-
-    // Add groups
-    (section.menuItemGroups || []).forEach((group) => {
-      elements.push({ type: "group", data: group });
-    });
-
-    // Sort by order
+    (section.menuItems || []).forEach((item) => elements.push({ type: "item", data: item }));
+    (section.menuItemGroups || []).forEach((group) => elements.push({ type: "group", data: group }));
     return elements.sort((a, b) => a.data.order - b.data.order);
   }, [section]);
 
-  const [elements, setElements] =
-    useState<SectionElement[]>(buildSortedElements);
-  const [activeElement, setActiveElement] = useState<SectionElement | null>(
-    null,
-  );
+  const [elements, setElements] = useState<SectionElement[]>(buildSortedElements);
+  const [activeElement, setActiveElement] = useState<SectionElement | null>(null);
 
   // Sync elements when section changes (skip during optimistic updates)
   useEffect(() => {
     if (isOptimisticPending.current) return;
     setElements(buildSortedElements());
   }, [buildSortedElements]);
+
+  // Report live item count to parent
+  useEffect(() => {
+    const ungrouped = elements.filter((el) => el.type === "item").length;
+    const grouped = elements
+      .filter((el): el is { type: "group"; data: SerializedMenuItemGroup } => el.type === "group")
+      .reduce((sum, el) => sum + (el.data.menuItems?.length ?? 0), 0);
+    onItemCountChanged?.(ungrouped + grouped);
+  }, [elements, onItemCountChanged]);
 
   // Dialog states
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
@@ -128,10 +126,12 @@ export function SectionContentManager({
       category: { name: string } | null;
     }>
   >([]);
+  const productsCache = useRef<typeof availableProducts | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [customPrice, setCustomPrice] = useState("");
+  const [showCustomPrice, setShowCustomPrice] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Add group form state
@@ -140,17 +140,10 @@ export function SectionContentManager({
 
   // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Get all product IDs already in this section
   const getAllSectionItemIds = useCallback(() => {
     const ids = new Set<string>();
     section.menuItems?.forEach((item) => ids.add(item.productId));
@@ -161,8 +154,13 @@ export function SectionContentManager({
   }, [section]);
 
   const loadAvailableProducts = useCallback(async () => {
-    const products = await getAvailableProducts(restaurantId);
     const alreadyAdded = getAllSectionItemIds();
+    if (productsCache.current) {
+      setAvailableProducts(productsCache.current.filter((p) => !alreadyAdded.has(p.id)));
+      return;
+    }
+    const products = await getAvailableProducts(restaurantId);
+    productsCache.current = products;
     setAvailableProducts(products.filter((p) => !alreadyAdded.has(p.id)));
   }, [restaurantId, getAllSectionItemIds]);
 
@@ -172,18 +170,16 @@ export function SectionContentManager({
     }
   }, [isAddItemDialogOpen, loadAvailableProducts]);
 
-  // Get the ID for sorting (prefixed to distinguish items from groups)
   const getElementId = (el: SectionElement) =>
     el.type === "item" ? `item-${el.data.id}` : `group-${el.data.id}`;
 
-  // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const element = elements.find((el) => getElementId(el) === active.id);
     setActiveElement(element || null);
   };
 
-  // Handle drag end
+  // Drag end — local state already updated, no onUpdate() needed
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveElement(null);
@@ -196,51 +192,103 @@ export function SectionContentManager({
     if (oldIndex === -1 || newIndex === -1) return;
 
     const newElements = arrayMove(elements, oldIndex, newIndex);
-    setElements(newElements);
+    setElements(newElements); // Optimistic
 
-    // Save the new order
     startTransition(async () => {
       const items = newElements
-        .filter(
-          (el): el is { type: "item"; data: SerializedMenuItem } =>
-            el.type === "item",
-        )
-        .map((el, index) => ({
-          id: el.data.id,
-          order: index,
-          menuItemGroupId: el.data.menuItemGroupId,
-        }));
+        .filter((el): el is { type: "item"; data: SerializedMenuItem } => el.type === "item")
+        .map((el, index) => ({ id: el.data.id, order: index, menuItemGroupId: el.data.menuItemGroupId }));
 
       const groups = newElements
-        .filter(
-          (el): el is { type: "group"; data: SerializedMenuItemGroup } =>
-            el.type === "group",
-        )
-        .map((el) => ({
-          id: el.data.id,
-          order: newElements.findIndex((e) => e === el),
-        }));
+        .filter((el): el is { type: "group"; data: SerializedMenuItemGroup } => el.type === "group")
+        .map((el) => ({ id: el.data.id, order: newElements.findIndex((e) => e === el) }));
 
       const result = await reorderSectionContent({ items, groups });
-      if (result.success) {
-        onUpdate();
+      if (!result.success) {
+        setElements(elements); // Revert
+        toast({ variant: "destructive", title: "Error", description: "Error al reordenar" });
       }
+      // No onUpdate() — local state is already correct
     });
   };
 
-  // Add item handler
+  // ─── Item-level callbacks ────────────────────────────────────────────────
+  const handleItemUpdated = useCallback(
+    (itemId: string, data: Partial<SerializedMenuItem>) => {
+      setElements((prev) =>
+        prev.map((el) =>
+          el.type === "item" && el.data.id === itemId
+            ? { type: "item", data: { ...el.data, ...data } }
+            : el,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleItemRemoved = useCallback((itemId: string) => {
+    setElements((prev) => prev.filter((el) => !(el.type === "item" && el.data.id === itemId)));
+  }, []);
+
+  // ─── Group-level callbacks ───────────────────────────────────────────────
+  const handleGroupUpdated = useCallback(
+    (groupId: string, data: Partial<SerializedMenuItemGroup>) => {
+      setElements((prev) =>
+        prev.map((el) =>
+          el.type === "group" && el.data.id === groupId
+            ? { type: "group", data: { ...el.data, ...data } }
+            : el,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleGroupItemUpdated = useCallback(
+    (groupId: string, itemId: string, data: Partial<SerializedMenuItem>) => {
+      setElements((prev) =>
+        prev.map((el) => {
+          if (el.type !== "group" || el.data.id !== groupId) return el;
+          return {
+            type: "group",
+            data: {
+              ...el.data,
+              menuItems: (el.data.menuItems ?? []).map((item) =>
+                item.id === itemId ? { ...item, ...data } : item,
+              ),
+            },
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  const handleGroupItemRemoved = useCallback((groupId: string, itemId: string) => {
+    setElements((prev) =>
+      prev.map((el) => {
+        if (el.type !== "group" || el.data.id !== groupId) return el;
+        return {
+          type: "group",
+          data: {
+            ...el.data,
+            menuItems: (el.data.menuItems ?? []).filter((item) => item.id !== itemId),
+          },
+        };
+      }),
+    );
+  }, []);
+
+  // ─── Add item ────────────────────────────────────────────────────────────
   const handleAddItem = async () => {
     if (!selectedProductId) {
-      alert("Selecciona un producto");
+      toast({ variant: "destructive", title: "Error", description: "Selecciona un producto" });
       return;
     }
 
-    const selectedProduct = availableProducts.find(
-      (p) => p.id === selectedProductId,
-    );
+    const selectedProduct = availableProducts.find((p) => p.id === selectedProductId);
     if (!selectedProduct) return;
 
-    // Close dialog immediately
     setIsAddItemDialogOpen(false);
     const productId = selectedProductId;
     const customPriceValue = customPrice ? Number(customPrice) : undefined;
@@ -248,9 +296,9 @@ export function SectionContentManager({
     setSelectedProductId("");
     setSearchQuery("");
     setCustomPrice("");
+    setShowCustomPrice(false);
     setIsFeatured(false);
 
-    // Build optimistic item with temp ID
     const tempId = `optimistic-${crypto.randomUUID()}`;
     const optimisticItem: SerializedMenuItem = {
       id: tempId,
@@ -259,6 +307,7 @@ export function SectionContentManager({
       menuSectionId: section.id,
       menuItemGroupId: null,
       customPrice: customPriceValue ?? null,
+      customDescription: null,
       isAvailable: true,
       isFeatured: featuredValue,
       createdAt: new Date().toISOString(),
@@ -276,6 +325,7 @@ export function SectionContentManager({
     const previousElements = elements;
     isOptimisticPending.current = true;
     setElements((prev) => [...prev, { type: "item", data: optimisticItem }]);
+    productsCache.current = null; // Invalidate cache
 
     startTransition(async () => {
       const result = await addMenuItem({
@@ -288,33 +338,10 @@ export function SectionContentManager({
       });
 
       if (result.success && result.menuItem) {
-        const mi = result.menuItem;
-        const confirmedItem: SerializedMenuItem = {
-          id: mi.id,
-          order: mi.order,
-          productId: mi.productId,
-          menuSectionId: mi.menuSectionId,
-          menuItemGroupId: mi.menuItemGroupId ?? null,
-          customPrice: mi.customPrice ?? null,
-          isAvailable: mi.isAvailable,
-          isFeatured: mi.isFeatured,
-          createdAt: String(mi.createdAt),
-          updatedAt: String(mi.updatedAt),
-          product: mi.product
-            ? {
-                id: mi.product.id,
-                name: mi.product.name,
-                description: mi.product.description,
-                imageUrl: mi.product.imageUrl,
-                categoryId: mi.product.categoryId,
-                tags: mi.product.tags ?? [],
-              }
-            : undefined,
-        };
         setElements((prev) =>
           prev.map((el) =>
             el.type === "item" && el.data.id === tempId
-              ? { type: "item", data: confirmedItem }
+              ? { type: "item", data: result.menuItem! }
               : el,
           ),
         );
@@ -322,27 +349,25 @@ export function SectionContentManager({
       } else {
         setElements(previousElements);
         isOptimisticPending.current = false;
-        alert(result.error || "Error al agregar el producto");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al agregar el producto" });
       }
     });
   };
 
-  // Add group handler
+  // ─── Add group ───────────────────────────────────────────────────────────
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) {
-      alert("El nombre del grupo es obligatorio");
+      toast({ variant: "destructive", title: "Error", description: "El nombre del grupo es obligatorio" });
       return;
     }
 
     const groupName = newGroupName.trim();
     const groupDescription = newGroupDescription.trim() || undefined;
 
-    // Close dialog immediately
     setIsAddGroupDialogOpen(false);
     setNewGroupName("");
     setNewGroupDescription("");
 
-    // Build optimistic group with temp ID
     const tempId = `optimistic-${crypto.randomUUID()}`;
     const optimisticGroup: SerializedMenuItemGroup = {
       id: tempId,
@@ -379,23 +404,28 @@ export function SectionContentManager({
       } else {
         setElements(previousElements);
         isOptimisticPending.current = false;
-        alert(result.error || "Error al crear el grupo");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al crear el grupo" });
       }
     });
   };
 
-  // Delete group handler
-  const handleDeleteGroup = async () => {
+  // ─── Delete group — optimistic ───────────────────────────────────────────
+  const handleDeleteGroup = () => {
     if (!deletingGroupId) return;
 
+    const groupIdToDelete = deletingGroupId;
+    const previousElements = elements;
+
+    setElements((prev) => prev.filter((el) => !(el.type === "group" && el.data.id === groupIdToDelete)));
+    setDeletingGroupId(null);
+
     startTransition(async () => {
-      const result = await deleteMenuItemGroup(deletingGroupId);
-      if (result.success) {
-        setDeletingGroupId(null);
-        onUpdate();
-      } else {
-        alert(result.error || "Error al eliminar el grupo");
+      const result = await deleteMenuItemGroup(groupIdToDelete);
+      if (!result.success) {
+        setElements(previousElements); // Revert
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al eliminar el grupo" });
       }
+      // No onUpdate() — local state already reflects deletion
     });
   };
 
@@ -409,9 +439,7 @@ export function SectionContentManager({
     <div className="space-y-3">
       {/* Sortable content */}
       {!isMounted ? (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          Cargando...
-        </div>
+        <div className="text-center py-8 text-gray-500 text-sm">Cargando...</div>
       ) : (
         <DndContext
           sensors={sensors}
@@ -438,7 +466,8 @@ export function SectionContentManager({
                       key={getElementId(element)}
                       id={getElementId(element)}
                       item={element.data}
-                      onUpdate={onUpdate}
+                      onItemUpdated={(data) => handleItemUpdated(element.data.id, data)}
+                      onItemRemoved={() => handleItemRemoved(element.data.id)}
                       isPending={isPending}
                     />
                   ) : (
@@ -448,7 +477,13 @@ export function SectionContentManager({
                       group={element.data}
                       section={section}
                       restaurantId={restaurantId}
-                      onUpdate={onUpdate}
+                      onGroupUpdated={(data) => handleGroupUpdated(element.data.id, data)}
+                      onGroupItemUpdated={(itemId, data) =>
+                        handleGroupItemUpdated(element.data.id, itemId, data)
+                      }
+                      onGroupItemRemoved={(itemId) =>
+                        handleGroupItemRemoved(element.data.id, itemId)
+                      }
                       onDelete={() => setDeletingGroupId(element.data.id)}
                       isPending={isPending}
                     />
@@ -525,19 +560,14 @@ export function SectionContentManager({
                     setSelectedProductId("");
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  onBlur={() =>
-                    setTimeout(() => setShowSuggestions(false), 200)
-                  }
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   placeholder="Buscar producto..."
                   autoComplete="off"
                 />
-
                 {showSuggestions && searchQuery && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredProducts.length === 0 ? (
-                      <div className="p-3 text-sm text-gray-500">
-                        No se encontraron productos
-                      </div>
+                      <div className="p-3 text-sm text-gray-500">No se encontraron productos</div>
                     ) : (
                       filteredProducts.map((product) => (
                         <button
@@ -551,13 +581,9 @@ export function SectionContentManager({
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="font-medium text-sm">
-                            {product.name}
-                          </div>
+                          <div className="font-medium text-sm">{product.name}</div>
                           {product.category && (
-                            <div className="text-xs text-gray-500">
-                              {product.category.name}
-                            </div>
+                            <div className="text-xs text-gray-500">{product.category.name}</div>
                           )}
                         </button>
                       ))
@@ -570,18 +596,26 @@ export function SectionContentManager({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="customPrice">
-                Precio Personalizado (opcional)
-              </Label>
-              <NumberInput
-                id="customPrice"
-                step="0.01"
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder="Deja vacio para usar precio base"
-              />
-            </div>
+            {!showCustomPrice ? (
+              <button
+                type="button"
+                onClick={() => setShowCustomPrice(true)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                + Agregar precio personalizado
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="customPrice">Precio Personalizado</Label>
+                <NumberInput
+                  id="customPrice"
+                  step="0.01"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                  placeholder="Deja vacío para usar precio base"
+                />
+              </div>
+            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -603,6 +637,7 @@ export function SectionContentManager({
                 setSelectedProductId("");
                 setSearchQuery("");
                 setCustomPrice("");
+                setShowCustomPrice(false);
                 setIsFeatured(false);
               }}
             >
@@ -616,16 +651,12 @@ export function SectionContentManager({
       </Dialog>
 
       {/* Add Group Dialog */}
-      <Dialog
-        open={isAddGroupDialogOpen}
-        onOpenChange={setIsAddGroupDialogOpen}
-      >
+      <Dialog open={isAddGroupDialogOpen} onOpenChange={setIsAddGroupDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Crear Grupo de Productos</DialogTitle>
             <DialogDescription>
-              Los grupos permiten organizar productos relacionados dentro de una
-              seccion
+              Los grupos permiten organizar productos relacionados dentro de una seccion
             </DialogDescription>
           </DialogHeader>
 
@@ -676,7 +707,9 @@ export function SectionContentManager({
       {/* Delete Group Confirmation */}
       <AlertDialog
         open={!!deletingGroupId}
-        onOpenChange={() => setDeletingGroupId(null)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingGroupId(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

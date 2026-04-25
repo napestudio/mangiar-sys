@@ -56,6 +56,7 @@ function serializeMenuItem(
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
     customPrice: item.customPrice ? Number(item.customPrice) : null,
+    customDescription: item.customDescription,
     product: {
       id: item.product.id,
       name: item.product.name,
@@ -249,7 +250,7 @@ export async function updateMenu(
   data: {
     name?: string;
     slug?: string;
-    description?: string;
+    description?: string | null;
     branchId?: string;
     isActive?: boolean;
     showPrices?: boolean;
@@ -365,7 +366,6 @@ export async function updateMenuSection(
       data,
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true, section };
   } catch (error) {
     console.error("Error updating menu section:", error);
@@ -403,38 +403,31 @@ export async function addMenuItem(data: {
   customPrice?: number;
 }) {
   try {
-    const menuItem = await prisma.menuItem.create({
-      data: {
-        menuSectionId: data.menuSectionId,
-        productId: data.productId,
-        menuItemGroupId: data.menuItemGroupId ?? null,
-        order: data.order ?? 0,
-        isAvailable: data.isAvailable ?? true,
-        isFeatured: data.isFeatured ?? false,
-        customPrice: data.customPrice,
-      },
-      include: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            imageUrl: true,
-            categoryId: true,
-            tags: true,
-          },
+    const [section, menuItem] = await Promise.all([
+      prisma.menuSection.findUnique({
+        where: { id: data.menuSectionId },
+        select: { menu: { select: { branchId: true, priceType: true } } },
+      }),
+      prisma.menuItem.create({
+        data: {
+          menuSectionId: data.menuSectionId,
+          productId: data.productId,
+          menuItemGroupId: data.menuItemGroupId ?? null,
+          order: data.order ?? 0,
+          isAvailable: data.isAvailable ?? true,
+          isFeatured: data.isFeatured ?? false,
+          customPrice: data.customPrice,
         },
-      },
-    });
+        include: menuItemInclude,
+      }),
+    ]);
 
-    revalidatePath("/dashboard/menus");
-    // Serialize Decimal to number for Client Components
+    const branchId = section?.menu.branchId ?? "";
+    const priceType = section?.menu.priceType ?? "DINE_IN";
+
     return {
       success: true,
-      menuItem: {
-        ...menuItem,
-        customPrice: menuItem.customPrice ? Number(menuItem.customPrice) : null,
-      },
+      menuItem: serializeMenuItem(menuItem as MenuItemWithProduct, branchId, priceType),
     };
   } catch (error) {
     console.error("Error adding menu item:", error);
@@ -452,6 +445,7 @@ export async function updateMenuItem(
     isAvailable?: boolean;
     isFeatured?: boolean;
     customPrice?: number | null;
+    customDescription?: string | null;
     menuItemGroupId?: string | null;
   }
 ) {
@@ -467,13 +461,15 @@ export async function updateMenuItem(
         ...(data.customPrice !== undefined && {
           customPrice: data.customPrice,
         }),
+        ...(data.customDescription !== undefined && {
+          customDescription: data.customDescription,
+        }),
         ...(data.menuItemGroupId !== undefined && {
           menuItemGroupId: data.menuItemGroupId,
         }),
       },
     });
 
-    revalidatePath("/dashboard/menus");
     // Serialize Decimal to number for Client Components
     return {
       success: true,
@@ -497,7 +493,6 @@ export async function removeMenuItem(itemId: string) {
       where: { id: itemId },
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true };
   } catch (error) {
     console.error("Error removing menu item:", error);
@@ -521,7 +516,6 @@ export async function reorderMenuSections(
       }
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true };
   } catch (error) {
     console.error("Error reordering menu sections:", error);
@@ -543,7 +537,6 @@ export async function reorderMenuItems(items: { id: string; order: number }[]) {
       }
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true };
   } catch (error) {
     console.error("Error reordering menu items:", error);
@@ -739,7 +732,6 @@ export async function updateMenuItemGroup(
       },
     });
 
-    revalidatePath("/dashboard/menus");
     return {
       success: true,
       group: {
@@ -787,7 +779,6 @@ export async function reorderMenuItemGroups(
       }
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true };
   } catch (error) {
     console.error("Error reordering menu item groups:", error);
@@ -808,7 +799,6 @@ export async function moveMenuItemToGroup(
       data: { menuItemGroupId: groupId },
     });
 
-    revalidatePath("/dashboard/menus");
     return {
       success: true,
       menuItem: {
@@ -846,7 +836,6 @@ export async function reorderSectionContent(data: {
       }
     });
 
-    revalidatePath("/dashboard/menus");
     return { success: true };
   } catch (error) {
     console.error("Error reordering section content:", error);

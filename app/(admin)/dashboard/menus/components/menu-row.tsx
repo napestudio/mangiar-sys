@@ -149,7 +149,10 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast({ title: "Éxito", description: "Código QR descargado correctamente" });
+      toast({
+        title: "Éxito",
+        description: "Código QR descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading QR code:", error);
       toast({
@@ -171,10 +174,7 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
     <>
       <TableRow className={!menu.isActive ? "opacity-60" : ""}>
         <TableCell>
-          <Link
-            href={editHref}
-            className="font-medium hover:underline"
-          >
+          <Link href={editHref} className="font-medium hover:underline">
             {menu.name}
           </Link>
         </TableCell>
@@ -182,14 +182,19 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
         <TableCell className="text-muted-foreground">{itemCount}</TableCell>
         <TableCell>
           {menu.isActive ? (
-            <Badge className="bg-green-500 hover:bg-green-500">Activo</Badge>
+            <Badge className="bg-green-600 hover:bg-green-500">Activo</Badge>
           ) : (
             <Badge variant="secondary">Inactivo</Badge>
           )}
         </TableCell>
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
-            <Button onClick={handleShowQR} variant="ghost" size="icon" title="Ver QR">
+            <Button
+              onClick={handleShowQR}
+              variant="ghost"
+              size="icon"
+              title="Ver QR"
+            >
               <QrCode className="h-4 w-4" />
             </Button>
             <Link
@@ -245,7 +250,10 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
       </TableRow>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar menú?</AlertDialogTitle>
@@ -255,7 +263,9 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -290,7 +300,11 @@ export function MenuRow({ menu, editHref, onDelete, onUpdate }: MenuRowProps) {
               {menuUrl}
             </div>
             <div className="flex gap-2 w-full">
-              <Button onClick={handleDownloadQR} variant="outline" className="flex-1">
+              <Button
+                onClick={handleDownloadQR}
+                variant="outline"
+                className="flex-1"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Descargar QR
               </Button>

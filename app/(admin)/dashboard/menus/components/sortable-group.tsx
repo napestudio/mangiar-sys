@@ -49,6 +49,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
 import {
   GripVertical,
   Trash2,
@@ -66,7 +67,9 @@ interface SortableGroupProps {
   group: SerializedMenuItemGroup;
   section: SerializedMenuSection;
   restaurantId: string;
-  onUpdate: () => void;
+  onGroupUpdated: (data: Partial<SerializedMenuItemGroup>) => void;
+  onGroupItemUpdated: (itemId: string, data: Partial<SerializedMenuItem>) => void;
+  onGroupItemRemoved: (itemId: string) => void;
   onDelete: () => void;
   isPending?: boolean;
 }
@@ -76,16 +79,18 @@ export function SortableGroup({
   group,
   section,
   restaurantId,
-  onUpdate,
+  onGroupUpdated,
+  onGroupItemUpdated,
+  onGroupItemRemoved,
   onDelete,
   isPending: parentPending = false,
 }: SortableGroupProps) {
+  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const isLoading = isPending || parentPending;
   const isOptimisticPending = useRef(false);
 
-  // Only render DndContext on client to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -107,13 +112,11 @@ export function SortableGroup({
   // Local state
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(group.name);
+  const [displayDescription, setDisplayDescription] = useState(group.description || "");
   const [editName, setEditName] = useState(group.name);
-  const [editDescription, setEditDescription] = useState(
-    group.description || "",
-  );
-  const [items, setItems] = useState<SerializedMenuItem[]>(
-    group.menuItems || [],
-  );
+  const [editDescription, setEditDescription] = useState(group.description || "");
+  const [items, setItems] = useState<SerializedMenuItem[]>(group.menuItems || []);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   // Add item dialog
@@ -127,10 +130,12 @@ export function SortableGroup({
       category: { name: string } | null;
     }>
   >([]);
+  const productsCache = useRef<typeof availableProducts | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [customPrice, setCustomPrice] = useState("");
+  const [showCustomPrice, setShowCustomPrice] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Sync items when group changes (skip during optimistic updates)
@@ -139,19 +144,20 @@ export function SortableGroup({
     setItems(group.menuItems || []);
   }, [group.menuItems]);
 
+  // Sync display name/description when group prop changes (skip during optimistic)
+  useEffect(() => {
+    if (isOptimisticPending.current) return;
+    setDisplayName(group.name);
+    setDisplayDescription(group.description || "");
+  }, [group.name, group.description]);
+
   // DnD sensors for internal sorting
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Get all product IDs in the section
+  // Get all product IDs in the section (for deduplication)
   const getAllSectionItemIds = useCallback(() => {
     const ids = new Set<string>();
     section.menuItems?.forEach((item) => ids.add(item.productId));
@@ -162,8 +168,13 @@ export function SortableGroup({
   }, [section]);
 
   const loadAvailableProducts = useCallback(async () => {
-    const products = await getAvailableProducts(restaurantId);
     const alreadyAdded = getAllSectionItemIds();
+    if (productsCache.current) {
+      setAvailableProducts(productsCache.current.filter((p) => !alreadyAdded.has(p.id)));
+      return;
+    }
+    const products = await getAvailableProducts(restaurantId);
+    productsCache.current = products;
     setAvailableProducts(products.filter((p) => !alreadyAdded.has(p.id)));
   }, [restaurantId, getAllSectionItemIds]);
 
@@ -173,75 +184,83 @@ export function SortableGroup({
     }
   }, [isAddDialogOpen, loadAvailableProducts]);
 
-  // Handle save edit
+  // Handle save edit — optimistic
   const handleSaveEdit = () => {
     if (!editName.trim()) return;
 
-    startTransition(async () => {
-      const result = await updateMenuItemGroup(group.id, {
-        name: editName.trim(),
-        description: editDescription.trim() || undefined,
-      });
+    const prevName = displayName;
+    const prevDescription = displayDescription;
+    const newName = editName.trim();
+    const newDescription = editDescription.trim();
+
+    // Optimistic update
+    setDisplayName(newName);
+    setDisplayDescription(newDescription);
+    setIsEditing(false);
+    isOptimisticPending.current = true;
+
+    updateMenuItemGroup(group.id, {
+      name: newName,
+      description: newDescription || undefined,
+    }).then((result) => {
+      isOptimisticPending.current = false;
       if (result.success) {
-        setIsEditing(false);
-        onUpdate();
+        onGroupUpdated({ name: newName, description: newDescription || null });
+      } else {
+        setDisplayName(prevName);
+        setDisplayDescription(prevDescription);
+        setEditName(prevName);
+        setEditDescription(prevDescription);
+        setIsEditing(true);
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al guardar el grupo" });
       }
     });
   };
 
-  // Handle internal item drag end
+  // Handle internal item drag end — no onUpdate needed (local state already updated)
   const handleItemDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveItemId(null);
 
     if (!over || active.id === over.id) return;
 
-    const oldIndex = items.findIndex(
-      (item) => `group-item-${item.id}` === active.id,
-    );
-    const newIndex = items.findIndex(
-      (item) => `group-item-${item.id}` === over.id,
-    );
+    const oldIndex = items.findIndex((item) => `group-item-${item.id}` === active.id);
+    const newIndex = items.findIndex((item) => `group-item-${item.id}` === over.id);
 
     if (oldIndex === -1 || newIndex === -1) return;
 
     const newItems = arrayMove(items, oldIndex, newIndex);
-    setItems(newItems);
+    setItems(newItems); // Optimistic
 
-    // Save the new order
     startTransition(async () => {
-      const updates = newItems.map((item, index) => ({
-        id: item.id,
-        order: index,
-      }));
+      const updates = newItems.map((item, index) => ({ id: item.id, order: index }));
       const result = await reorderMenuItems(updates);
-      if (result.success) {
-        onUpdate();
+      if (!result.success) {
+        setItems(items); // Revert
+        toast({ variant: "destructive", title: "Error", description: "Error al reordenar" });
       }
+      // No onUpdate() — local state is correct
     });
   };
 
-  // Handle add item
+  // Handle add item — optimistic with temp ID
   const handleAddItem = async () => {
     if (!selectedProductId) return;
 
-    const selectedProduct = availableProducts.find(
-      (p) => p.id === selectedProductId,
-    );
+    const selectedProduct = availableProducts.find((p) => p.id === selectedProductId);
     if (!selectedProduct) return;
 
     const productId = selectedProductId;
     const customPriceValue = customPrice ? Number(customPrice) : undefined;
     const featuredValue = isFeatured;
 
-    // Close dialog immediately
     setIsAddDialogOpen(false);
     setSelectedProductId("");
     setSearchQuery("");
     setCustomPrice("");
+    setShowCustomPrice(false);
     setIsFeatured(false);
 
-    // Build optimistic item with temp ID
     const tempId = `optimistic-${crypto.randomUUID()}`;
     const optimisticItem: SerializedMenuItem = {
       id: tempId,
@@ -250,6 +269,7 @@ export function SortableGroup({
       menuSectionId: section.id,
       menuItemGroupId: group.id,
       customPrice: customPriceValue ?? null,
+      customDescription: null,
       isAvailable: true,
       isFeatured: featuredValue,
       createdAt: new Date().toISOString(),
@@ -267,6 +287,8 @@ export function SortableGroup({
     const previousItems = items;
     isOptimisticPending.current = true;
     setItems((prev) => [...prev, optimisticItem]);
+    // Invalidate product cache so newly added product is excluded next time
+    productsCache.current = null;
 
     startTransition(async () => {
       const result = await addMenuItem({
@@ -280,39 +302,27 @@ export function SortableGroup({
       });
 
       if (result.success && result.menuItem) {
-        const mi = result.menuItem;
-        const confirmedItem: SerializedMenuItem = {
-          id: mi.id,
-          order: mi.order,
-          productId: mi.productId,
-          menuSectionId: mi.menuSectionId,
-          menuItemGroupId: mi.menuItemGroupId ?? null,
-          customPrice: mi.customPrice ?? null,
-          isAvailable: mi.isAvailable,
-          isFeatured: mi.isFeatured,
-          createdAt: String(mi.createdAt),
-          updatedAt: String(mi.updatedAt),
-          product: mi.product
-            ? {
-                id: mi.product.id,
-                name: mi.product.name,
-                description: mi.product.description,
-                imageUrl: mi.product.imageUrl,
-                categoryId: mi.product.categoryId,
-                tags: mi.product.tags ?? [],
-              }
-            : undefined,
-        };
-        setItems((prev) =>
-          prev.map((item) => (item.id === tempId ? confirmedItem : item)),
-        );
+        setItems((prev) => prev.map((item) => (item.id === tempId ? result.menuItem! : item)));
         isOptimisticPending.current = false;
-        // No onUpdate() — skip the full refetch
       } else {
         setItems(previousItems);
         isOptimisticPending.current = false;
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al agregar el producto" });
       }
     });
+  };
+
+  // Item-level callbacks (update local items state + propagate up)
+  const handleItemUpdated = (itemId: string, data: Partial<SerializedMenuItem>) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, ...data } : item)),
+    );
+    onGroupItemUpdated(itemId, data);
+  };
+
+  const handleItemRemoved = (itemId: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
+    onGroupItemRemoved(itemId);
   };
 
   const filteredProducts = availableProducts.filter(
@@ -346,9 +356,7 @@ export function SortableGroup({
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <ChevronRight
-                className={`h-4 w-4 transition-transform ${
-                  isExpanded ? "rotate-90" : ""
-                }`}
+                className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
               />
             </Button>
           </CollapsibleTrigger>
@@ -371,11 +379,7 @@ export function SortableGroup({
                   className="text-sm"
                 />
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    disabled={isLoading}
-                  >
+                  <Button size="sm" onClick={handleSaveEdit} disabled={isLoading}>
                     <Check className="mr-1 h-3 w-3" />
                     Guardar
                   </Button>
@@ -384,8 +388,8 @@ export function SortableGroup({
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false);
-                      setEditName(group.name);
-                      setEditDescription(group.description || "");
+                      setEditName(displayName);
+                      setEditDescription(displayDescription);
                     }}
                   >
                     <X className="mr-1 h-3 w-3" />
@@ -397,12 +401,10 @@ export function SortableGroup({
               <>
                 <div className="font-medium text-sm flex items-center gap-2">
                   <FolderOpen className="h-4 w-4 text-red-500" />
-                  {group.name}
+                  {displayName}
                 </div>
-                {group.description && (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {group.description}
-                  </div>
+                {displayDescription && (
+                  <div className="text-xs text-gray-500 mt-0.5">{displayDescription}</div>
                 )}
                 <div className="text-xs text-gray-400 mt-1">
                   {items.length} producto{items.length !== 1 ? "s" : ""}
@@ -418,7 +420,11 @@ export function SortableGroup({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setEditName(displayName);
+                  setEditDescription(displayDescription);
+                  setIsEditing(true);
+                }}
                 disabled={isLoading}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -439,11 +445,8 @@ export function SortableGroup({
         {/* Group content */}
         <CollapsibleContent>
           <div className="px-3 pb-3 space-y-2">
-            {/* Internal sortable items */}
             {!isMounted ? (
-              <div className="text-center py-4 text-gray-500 text-xs">
-                Cargando...
-              </div>
+              <div className="text-center py-4 text-gray-500 text-xs">Cargando...</div>
             ) : (
               <DndContext
                 sensors={sensors}
@@ -465,7 +468,8 @@ export function SortableGroup({
                         key={`group-item-${item.id}`}
                         id={`group-item-${item.id}`}
                         item={item}
-                        onUpdate={onUpdate}
+                        onItemUpdated={(data) => handleItemUpdated(item.id, data)}
+                        onItemRemoved={() => handleItemRemoved(item.id)}
                         isPending={isLoading}
                         isInGroup={true}
                       />
@@ -477,11 +481,7 @@ export function SortableGroup({
                   {activeItemId ? (
                     <div className="bg-white shadow-lg rounded-lg border-2 border-blue-500 opacity-90 p-3">
                       <span className="text-sm font-medium">
-                        {
-                          items.find(
-                            (i) => `group-item-${i.id}` === activeItemId,
-                          )?.product?.name
-                        }
+                        {items.find((i) => `group-item-${i.id}` === activeItemId)?.product?.name}
                       </span>
                     </div>
                   ) : null}
@@ -509,7 +509,7 @@ export function SortableGroup({
           <DialogHeader>
             <DialogTitle>Agregar Producto</DialogTitle>
             <DialogDescription>
-              Agregar producto al grupo &quot;{group.name}&quot;
+              Agregar producto al grupo &quot;{displayName}&quot;
             </DialogDescription>
           </DialogHeader>
 
@@ -529,19 +529,14 @@ export function SortableGroup({
                     setSelectedProductId("");
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  onBlur={() =>
-                    setTimeout(() => setShowSuggestions(false), 200)
-                  }
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   placeholder="Buscar producto..."
                   autoComplete="off"
                 />
-
                 {showSuggestions && searchQuery && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredProducts.length === 0 ? (
-                      <div className="p-3 text-sm text-gray-500">
-                        No se encontraron productos
-                      </div>
+                      <div className="p-3 text-sm text-gray-500">No se encontraron productos</div>
                     ) : (
                       filteredProducts.map((product) => (
                         <button
@@ -555,13 +550,9 @@ export function SortableGroup({
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="font-medium text-sm">
-                            {product.name}
-                          </div>
+                          <div className="font-medium text-sm">{product.name}</div>
                           {product.category && (
-                            <div className="text-xs text-gray-500">
-                              {product.category.name}
-                            </div>
+                            <div className="text-xs text-gray-500">{product.category.name}</div>
                           )}
                         </button>
                       ))
@@ -574,18 +565,26 @@ export function SortableGroup({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="customPrice">
-                Precio Personalizado (opcional)
-              </Label>
-              <NumberInput
-                id="customPrice"
-                step="0.01"
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder="Deja vacio para usar precio base"
-              />
-            </div>
+            {!showCustomPrice ? (
+              <button
+                type="button"
+                onClick={() => setShowCustomPrice(true)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                + Agregar precio personalizado
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="customPrice">Precio Personalizado</Label>
+                <NumberInput
+                  id="customPrice"
+                  step="0.01"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                  placeholder="Deja vacío para usar precio base"
+                />
+              </div>
+            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -593,10 +592,7 @@ export function SortableGroup({
                 checked={isFeatured}
                 onCheckedChange={(checked) => setIsFeatured(checked as boolean)}
               />
-              <Label
-                htmlFor="featured-group"
-                className="font-normal cursor-pointer"
-              >
+              <Label htmlFor="featured-group" className="font-normal cursor-pointer">
                 Marcar como producto destacado
               </Label>
             </div>
@@ -610,6 +606,7 @@ export function SortableGroup({
                 setSelectedProductId("");
                 setSearchQuery("");
                 setCustomPrice("");
+                setShowCustomPrice(false);
                 setIsFeatured(false);
               }}
             >
