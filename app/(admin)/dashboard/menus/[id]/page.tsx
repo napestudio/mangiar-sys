@@ -20,6 +20,10 @@ export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
     branchResult.success && branchResult.data
       ? branchResult.data.restaurantId
       : "";
+  const restaurantSlug =
+    branchResult.success && branchResult.data
+      ? branchResult.data.restaurant?.slug ?? ""
+      : "";
 
   if (!restaurantId) {
     notFound();
@@ -27,7 +31,7 @@ export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
 
   // Handle "new" route for creating new menus
   if (id === "new") {
-    return <MenuEditorClient menu={null} branchId={branchId} restaurantId={restaurantId} />;
+    return <MenuEditorClient menu={null} branchId={branchId} restaurantId={restaurantId} restaurantSlug={restaurantSlug} />;
   }
 
   // Fetch existing menu
@@ -37,5 +41,5 @@ export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
     notFound();
   }
 
-  return <MenuEditorClient menu={menu} branchId={branchId} restaurantId={restaurantId} />;
+  return <MenuEditorClient menu={menu} branchId={branchId} restaurantId={restaurantId} restaurantSlug={restaurantSlug} />;
 }

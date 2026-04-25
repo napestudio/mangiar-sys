@@ -104,17 +104,18 @@ export function Step2({ defaultValues, isPending, onBack, onSubmit }: Step2Props
       {/* Promo code */}
       <div className="space-y-2">
         <Label htmlFor="promoCode">
-          Código promocional{" "}
-          <span className="text-muted-foreground font-normal text-sm">
-            (opcional)
-          </span>
+          Código promocional <span className="text-red-600">*</span>
         </Label>
         <Input
           id="promoCode"
           value={values.promoCode ?? ""}
           onChange={(e) => update("promoCode", e.target.value)}
-          placeholder="Si tenés un código, ingresalo aquí"
+          placeholder="Ingresá tu código de acceso"
+          aria-invalid={!!errors.promoCode}
         />
+        {errors.promoCode && (
+          <p className="text-sm text-red-600">{errors.promoCode}</p>
+        )}
       </div>
 
       {/* Actions */}
