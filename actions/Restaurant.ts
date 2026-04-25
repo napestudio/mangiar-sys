@@ -187,7 +187,7 @@ const themeUpdateSchema = z.object({
   cardColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color de tarjeta inválido"),
   buttonShape: z.enum(["pill", "rounded", "sharp"]),
   buttonVariant: z.enum(["solid", "outline"]),
-  fontFamily: z.enum(["geist", "poppins", "serif"]),
+  fontFamily: z.enum(["geist", "poppins", "serif", "nunito", "playfair"]),
 });
 
 export async function updateRestaurantTheme(

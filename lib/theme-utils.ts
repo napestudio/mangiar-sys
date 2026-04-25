@@ -8,7 +8,7 @@ import { DEFAULT_THEME } from "@/types/restaurant-theme";
 
 const VALID_BUTTON_SHAPES: ButtonShape[] = ["pill", "rounded", "sharp"];
 const VALID_BUTTON_VARIANTS: ButtonVariant[] = ["solid", "outline"];
-const VALID_FONT_FAMILIES: FontFamily[] = ["geist", "poppins", "serif"];
+const VALID_FONT_FAMILIES: FontFamily[] = ["geist", "poppins", "serif", "nunito", "playfair"];
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 function isHexColor(value: unknown): value is string {
@@ -81,6 +81,8 @@ const FONT_FAMILY_VALUE: Record<FontFamily, string> = {
   geist: "var(--font-geist-sans), sans-serif",
   poppins: "var(--font-poppins), sans-serif",
   serif: "Georgia, 'Times New Roman', serif",
+  nunito: "var(--font-nunito), sans-serif",
+  playfair: "var(--font-playfair), serif",
 };
 
 /**
