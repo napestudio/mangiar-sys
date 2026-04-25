@@ -105,10 +105,10 @@ export default async function Home() {
           </div>
           <div className="absolute lg:-top-10 bottom-[-85%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
         </section>
-        <Features />
+        {/* <Features />
         <Pricing />
         <TrustedBy />
-        <Footer />
+        <Footer /> */}
       </div>
     </>
   );

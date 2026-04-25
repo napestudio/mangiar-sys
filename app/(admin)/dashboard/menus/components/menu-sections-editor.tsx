@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import type { SerializedMenu } from "@/actions/menus";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type { SerializedMenu, SerializedMenuSection } from "@/actions/menus";
 import {
   createMenuSection,
   updateMenuSection,
@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { SectionContentManager } from "./section-content-manager";
 
@@ -43,25 +44,28 @@ export function MenuSectionsEditor({
   restaurantId,
   onUpdate,
 }: MenuSectionsEditorProps) {
+  const { toast } = useToast();
   const [isAddingSection, setIsAddingSection] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
-  const [deletingSectionId, setDeletingSectionId] = useState<string | null>(
-    null
-  );
-  // All sections expanded by default to show products
-  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
-    new Set()
-  );
+  const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null);
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(new Set());
 
-  // New section form
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionDescription, setNewSectionDescription] = useState("");
 
-  // Edit section form
   const [editSectionName, setEditSectionName] = useState("");
   const [editSectionDescription, setEditSectionDescription] = useState("");
 
   const [sections, setSections] = useState(menu.menuSections || []);
+  const [itemCounts, setItemCounts] = useState<Record<string, number>>(
+    () => Object.fromEntries(
+      (menu.menuSections || []).map((s) => [
+        s.id,
+        (s.menuItems?.length ?? 0) +
+          (s.menuItemGroups?.reduce((sum, g) => sum + (g.menuItems?.length ?? 0), 0) ?? 0),
+      ]),
+    ),
+  );
   const isOptimisticRef = useRef(false);
   const [, startTransition] = useTransition();
 
@@ -73,26 +77,63 @@ export function MenuSectionsEditor({
     setSections(menu.menuSections || []);
   }, [menu]);
 
+  // ─── Add section — optimistic ────────────────────────────────────────────
   const handleAddSection = async () => {
     if (!newSectionName.trim()) {
-      alert("El nombre de la sección es obligatorio");
+      toast({ variant: "destructive", title: "Error", description: "El nombre de la sección es obligatorio" });
       return;
     }
 
+    const sectionName = newSectionName.trim();
+    const sectionDescription = newSectionDescription.trim() || undefined;
+
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimisticSection: SerializedMenuSection = {
+      id: tempId,
+      menuId: menu.id,
+      name: sectionName,
+      description: sectionDescription ?? null,
+      order: sections.length,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      menuItems: [],
+      menuItemGroups: [],
+    };
+
+    const previousSections = sections;
+    isOptimisticRef.current = true;
+    setSections((prev) => [...prev, optimisticSection]);
+    setNewSectionName("");
+    setNewSectionDescription("");
+    setIsAddingSection(false);
+
     const result = await createMenuSection({
       menuId: menu.id,
-      name: newSectionName.trim(),
-      description: newSectionDescription.trim() || undefined,
-      order: sections.length,
+      name: sectionName,
+      description: sectionDescription,
+      order: previousSections.length,
     });
 
-    if (result.success) {
-      setNewSectionName("");
-      setNewSectionDescription("");
-      setIsAddingSection(false);
-      onUpdate();
+    if (result.success && result.section) {
+      const realSection: SerializedMenuSection = {
+        id: result.section.id,
+        menuId: result.section.menuId,
+        name: result.section.name,
+        description: result.section.description ?? null,
+        order: result.section.order,
+        createdAt: String(result.section.createdAt),
+        updatedAt: String(result.section.updatedAt),
+        menuItems: [],
+        menuItemGroups: [],
+      };
+      isOptimisticRef.current = true;
+      setSections((prev) =>
+        prev.map((s) => (s.id === tempId ? realSection : s)),
+      );
     } else {
-      alert(result.error || "Error al crear la sección");
+      isOptimisticRef.current = false;
+      setSections(previousSections);
+      toast({ variant: "destructive", title: "Error", description: result.error || "Error al crear la sección" });
     }
   };
 
@@ -105,20 +146,37 @@ export function MenuSectionsEditor({
     }
   };
 
+  // ─── Edit section — optimistic ───────────────────────────────────────────
   const handleSaveEdit = async () => {
     if (!editingSectionId || !editSectionName.trim()) return;
 
-    const result = await updateMenuSection(editingSectionId, {
-      name: editSectionName.trim(),
-      description: editSectionDescription.trim() || undefined,
+    const sectionId = editingSectionId;
+    const newName = editSectionName.trim();
+    const newDescription = editSectionDescription.trim() || null;
+
+    const previousSections = sections;
+    isOptimisticRef.current = true;
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId ? { ...s, name: newName, description: newDescription } : s,
+      ),
+    );
+    setEditingSectionId(null);
+
+    const result = await updateMenuSection(sectionId, {
+      name: newName,
+      description: newDescription || undefined,
     });
 
-    if (result.success) {
-      setEditingSectionId(null);
-      onUpdate();
-    } else {
-      alert(result.error || "Error al actualizar la sección");
+    if (!result.success) {
+      isOptimisticRef.current = true;
+      setSections(previousSections);
+      setEditingSectionId(sectionId);
+      setEditSectionName(newName);
+      setEditSectionDescription(newDescription || "");
+      toast({ variant: "destructive", title: "Error", description: result.error || "Error al actualizar la sección" });
     }
+    // No onUpdate() — local state is correct
   };
 
   const handleCancelEdit = () => {
@@ -127,21 +185,25 @@ export function MenuSectionsEditor({
     setEditSectionDescription("");
   };
 
+  // ─── Delete section — already optimistic ─────────────────────────────────
   const handleDeleteSection = () => {
     if (!deletingSectionId) return;
 
     const sectionIdToDelete = deletingSectionId;
     const previousSections = sections;
 
+    isOptimisticRef.current = true;
     setSections((prev) => prev.filter((s) => s.id !== sectionIdToDelete));
     setDeletingSectionId(null);
 
     startTransition(async () => {
       const result = await deleteMenuSection(sectionIdToDelete);
       if (!result.success) {
+        isOptimisticRef.current = true;
         setSections(previousSections);
-        alert(result.error || "Error al eliminar la sección");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Error al eliminar la sección" });
       }
+      // No onUpdate()
     });
   };
 
@@ -157,67 +219,84 @@ export function MenuSectionsEditor({
     });
   };
 
-  const isSectionExpanded = (sectionId: string) =>
-    !collapsedSectionIds.has(sectionId);
+  const isSectionExpanded = (sectionId: string) => !collapsedSectionIds.has(sectionId);
 
-  const handleMoveUp = async (sectionId: string) => {
+  // ─── Move up/down — already updates local state, no onUpdate() needed ───
+  const handleMoveUp = (sectionId: string) => {
     const currentIndex = sections.findIndex((s) => s.id === sectionId);
-    if (currentIndex <= 0) return; // Already at the top
+    if (currentIndex <= 0) return;
 
     const newSections = [...sections];
-    const temp = newSections[currentIndex];
-    newSections[currentIndex] = newSections[currentIndex - 1];
-    newSections[currentIndex - 1] = temp;
+    [newSections[currentIndex], newSections[currentIndex - 1]] = [
+      newSections[currentIndex - 1],
+      newSections[currentIndex],
+    ];
 
-    // Update order values
-    const updates = newSections.map((section, index) => ({
-      id: section.id,
-      order: index,
-    }));
+    const updates = newSections.map((section, index) => ({ id: section.id, order: index }));
 
-    const result = await reorderMenuSections(updates);
-    if (result.success) {
-      onUpdate();
-    }
+    isOptimisticRef.current = true;
+    setSections(newSections); // Optimistic
+
+    reorderMenuSections(updates).then((result) => {
+      if (!result.success) {
+        isOptimisticRef.current = true;
+        setSections(sections); // Revert
+        toast({ variant: "destructive", title: "Error", description: "Error al reordenar secciones" });
+      }
+      // No onUpdate()
+    });
   };
 
-  const handleMoveDown = async (sectionId: string) => {
+  const handleMoveDown = (sectionId: string) => {
     const currentIndex = sections.findIndex((s) => s.id === sectionId);
-    if (currentIndex >= sections.length - 1) return; // Already at the bottom
+    if (currentIndex >= sections.length - 1) return;
 
     const newSections = [...sections];
-    const temp = newSections[currentIndex];
-    newSections[currentIndex] = newSections[currentIndex + 1];
-    newSections[currentIndex + 1] = temp;
+    [newSections[currentIndex], newSections[currentIndex + 1]] = [
+      newSections[currentIndex + 1],
+      newSections[currentIndex],
+    ];
 
-    // Update order values
-    const updates = newSections.map((section, index) => ({
-      id: section.id,
-      order: index,
-    }));
+    const updates = newSections.map((section, index) => ({ id: section.id, order: index }));
 
-    const result = await reorderMenuSections(updates);
-    if (result.success) {
-      onUpdate();
-    }
+    isOptimisticRef.current = true;
+    setSections(newSections); // Optimistic
+
+    reorderMenuSections(updates).then((result) => {
+      if (!result.success) {
+        isOptimisticRef.current = true;
+        setSections(sections); // Revert
+        toast({ variant: "destructive", title: "Error", description: "Error al reordenar secciones" });
+      }
+      // No onUpdate()
+    });
   };
+
+  const itemCountCallbacks = useMemo(
+    () =>
+      Object.fromEntries(
+        sections.map((s) => [
+          s.id,
+          (count: number) =>
+            setItemCounts((prev) => ({ ...prev, [s.id]: count })),
+        ]),
+      ),
+    [sections],
+  );
 
   return (
     <div className="space-y-4">
-      {/* Add Section Button - Always visible at top */}
-
-      {/* Sections List */}
       {sections.length === 0 && !isAddingSection && (
         <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
           <p className="text-sm">
-            No hay secciones en este menú. Haz clic en `&quot;`Agregar Nueva
-            Sección`&quot;` para comenzar.
+            No hay secciones en este menú. Haz clic en &quot;Agregar Nueva
+            Sección&quot; para comenzar.
           </p>
         </div>
       )}
 
       {sections.map((section, index) => (
-        <Card key={section.id}>
+        <Card key={section.id} className={section.id.startsWith("temp-") ? "opacity-70" : ""}>
           <CardHeader>
             <div className="flex items-start gap-3">
               <div className="flex flex-col gap-1">
@@ -226,7 +305,7 @@ export function MenuSectionsEditor({
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => handleMoveUp(section.id)}
-                  disabled={index === 0}
+                  disabled={index === 0 || section.id.startsWith("temp-")}
                   title="Mover arriba"
                 >
                   <ChevronUp className="h-4 w-4" />
@@ -236,7 +315,7 @@ export function MenuSectionsEditor({
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => handleMoveDown(section.id)}
-                  disabled={index === sections.length - 1}
+                  disabled={index === sections.length - 1 || section.id.startsWith("temp-")}
                   title="Mover abajo"
                 >
                   <ChevronDown className="h-4 w-4" />
@@ -253,9 +332,7 @@ export function MenuSectionsEditor({
                     />
                     <Textarea
                       value={editSectionDescription}
-                      onChange={(e) =>
-                        setEditSectionDescription(e.target.value)
-                      }
+                      onChange={(e) => setEditSectionDescription(e.target.value)}
                       placeholder="Descripción (opcional)"
                       rows={2}
                     />
@@ -264,11 +341,7 @@ export function MenuSectionsEditor({
                         <Check className="mr-1 h-3 w-3" />
                         Guardar
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                      >
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                         <X className="mr-1 h-3 w-3" />
                         Cancelar
                       </Button>
@@ -278,19 +351,17 @@ export function MenuSectionsEditor({
                   <>
                     <CardTitle className="text-base">{section.name}</CardTitle>
                     {section.description && (
-                      <CardDescription className="mt-1">
-                        {section.description}
-                      </CardDescription>
+                      <CardDescription className="mt-1">{section.description}</CardDescription>
                     )}
                     <div className="text-sm text-gray-500 mt-2">
-                      {section.menuItems?.length || 0} producto
-                      {section.menuItems?.length !== 1 ? "s" : ""}
+                      {itemCounts[section.id] ?? section.menuItems?.length ?? 0} producto
+                      {(itemCounts[section.id] ?? section.menuItems?.length ?? 0) !== 1 ? "s" : ""}
                     </div>
                   </>
                 )}
               </div>
 
-              {editingSectionId !== section.id && (
+              {editingSectionId !== section.id && !section.id.startsWith("temp-") && (
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -315,11 +386,12 @@ export function MenuSectionsEditor({
 
           {editingSectionId !== section.id && (
             <CardContent>
-              {isSectionExpanded(section.id) && (
+              {isSectionExpanded(section.id) && !section.id.startsWith("temp-") && (
                 <SectionContentManager
                   section={section}
                   restaurantId={restaurantId}
                   onUpdate={onUpdate}
+                  onItemCountChanged={itemCountCallbacks[section.id]}
                 />
               )}
 
@@ -328,15 +400,15 @@ export function MenuSectionsEditor({
                 size="sm"
                 onClick={() => handleToggleSection(section.id)}
                 className="w-full text-gray-600 mt-4"
+                disabled={section.id.startsWith("temp-")}
               >
-                {isSectionExpanded(section.id)
-                  ? "Ocultar Contenido"
-                  : "Mostrar Contenido"}
+                {isSectionExpanded(section.id) ? "Ocultar Contenido" : "Mostrar Contenido"}
               </Button>
             </CardContent>
           )}
         </Card>
       ))}
+
       {!isAddingSection && (
         <Button
           onClick={() => setIsAddingSection(true)}
@@ -352,9 +424,7 @@ export function MenuSectionsEditor({
       {isAddingSection && (
         <Card className="border-2 border-blue-500">
           <CardHeader className="bg-blue-50">
-            <CardTitle className="text-base text-blue-900">
-              Nueva Sección del Menú
-            </CardTitle>
+            <CardTitle className="text-base text-blue-900">Nueva Sección del Menú</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-4">
             <div className="space-y-2">

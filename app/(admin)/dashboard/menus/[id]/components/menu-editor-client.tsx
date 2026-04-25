@@ -75,7 +75,7 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
         // Update existing menu (slug cannot be changed after creation)
         const result = await updateMenu(menu.id, {
           name: name.trim(),
-          description: description.trim() || undefined,
+          description: description.trim() || null,
           isActive,
           showPrices,
           priceType,
