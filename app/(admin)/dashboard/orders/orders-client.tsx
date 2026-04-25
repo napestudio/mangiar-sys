@@ -665,7 +665,7 @@ export function OrdersClient({
         className="w-full"
       >
         <TabsList className="w-full justify-start">
-          <TabsTrigger value="DINE_IN">
+          <TabsTrigger className="cursor-pointer" value="DINE_IN">
             <span>Para Comer Aquí</span>
             {activeOrderCounts.DINE_IN > 0 && (
               <Badge variant="destructive" className="ml-1.5">
@@ -673,7 +673,7 @@ export function OrdersClient({
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="TAKE_AWAY">
+          <TabsTrigger className="cursor-pointer" value="TAKE_AWAY">
             <span>Para Llevar</span>
             {activeOrderCounts.TAKE_AWAY > 0 && (
               <Badge variant="destructive" className="ml-1.5">
@@ -681,7 +681,7 @@ export function OrdersClient({
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="DELIVERY">
+          <TabsTrigger className="cursor-pointer" value="DELIVERY">
             <span>Delivery</span>
             {activeOrderCounts.DELIVERY > 0 && (
               <Badge variant="destructive" className="ml-1.5">
@@ -689,29 +689,37 @@ export function OrdersClient({
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="ALL">Todas</TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="ALL">
+            Todas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={currentTab} className="mt-6">
-          {currentTab === "DELIVERY" && !notificationWhatsapp && !whatsappBannerDismissed && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800">
-                  No configuraste un número de WhatsApp para notificaciones de pedidos.{" "}
-                  <Link href="/dashboard/config/delivery" className="font-medium underline">
-                    Configurarlo ahora
-                  </Link>
-                </p>
+          {currentTab === "DELIVERY" &&
+            !notificationWhatsapp &&
+            !whatsappBannerDismissed && (
+              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    No configuraste un número de WhatsApp para notificaciones de
+                    pedidos.{" "}
+                    <Link
+                      href="/dashboard/config/delivery"
+                      className="font-medium underline"
+                    >
+                      Configurarlo ahora
+                    </Link>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setWhatsappBannerDismissed(true)}
+                  className="text-amber-600 hover:text-amber-800 shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setWhatsappBannerDismissed(true)}
-                className="text-amber-600 hover:text-amber-800 shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+            )}
           {isLoadingState ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />

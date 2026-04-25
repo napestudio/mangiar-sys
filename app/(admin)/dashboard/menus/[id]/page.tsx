@@ -1,5 +1,5 @@
 import { getMenu } from "@/actions/menus";
-import { getBranch } from "@/actions/Branch";
+import { getBranchCached } from "@/actions/Branch";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { notFound } from "next/navigation";
@@ -15,7 +15,11 @@ export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
   const { id } = await params;
   const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_MENU);
 
-  const branchResult = await getBranch(branchId);
+  const [branchResult, menu] = await Promise.all([
+    getBranchCached(branchId),
+    id === "new" ? Promise.resolve(null) : getMenu(id),
+  ]);
+
   const restaurantId =
     branchResult.success && branchResult.data
       ? branchResult.data.restaurantId
@@ -29,17 +33,9 @@ export default async function MenuEditorPage({ params }: MenuEditorPageProps) {
     notFound();
   }
 
-  // Handle "new" route for creating new menus
-  if (id === "new") {
-    return <MenuEditorClient menu={null} branchId={branchId} restaurantId={restaurantId} restaurantSlug={restaurantSlug} />;
-  }
-
-  // Fetch existing menu
-  const menu = await getMenu(id);
-
-  if (!menu) {
+  if (id !== "new" && !menu) {
     notFound();
   }
 
-  return <MenuEditorClient menu={menu} branchId={branchId} restaurantId={restaurantId} restaurantSlug={restaurantSlug} />;
+  return <MenuEditorClient menu={id === "new" ? null : menu} branchId={branchId} restaurantId={restaurantId} restaurantSlug={restaurantSlug} />;
 }

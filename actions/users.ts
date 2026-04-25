@@ -9,7 +9,7 @@ import {
   UserUpdateInput,
 } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { UserWithBranches } from "@/types/user";
 import { UserRole } from "@/app/generated/prisma";
 import { authorizeAction } from "@/lib/permissions/middleware";
@@ -412,6 +412,7 @@ export async function updateUser(
     }
 
     revalidatePath("/dashboard/config/users");
+    revalidateTag("user-role-and-branch");
 
     return {
       success: true,

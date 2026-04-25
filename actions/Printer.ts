@@ -13,7 +13,7 @@ import type {
   OrderInfoForPrint,
   OrderItemForPrint,
 } from "@/types/printer-internal";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 const printerInputSchema = z.object({
@@ -95,6 +95,7 @@ export async function createPrinter(data: z.input<typeof printerSchema>) {
     });
 
     revalidatePath("/dashboard/config/printers");
+    revalidateTag("branch-printers");
 
     return {
       success: true,
@@ -290,6 +291,7 @@ export async function togglePrinterStatus(id: string, isActive: boolean) {
     });
 
     revalidatePath("/dashboard/config/printers");
+    revalidateTag("branch-printers");
 
     return {
       success: true,
@@ -358,6 +360,7 @@ export async function deletePrinter(id: string) {
     });
 
     revalidatePath("/dashboard/config/printers");
+    revalidateTag("branch-printers");
 
     return {
       success: true,

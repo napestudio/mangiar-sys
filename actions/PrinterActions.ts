@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { formatTimestampDateAR } from "@/lib/date-utils";
 import { calculateDiscountAmount } from "@/lib/discount";
 import { PrintJobStatus, PrinterStatus } from "@/app/generated/prisma";
@@ -598,6 +598,26 @@ export async function hasBranchPrinters(branchId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Cached version of hasBranchPrinters for the dashboard layout.
+ * Invalidate with revalidateTag("branch-printers") when printers change.
+ */
+export const hasBranchPrintersCached = unstable_cache(
+  async (branchId: string): Promise<boolean> => {
+    try {
+      const count = await prisma.printer.count({
+        where: { branchId, isActive: true },
+      });
+      return count > 0;
+    } catch (error) {
+      console.error("Error checking branch printers:", error);
+      return false;
+    }
+  },
+  ["branch-has-printers"],
+  { revalidate: 300, tags: ["branch-printers"] }
+);
 
 /**
  * Check if a branch has control ticket printers (FULL_ORDER or BOTH mode)
