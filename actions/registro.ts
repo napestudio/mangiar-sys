@@ -58,7 +58,13 @@ export async function registerRestaurant(
   const { businessName, phone, contactEmail, password } = v1.data;
   const { personName, restaurantType, promoCode } = v2.data;
 
-  // 2. Generate slug and verify availability
+  // 2. Validate promo code
+  const validPromoCode = process.env.PROMO_CODE;
+  if (!validPromoCode || promoCode.trim() !== validPromoCode) {
+    return { success: false, error: "El código promocional es inválido" };
+  }
+
+  // 3. Generate slug and verify availability
   const slug = generateSlug(businessName);
 
   if (slug.length < 2) {

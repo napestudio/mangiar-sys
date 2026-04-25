@@ -27,7 +27,7 @@ export const step2Schema = z.object({
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(80, "El nombre es demasiado largo"),
   restaurantType: z.nativeEnum(RestaurantType),
-  promoCode: z.string().optional(),
+  promoCode: z.string().min(1, "El código promocional es requerido"),
 });
 
 export const fullRegistroSchema = step1Schema.merge(step2Schema);

@@ -129,6 +129,7 @@ export function MenuItemsManager({
       isAvailable: true,
       isFeatured,
       customPrice: customPrice ? Number(customPrice) : null,
+      customDescription: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       product: selectedProduct
@@ -347,7 +348,7 @@ export function MenuItemsManager({
           item={editingItem}
           open={!!editingItem}
           onOpenChange={(open) => !open && setEditingItem(null)}
-          onUpdate={onUpdate}
+          onItemUpdated={() => onUpdate()}
         />
       )}
 

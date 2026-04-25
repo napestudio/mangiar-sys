@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { buildSubdomainUrl } from "@/lib/constants";
 import { ArrowLeft, Eye, Layers, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,9 +27,10 @@ interface MenuEditorClientProps {
   menu: SerializedMenu | null;
   branchId: string;
   restaurantId: string;
+  restaurantSlug: string;
 }
 
-export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: MenuEditorClientProps) {
+export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId, restaurantSlug }: MenuEditorClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -75,7 +77,7 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
         // Update existing menu (slug cannot be changed after creation)
         const result = await updateMenu(menu.id, {
           name: name.trim(),
-          description: description.trim() || undefined,
+          description: description.trim() || null,
           isActive,
           showPrices,
           priceType,
@@ -298,7 +300,7 @@ export function MenuEditorClient({ menu: initialMenu, branchId, restaurantId }: 
                   </Link>
                   {menu && (
                     <Link
-                      href={`/carta/${menu.slug}`}
+                      href={buildSubdomainUrl(restaurantSlug, `/carta/${menu.slug}`)}
                       target="_blank"
                       className={
                         buttonVariants({ variant: "outline", size: "sm" }) +

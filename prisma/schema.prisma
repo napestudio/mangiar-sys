@@ -673,7 +673,8 @@ model MenuItem {
   order       Int      @default(0) // Orden dentro de la sección o grupo
   isAvailable Boolean  @default(true) // Override de disponibilidad del producto
   isFeatured  Boolean  @default(false) // Destacar en el menú (chef's special, etc.)
-  customPrice Decimal? // Override de precio (opcional, para promociones)
+  customPrice       Decimal? // Override de precio (opcional, para promociones)
+  customDescription String?  // Override de descripción (opcional, para menús específicos)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

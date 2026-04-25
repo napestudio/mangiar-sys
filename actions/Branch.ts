@@ -7,7 +7,7 @@ export async function getBranch(branchId: string) {
   try {
     const branch = await prisma.branch.findUnique({
       where: { id: branchId },
-      include: { restaurant: { select: { name: true } } },
+      include: { restaurant: { select: { name: true, slug: true } } },
     });
 
     return { success: true, data: branch };
