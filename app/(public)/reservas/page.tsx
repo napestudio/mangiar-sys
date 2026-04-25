@@ -3,6 +3,7 @@ import Avatar from "@/components/avatar";
 import { ReservationWizard } from "@/components/home/reservation-wizard";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,7 +30,7 @@ export default async function ReservationPage() {
   const data = await getPublicRestaurantAndBranch();
 
   if (!data) {
-    return <p>Error: Branch ID no está configurado.</p>;
+    return redirect("/");
   }
 
   const { branchId, restaurant } = data;

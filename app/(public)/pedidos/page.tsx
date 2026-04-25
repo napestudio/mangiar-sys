@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   };
 }
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import DeliveryPage from "./components/delivery-page-client";
 import DeliveryClosedPage from "./components/delivery-closed-page";
 
@@ -37,11 +37,7 @@ export default async function PedidosPage() {
   const branchId = await getPublicBranchId();
 
   if (!branchId) {
-    return (
-      <div className="min-h-svh bg-white text-neutral-900 flex items-center justify-center p-4">
-        <p className="text-red-500">Error: Branch ID no configurado</p>
-      </div>
-    );
+    return redirect("/");
   }
 
   // Fetch delivery config
