@@ -17,6 +17,7 @@ import {
   dateStringToTimestampBoundsAR,
 } from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
+import { unstable_cache } from "next/cache";
 import type {
   DeliverySection,
   DeliveryElement,
@@ -827,23 +828,34 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
 // Add multiple items to order (bulk operation)
 export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
   try {
-    // Single transaction for all items - much faster than sequential calls
-    const result = await prisma.orderItem.createMany({
-      data: items.map((item) => ({
-        orderId,
-        productId: item.productId,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        price: item.price,
-        originalPrice: item.originalPrice,
-        notes: item.notes || null,
-      })),
+    const updatedItems = await prisma.$transaction(async (tx) => {
+      await tx.orderItem.createMany({
+        data: items.map((item) => ({
+          orderId,
+          productId: item.productId,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          price: item.price,
+          originalPrice: item.originalPrice,
+          notes: item.notes || null,
+        })),
+      });
+
+      const allItems = await tx.orderItem.findMany({
+        where: { orderId },
+        include: { product: true },
+        orderBy: { id: "asc" },
+      });
+
+      return allItems.map((item) => ({
+        ...item,
+        price: Number(item.price),
+        originalPrice: item.originalPrice !== null ? Number(item.originalPrice) : null,
+        product: serializeProduct(item.product),
+      }));
     });
 
-    return {
-      success: true,
-      data: result,
-    };
+    return { success: true, data: updatedItems };
   } catch (error) {
     console.error("Error adding order items:", error);
     return {
@@ -1189,7 +1201,7 @@ export async function tableHasActiveOrders(tableId: string) {
 }
 
 // Get products available for ordering (branch-specific with prices)
-export async function getAvailableProductsForOrder(
+async function _getAvailableProductsForOrder(
   branchId: string,
   orderType: OrderType = OrderType.DINE_IN,
 ) {
@@ -1327,6 +1339,12 @@ export async function getAvailableProductsForOrder(
     return [];
   }
 }
+
+export const getAvailableProductsForOrder = unstable_cache(
+  _getAvailableProductsForOrder,
+  ["available-products-for-order"],
+  { tags: ["products"], revalidate: 60 }
+);
 
 // Get products for a specific delivery menu, organised by menu sections and groups.
 // Returns both the section structure (for display) and a flat deduped product list

@@ -2,12 +2,12 @@ import { getMenus } from "@/actions/menus";
 import { MenusClient } from "./components/menus-client";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
-import { getBranch } from "@/actions/Branch";
+import { getBranchCached } from "@/actions/Branch";
 
 export default async function MenusPage() {
   const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_MENU);
 
-  const branchResult = await getBranch(branchId);
+  const branchResult = await getBranchCached(branchId);
   const restaurantId =
     branchResult.success && branchResult.data
       ? branchResult.data.restaurantId

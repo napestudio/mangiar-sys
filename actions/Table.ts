@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { todayBoundsARDate } from "@/lib/date-utils";
 import { OrderStatus, ReservationStatus, Table } from "@/app/generated/prisma";
 import { TableShapeType } from "@/types/table";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 /**
  * Batch calculate remaining capacity for multiple tables
@@ -222,6 +223,23 @@ export async function getTables(branchId: string) {
     return { success: false, error: "Failed to fetch tables" };
   }
 }
+
+/**
+ * Get active tables for a branch (lightweight, for dropdowns/selects).
+ * Cached — busted when tables are created, deleted, or toggled.
+ */
+async function _getActiveTables(branchId: string) {
+  return prisma.table.findMany({
+    where: { branchId, isActive: true },
+    select: { id: true, number: true, name: true },
+    orderBy: { number: "asc" },
+  });
+}
+
+export const getActiveTables = unstable_cache(_getActiveTables, ["active-tables"], {
+  tags: ["tables-list"],
+  revalidate: 300,
+});
 
 /**
  * Get all tables for a branch with their current reservation status
@@ -921,6 +939,8 @@ export async function createTable(data: {
       },
     });
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
+    revalidateTag("tables-list");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error creating table:", error);
@@ -992,6 +1012,7 @@ export async function updateTable(
       );
     }
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error updating table:", error);
@@ -1015,6 +1036,8 @@ export async function toggleTableActive(id: string) {
       data: { isActive: !table.isActive },
     });
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
+    revalidateTag("tables-list");
     return { success: true, data: updated };
   } catch (error) {
     console.error("Error toggling table status:", error);
@@ -1042,6 +1065,8 @@ export async function deleteTable(id: string) {
 
     await prisma.table.delete({ where: { id } });
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
+    revalidateTag("tables-list");
     return { success: true, data: null };
   } catch (error) {
     console.error("Error deleting table:", error);
@@ -1070,6 +1095,7 @@ export async function updateTableFloorPlan(
       data,
     });
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error updating table floor plan:", error);
@@ -1110,6 +1136,7 @@ export async function updateFloorPlanBatch(
       }
     });
 
+    revalidatePath("/(admin)/dashboard/tables", "page");
     return { success: true };
   } catch (error) {
     console.error("Error updating floor plan batch:", error);

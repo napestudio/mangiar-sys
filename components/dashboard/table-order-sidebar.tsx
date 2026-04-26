@@ -272,32 +272,44 @@ export function TableOrderSidebar({
   const handleConfirmPreOrder = async () => {
     if (!order || !tableId || preOrderItems.length === 0) return;
 
-    setIsLoadingAction(true);
+    // Capture before clearing
+    const itemsToConfirm = [...preOrderItems];
+    const tableName = tableNumber?.toString() || "—";
 
-    // Store items to print before clearing
-    const itemsToPrint = [...preOrderItems];
+    // Optimistic: clear UI immediately so user can keep adding products
+    setPreOrderItems([]);
 
-    // Add all pre-order items to the actual order (bulk operation - single DB call)
-    const result = await addOrderItems(order.id, preOrderItems);
+    const result = await addOrderItems(order.id, itemsToConfirm);
 
-    if (!result.success) {
-      alert(result.error || "Error al agregar los productos");
-      setIsLoadingAction(false);
+    if (!result.success || !result.data) {
+      // Rollback
+      setPreOrderItems(itemsToConfirm);
+      toast({
+        title: "Error al agregar los productos",
+        description: result.error,
+        variant: "destructive",
+      });
       return;
     }
 
-    // Auto-print the newly added items via gg-ez-print (station comandas - no prices, no waiter)
-    const tableName = tableNumber?.toString() || "—";
-
-    // Fire and forget - printing happens in background via gg-ez-print
-    printOrderItems(
-      {
-        orderId: order.id,
-        orderCode: order.publicCode,
-        tableName,
-        branchId,
+    // Update SWR cache directly with real data — no second DB roundtrip
+    mutate(
+      (current) => {
+        if (!current) return current;
+        if (Array.isArray(current)) {
+          return current.map((o) =>
+            o.id === order.id ? { ...o, items: result.data } : o,
+          );
+        }
+        return { ...current, items: result.data };
       },
-      itemsToPrint.map((item) => ({
+      { revalidate: false },
+    );
+
+    // Fire and forget: print + revert table status
+    printOrderItems(
+      { orderId: order.id, orderCode: order.publicCode, tableName, branchId },
+      itemsToConfirm.map((item) => ({
         productId: item.productId,
         itemName: item.itemName,
         quantity: item.quantity,
@@ -305,18 +317,8 @@ export function TableOrderSidebar({
         categoryId: item.categoryId,
       })),
     );
-
-    // If table was in PAYING state, revert to OCCUPIED since new items were added
-    await setTablesOccupied([tableId]);
-
-    // Clear pre-order items after successful confirmation
-    setPreOrderItems([]);
-
-    // Trigger background revalidation (non-blocking for instant UI responsiveness)
-    // SWR will sync data automatically within 2s (dedupe) or 30s (polling)
-    mutate(undefined, { revalidate: true });
+    setTablesOccupied([tableId]);
     onOrderUpdated(tableId);
-    setIsLoadingAction(false);
   };
 
   // Remove price and quantity editing for committed items - they can only be removed

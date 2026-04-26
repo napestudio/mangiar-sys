@@ -1,6 +1,7 @@
 import "server-only";
 import { UserRole } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 
 /**
  * Server-only role functions (require database access)
@@ -21,18 +22,21 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 }
 
 /**
- * Get user's role and branchId from their primary branch in one query
+ * Get user's role and branchId from their primary branch in one query.
+ * Cached for 5 minutes — invalidate with revalidateTag("user-role-and-branch")
+ * when UserOnBranch.role changes.
  */
-export async function getUserRoleAndBranchId(
-  userId: string
-): Promise<{ role: UserRole; branchId: string } | null> {
-  const userOnBranch = await prisma.userOnBranch.findFirst({
-    where: { userId },
-    select: { role: true, branchId: true },
-  });
-
-  return userOnBranch ?? null;
-}
+export const getUserRoleAndBranchId = unstable_cache(
+  async (userId: string): Promise<{ role: UserRole; branchId: string } | null> => {
+    const userOnBranch = await prisma.userOnBranch.findFirst({
+      where: { userId },
+      select: { role: true, branchId: true },
+    });
+    return userOnBranch ?? null;
+  },
+  ["user-role-and-branch"],
+  { revalidate: 300, tags: ["user-role-and-branch"] }
+);
 
 // Re-export client-safe utilities for convenience
 export {

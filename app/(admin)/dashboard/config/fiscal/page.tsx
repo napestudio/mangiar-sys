@@ -2,13 +2,13 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getFiscalConfig } from "@/actions/FiscalConfig";
 import { FiscalConfigClient } from "./fiscal-config-client";
-import { getBranch } from "@/actions/Branch";
+import { getBranchCached } from "@/actions/Branch";
 
 export default async function FiscalConfigPage() {
   // Only admins can access fiscal config
   const { branchId } = await requireRole(UserRole.ADMIN, PermissionGrant.MANAGE_CONFIG);
 
-  const branchResult = await getBranch(branchId);
+  const branchResult = await getBranchCached(branchId);
   const restaurantId =
     branchResult.success && branchResult.data
       ? branchResult.data.restaurantId

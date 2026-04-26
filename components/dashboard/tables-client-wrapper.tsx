@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { TablesTabs } from "./tables-tabs";
 import { TablesSimpleView } from "./tables-simple-view";
 import FloorPlanHandler from "./floor-plan-handler";
@@ -17,6 +17,42 @@ import { OrderType } from "@/app/generated/prisma";
 
 // Re-export for backward compatibility
 export type { TableWithReservations };
+
+type RawReservationEntry = {
+  reservation: {
+    date: Date | string;
+    timeSlot: { startTime: Date | string; endTime: Date | string } | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+function serializeReservations(
+  reservations: RawReservationEntry[]
+): TableWithReservations["reservations"] {
+  return reservations.map((res) => ({
+    ...res,
+    reservation: {
+      ...res.reservation,
+      date:
+        res.reservation.date instanceof Date
+          ? res.reservation.date.toISOString()
+          : String(res.reservation.date),
+      timeSlot: res.reservation.timeSlot
+        ? {
+            startTime:
+              res.reservation.timeSlot.startTime instanceof Date
+                ? res.reservation.timeSlot.startTime.toISOString()
+                : String(res.reservation.timeSlot.startTime),
+            endTime:
+              res.reservation.timeSlot.endTime instanceof Date
+                ? res.reservation.timeSlot.endTime.toISOString()
+                : String(res.reservation.timeSlot.endTime),
+          }
+        : null,
+    },
+  })) as TableWithReservations["reservations"];
+}
 
 interface TablesClientWrapperProps {
   branchId: string;
@@ -66,36 +102,14 @@ export function TablesClientWrapper({
     if (table?.sectorId) setSelectedSector(table.sectorId);
   }, []); // mount only — eslint-disable-line react-hooks/exhaustive-deps
 
-  // Memoized filtered tables calculation
-  useMemo(
-    () =>
-      selectedSector
-        ? tables.filter((table) => table.sectorId === selectedSector)
-        : tables,
-    [tables, selectedSector]
-  );
-
   // Refresh tables data from server
   const refreshTables = useCallback(async () => {
     const tablesResult = await getTablesWithStatus(branchId);
     if (tablesResult.success && tablesResult.data) {
-      // Serialize dates for client components
       const serializedTables = tablesResult.data.map((table) => ({
         ...table,
-        reservations: table.reservations.map((res) => ({
-          ...res,
-          reservation: {
-            ...res.reservation,
-            date: res.reservation.date.toISOString(),
-            timeSlot: res.reservation.timeSlot
-              ? {
-                  startTime: res.reservation.timeSlot.startTime.toISOString(),
-                  endTime: res.reservation.timeSlot.endTime.toISOString(),
-                }
-              : null,
-          },
-        })),
-      }));
+        reservations: serializeReservations(table.reservations),
+      })) as TableWithReservations[];
       setTables(serializedTables);
     }
   }, [branchId]);
@@ -105,24 +119,10 @@ export function TablesClientWrapper({
     const tableResult = await getTableWithStatus(tableId);
     if (tableResult.success && tableResult.data) {
       const updatedTable = tableResult.data;
-
-      // Serialize the updated table
       const serializedTable = {
         ...updatedTable,
-        reservations: updatedTable.reservations.map((res) => ({
-          ...res,
-          reservation: {
-            ...res.reservation,
-            date: res.reservation.date.toISOString(),
-            timeSlot: res.reservation.timeSlot
-              ? {
-                  startTime: res.reservation.timeSlot.startTime.toISOString(),
-                  endTime: res.reservation.timeSlot.endTime.toISOString(),
-                }
-              : null,
-          },
-        })),
-      };
+        reservations: serializeReservations(updatedTable.reservations),
+      } as TableWithReservations;
 
       // Update only the specific table in state
       setTables((prevTables) =>

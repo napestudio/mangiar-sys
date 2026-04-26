@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
 
 const sectorSchema = z.object({
@@ -54,6 +54,7 @@ export async function createSector(data: z.infer<typeof sectorSchema>) {
     });
 
     revalidatePath("/dashboard/tables");
+    revalidateTag("sectors");
 
     return {
       success: true,
@@ -68,7 +69,7 @@ export async function createSector(data: z.infer<typeof sectorSchema>) {
   }
 }
 
-export async function getSectorsByBranch(branchId: string) {
+async function _getSectorsByBranch(branchId: string) {
   try {
     const sectors = await prisma.sector.findMany({
       where: {
@@ -101,6 +102,12 @@ export async function getSectorsByBranch(branchId: string) {
   }
 }
 
+export const getSectorsByBranch = unstable_cache(
+  _getSectorsByBranch,
+  ["sectors-by-branch"],
+  { tags: ["sectors"], revalidate: 300 }
+);
+
 export async function updateSector(
   id: string,
   data: Partial<z.infer<typeof sectorSchema>>
@@ -118,6 +125,7 @@ export async function updateSector(
     });
 
     revalidatePath("/dashboard/tables");
+    revalidateTag("sectors");
 
     return {
       success: true,
@@ -165,6 +173,7 @@ export async function deleteSector(id: string) {
     });
 
     revalidatePath("/dashboard/tables");
+    revalidateTag("sectors");
 
     return {
       success: true,

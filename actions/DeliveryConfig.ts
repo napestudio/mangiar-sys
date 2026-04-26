@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 import type { DeliveryWindowInput } from "@/types/delivery";
 export type { DeliveryWindowInput };
@@ -43,7 +43,7 @@ type SerializedDeliveryConfig = {
 /**
  * Get delivery configuration for a branch
  */
-export async function getDeliveryConfig(branchId: string): Promise<{
+async function _getDeliveryConfig(branchId: string): Promise<{
   success: boolean;
   data?: SerializedDeliveryConfig | null;
   error?: string;
@@ -112,6 +112,11 @@ export async function getDeliveryConfig(branchId: string): Promise<{
     };
   }
 }
+
+export const getDeliveryConfig = unstable_cache(_getDeliveryConfig, ["delivery-config"], {
+  tags: ["delivery-config"],
+  revalidate: 600,
+});
 
 /**
  * Update or create delivery configuration
@@ -182,6 +187,7 @@ export async function updateDeliveryConfig(data: {
 
     revalidatePath("/dashboard/config/delivery");
     revalidatePath("/pedidos");
+    revalidateTag("delivery-config");
     return { success: true };
   } catch (error) {
     console.error("Error updating delivery config:", error);

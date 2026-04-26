@@ -2,7 +2,7 @@ import { getMenuItemsPaginated, getCategories } from "@/actions/Products";
 import { ProductsClient } from "./components/product-client";
 import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
-import { getBranch } from "@/actions/Branch";
+import { getBranchCached } from "@/actions/Branch";
 import { getStationsByBranch } from "@/actions/Station";
 
 type SearchParams = {
@@ -24,7 +24,7 @@ export default async function MenuItemsPage({
   // Await searchParams (Next.js 15 requirement)
   const params = await searchParams;
 
-  const branchResult = await getBranch(branchId);
+  const branchResult = await getBranchCached(branchId);
   const restaurantId =
     branchResult.success && branchResult.data
       ? branchResult.data.restaurantId

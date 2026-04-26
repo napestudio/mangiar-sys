@@ -9,6 +9,7 @@ export async function invalidateUserCaches(): Promise<void> {
   if (!session?.user?.id) return;
   revalidateTag("user-permissions");
   revalidateTag("user-permission-grants");
+  revalidateTag("user-role-and-branch");
 }
 
 export async function logoutAction(): Promise<void> {

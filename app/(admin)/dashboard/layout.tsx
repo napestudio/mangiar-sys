@@ -1,11 +1,10 @@
-import { hasBranchPrinters } from "@/actions/PrinterActions";
-import { getBranch } from "@/actions/Branch";
+import { hasBranchPrintersCached } from "@/actions/PrinterActions";
+import { getBranchCached } from "@/actions/Branch";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { ConditionalGgEzPrintProvider } from "@/components/providers/conditional-gg-ez-print-provider";
 import { auth } from "@/lib/auth";
 import { getNavItems } from "@/lib/dashboard-nav";
-import { getUserRole } from "@/lib/permissions/roles";
-import { getCurrentUserBranchId } from "@/lib/user-branch";
+import { getUserRoleAndBranchId } from "@/lib/permissions/roles";
 import prisma from "@/lib/prisma";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -36,26 +35,28 @@ export default async function DashboardLayout({
     redirect("/ingresar");
   }
 
-  // Get user's role, branch, and current avatar in parallel
-  const [userRole, branchId, userRecord] = await Promise.all([
-    getUserRole(session.user.id),
-    getCurrentUserBranchId(),
+  // Step 1: get role+branchId in ONE query alongside avatar (no duplicate auth calls)
+  const [identityResult, userRecord] = await Promise.all([
+    getUserRoleAndBranchId(session.user.id),
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { image: true },
     }),
   ]);
 
-  // Get filtered nav items on server (includes grant-based overrides)
-  const navItems = await getNavItems(userRole, session.user.id, branchId ?? "");
+  if (!identityResult) {
+    redirect("/ingresar");
+  }
 
-  // Check if branch has printers and get printer server URL (for conditional loading of gg-ez-print)
-  const [hasPrinters, branchResult] = await Promise.all([
-    branchId ? hasBranchPrinters(branchId) : Promise.resolve(false),
-    branchId
-      ? getBranch(branchId)
-      : Promise.resolve({ success: false, data: null }),
+  const { role: userRole, branchId } = identityResult;
+
+  // Step 2: all three run in parallel now (previously split across two sequential steps)
+  const [navItems, hasPrinters, branchResult] = await Promise.all([
+    getNavItems(userRole, session.user.id, branchId),
+    hasBranchPrintersCached(branchId),
+    getBranchCached(branchId),
   ]);
+
   const printerServerUrl =
     branchResult.success && branchResult.data?.printerServerUrl
       ? branchResult.data.printerServerUrl
