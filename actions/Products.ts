@@ -17,7 +17,7 @@ import { authorizeAction } from "@/lib/permissions/middleware";
 import { prisma } from "@/lib/prisma";
 import { generateProductSKU } from "@/lib/sku-generator";
 import { todayStringAR } from "@/lib/date-utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import type { CreateMenuItemInput, UpdateMenuItemInput, SetProductBranchInput } from "@/types/products";
 export type { CreateMenuItemInput, UpdateMenuItemInput, SetProductBranchInput };
@@ -98,6 +98,7 @@ export async function createMenuItem(input: CreateMenuItemInput) {
     };
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: serializedProduct };
   } catch (error) {
     console.error("Error creating menu item:", error);
@@ -218,6 +219,7 @@ export async function updateMenuItem(input: UpdateMenuItemInput) {
     };
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: serializedProduct };
   } catch (error) {
     console.error("Error updating menu item:", error);
@@ -287,6 +289,7 @@ export async function deleteMenuItem(id: string) {
     }
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     revalidatePath("/dashboard/stock");
     return { success: true };
   } catch (error) {
@@ -318,6 +321,7 @@ export async function reactivateMenuItem(id: string) {
     ]);
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     revalidatePath("/dashboard/stock");
     return { success: true };
   } catch (error) {
@@ -535,6 +539,7 @@ export async function duplicateProduct(productId: string) {
     };
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: serializedProduct };
   } catch (error) {
     console.error("Error duplicating product:", error);
@@ -750,6 +755,7 @@ export async function setProductOnBranch(input: SetProductBranchInput) {
     };
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: serializedProductOnBranch };
   } catch (error) {
     console.error("Error setting product on branch:", error);
@@ -1506,6 +1512,7 @@ export async function importProductsCSV(
 
     // Revalidate products page
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
 
     return result;
   } catch (error) {
@@ -1607,6 +1614,7 @@ export async function createCategory(input: {
     }
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: category };
   } catch (error) {
     console.error("Error creating category:", error);
@@ -1646,6 +1654,7 @@ export async function updateCategory(input: {
     }
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true, data: category };
   } catch (error) {
     console.error("Error updating category:", error);
@@ -1681,6 +1690,7 @@ export async function deleteCategory(id: string) {
     });
 
     revalidatePath("/dashboard/menu-items");
+    revalidateTag("products");
     return { success: true };
   } catch (error) {
     console.error("Error deleting category:", error);

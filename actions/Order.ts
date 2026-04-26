@@ -17,6 +17,7 @@ import {
   dateStringToTimestampBoundsAR,
 } from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
+import { unstable_cache } from "next/cache";
 import type {
   DeliverySection,
   DeliveryElement,
@@ -1189,7 +1190,7 @@ export async function tableHasActiveOrders(tableId: string) {
 }
 
 // Get products available for ordering (branch-specific with prices)
-export async function getAvailableProductsForOrder(
+async function _getAvailableProductsForOrder(
   branchId: string,
   orderType: OrderType = OrderType.DINE_IN,
 ) {
@@ -1327,6 +1328,12 @@ export async function getAvailableProductsForOrder(
     return [];
   }
 }
+
+export const getAvailableProductsForOrder = unstable_cache(
+  _getAvailableProductsForOrder,
+  ["available-products-for-order"],
+  { tags: ["products"], revalidate: 60 }
+);
 
 // Get products for a specific delivery menu, organised by menu sections and groups.
 // Returns both the section structure (for display) and a flat deduped product list
