@@ -122,7 +122,7 @@ interface OrderDetailsSidebarProps {
   open: boolean;
   onClose: () => void;
   branchId: string;
-  onOrderUpdated?: () => void;
+  onOrderUpdated?: (patch?: { id: string; status: OrderStatus }) => void;
   canChangeOrderType?: boolean;
   onOrderTypeChanged?: (newType: OrderType) => void;
 }
@@ -453,7 +453,7 @@ export function OrderDetailsSidebar({
           title: "Estado actualizado",
           description: `La orden ahora está ${statusLabels[newStatus].toLowerCase()}`,
         });
-        onOrderUpdated?.();
+        onOrderUpdated?.({ id: order.id, status: newStatus });
       } else {
         // Show error message from backend
         toast({

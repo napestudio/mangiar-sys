@@ -1,7 +1,7 @@
 import { getOrders, getActiveOrderCounts } from "@/actions/Order";
 import { getDeliveryConfig } from "@/actions/DeliveryConfig";
+import { getActiveTables } from "@/actions/Table";
 import { OrdersClient } from "./orders-client";
-import prisma from "@/lib/prisma";
 import { OrderType, UserRole } from "@/app/generated/prisma";
 import { requireRole } from "@/lib/permissions/middleware";
 import { isManagerOrHigher } from "@/lib/permissions/role-utils";
@@ -67,20 +67,7 @@ export default async function OrdersPage({
       paymentMethod: paymentMethodParam || undefined,
       sortOrder,
     }),
-    prisma.table.findMany({
-      where: {
-        branchId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        number: true,
-        name: true,
-      },
-      orderBy: {
-        number: "asc",
-      },
-    }),
+    getActiveTables(branchId),
     getActiveOrderCounts(branchId),
     getDeliveryConfig(branchId),
   ]);

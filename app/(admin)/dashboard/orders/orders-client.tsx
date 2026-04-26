@@ -2,7 +2,7 @@
 
 import { getOrders } from "@/actions/Order";
 import type { PaginationInfo } from "@/types/pagination";
-import { OrderType } from "@/app/generated/prisma";
+import { OrderStatus, OrderType } from "@/app/generated/prisma";
 import { OrderDetailsSidebar } from "@/components/dashboard/order-details-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -375,7 +375,19 @@ export function OrdersClient({
     setSelectedOrder(null);
   };
 
-  const handleOrderUpdated = () => {
+  const handleOrderUpdated = (patch?: { id: string; status: OrderStatus }) => {
+    if (patch) {
+      // Surgical update: only the status changed, no round-trip needed
+      setOrders((prev) =>
+        prev.map((o) => (o.id === patch.id ? { ...o, status: patch.status } : o))
+      );
+      setSelectedOrder((prev) =>
+        prev?.id === patch.id ? { ...prev, status: patch.status } : prev
+      );
+      return;
+    }
+
+    // Full refetch: items, totals, or other fields changed
     startTransition(async () => {
       const result = await getOrders(
         buildFilters(

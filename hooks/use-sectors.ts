@@ -18,13 +18,13 @@ export function useSectors(branchId: string, initialSectors?: Sector[]) {
     const result = await getSectorsByBranch(branchId);
     if (result.success && result.data) {
       setSectors(result.data);
-      // Set the first sector as default IMMEDIATELY to prevent flicker
-      if (result.data.length > 0 && !selectedSector) {
+      // Set the first sector as default on initial load
+      if (result.data.length > 0) {
         setSelectedSector(result.data[0].id);
       }
       setSectorsLoaded(true);
     }
-  }, [branchId, selectedSector, initialSectors]);
+  }, [branchId, initialSectors]);
 
   const refreshSectors = useCallback(async () => {
     const result = await getSectorsByBranch(branchId);

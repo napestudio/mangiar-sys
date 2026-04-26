@@ -176,6 +176,17 @@ export function PreOrderItemsList({
                   className="text-sm resize-none h-20"
                   autoFocus
                   disabled={disabled}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleNotesSave(index);
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setEditingNotes(null);
+                      setTempNotes("");
+                    }
+                  }}
                 />
                 <div className="flex gap-2">
                   <Button
