@@ -23,6 +23,7 @@ export interface ArcaConfig {
   key: string;
   production?: boolean;
   ticketPath?: string;
+  useHttpsAgent?: boolean;
 }
 
 /**
@@ -181,6 +182,7 @@ export function getArcaConfig(
       key,
       production: isProduction,
       ticketPath,
+      useHttpsAgent: true,
     };
   } catch (error) {
     // Re-throw if it's already a formatted error
@@ -258,6 +260,7 @@ export async function getActiveArcaConfig(
         key: normalizePem(fiscalConfig.privateKeyContent),
         production: isProduction,
         ticketPath,
+        useHttpsAgent: true,
       };
     }
 
