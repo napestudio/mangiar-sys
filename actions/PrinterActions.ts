@@ -849,16 +849,25 @@ export async function prepareInvoicePrint(
       copies: 1,
     };
 
-    // Create print job record for tracking
-    const printJob = await prisma.printJob.create({
-      data: {
-        printerId: printer.id,
-        orderId: invoice.order?.id ?? null,
-        content: JSON.stringify(invoiceData),
-        jobType: "FULL_ORDER",
-        status: PrintJobStatus.PENDING,
-      },
-    });
+    // Create print job record for tracking (isolated — failure must not abort the print)
+    let invoicePrintJobIds: string[] = [];
+    try {
+      const printJob = await prisma.printJob.create({
+        data: {
+          printerId: printer.id,
+          orderId: invoice.order?.id ?? null,
+          content: JSON.stringify(invoiceData),
+          jobType: "FULL_ORDER",
+          status: PrintJobStatus.PENDING,
+        },
+      });
+      invoicePrintJobIds = [printJob.id];
+    } catch (err) {
+      console.warn(
+        "[prepareInvoicePrint] PrintJob tracking failed (print will continue):",
+        err,
+      );
+    }
 
     return {
       success: true,
@@ -871,7 +880,7 @@ export async function prepareInvoicePrint(
           copies: 1,
         },
       ],
-      printJobIds: [printJob.id],
+      printJobIds: invoicePrintJobIds,
     };
   } catch (error) {
     console.error("Error preparing invoice print:", error);
