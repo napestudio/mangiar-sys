@@ -62,10 +62,10 @@ export async function testArcaConnection(
     // Authorization check - MANAGER and above
     await authorizeAction(UserRole.MANAGER);
 
-    const environment = getCurrentArcaEnvironment();
-    console.log(`[ARCA] Testing connection to ${environment} environment...`);
-
     const config = await resolveArcaConfig(restaurantId);
+    // Derive environment from the resolved config, not from global env vars
+    const environment = config.production ? "production" : "test";
+    console.log(`[ARCA] Testing connection to ${environment} environment...`);
     const arca = new Arca(config);
 
     // Get actual server status from ARCA
