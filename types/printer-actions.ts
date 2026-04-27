@@ -31,6 +31,7 @@ export interface AfipInvoicePrintParams {
   cuit: string;
 
   // Customer
+  customerName?: string; // Business or person name
   customerDoc: string;
 
   // Items
