@@ -124,17 +124,27 @@ export async function updateFiscalConfig(
       };
     }
 
+    // Normalize PEM content — Windows line endings (\r\n) break ARCA/AFIP cert parsing
+    const normalizePem = (pem: string | null | undefined) =>
+      pem ? pem.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim() : pem;
+
+    const dataToSave = {
+      ...validation.data,
+      certificateContent: normalizePem(validation.data.certificateContent),
+      privateKeyContent: normalizePem(validation.data.privateKeyContent),
+    };
+
     // Upsert fiscal configuration
     const updated = await prisma.fiscalConfiguration.upsert({
       where: { restaurantId },
       create: {
-        ...validation.data,
+        ...dataToSave,
         restaurantId,
         createdBy: userId,
         updatedBy: userId,
       },
       update: {
-        ...validation.data,
+        ...dataToSave,
         updatedBy: userId,
         updatedAt: new Date(),
       },

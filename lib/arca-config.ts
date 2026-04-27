@@ -248,10 +248,14 @@ export async function getActiveArcaConfig(
         ? "/tmp/arca-tickets"
         : path.resolve(process.cwd(), "storage", "arca-tickets");
 
+      // Normalize PEM line endings — Windows \r\n breaks ARCA cert parsing
+      const normalizePem = (pem: string) =>
+        pem.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+
       return {
         cuit: cuitNumber,
-        cert: fiscalConfig.certificateContent,
-        key: fiscalConfig.privateKeyContent,
+        cert: normalizePem(fiscalConfig.certificateContent),
+        key: normalizePem(fiscalConfig.privateKeyContent),
         production: isProduction,
         ticketPath,
       };
