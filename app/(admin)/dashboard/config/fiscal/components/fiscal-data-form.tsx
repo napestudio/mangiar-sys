@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiscalConfigInput,
   FiscalConfigData,
@@ -48,6 +48,25 @@ export function FiscalDataForm({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync form state when initialConfig changes (triggered by revalidatePath after any tab saves)
+  useEffect(() => {
+    setFormData({
+      isEnabled: initialConfig?.isEnabled ?? false,
+      businessName: initialConfig?.businessName ?? "",
+      cuit: initialConfig?.cuit ?? "",
+      address: initialConfig?.address ?? "",
+      activityStartDate: initialConfig?.activityStartDate ?? undefined,
+      grossIncome: initialConfig?.grossIncome ?? "",
+      taxStatus: initialConfig?.taxStatus ?? undefined,
+      defaultInvoiceType: initialConfig?.defaultInvoiceType ?? 6,
+      autoIssue: initialConfig?.autoIssue ?? false,
+      environment: initialConfig?.environment ?? "test",
+      certificateContent: initialConfig?.certificateContent ?? "",
+      privateKeyContent: initialConfig?.privateKeyContent ?? "",
+      defaultPtoVta: initialConfig?.defaultPtoVta ?? 1,
+    });
+  }, [initialConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
