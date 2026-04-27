@@ -1,0 +1,13 @@
+openssl_conf = openssl_init
+
+[openssl_init]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+# Allow 1024-bit DH keys (ARCA/AFIP servers use legacy 1024-bit DH parameters)
+# OpenSSL 3.x defaults to security level 2 (requires 2048-bit DH), which breaks
+# connections to wsaa2.afip.gov.ar and wsfe.afip.gov.ar
+CipherString = DEFAULT:@SECLEVEL=1
