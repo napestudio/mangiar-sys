@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiscalConfigInput,
   FiscalConfigData,
@@ -63,6 +63,24 @@ export function CertificatesForm({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync form state when initialConfig changes (triggered by revalidatePath after any tab saves)
+  useEffect(() => {
+    setFormData({
+      environment: initialConfig?.environment ?? "test",
+      certificateContent: initialConfig?.certificateContent ?? "",
+      privateKeyContent: initialConfig?.privateKeyContent ?? "",
+      isEnabled: initialConfig?.isEnabled ?? false,
+      businessName: initialConfig?.businessName ?? "",
+      cuit: initialConfig?.cuit ?? "",
+      defaultPtoVta: initialConfig?.defaultPtoVta ?? 1,
+      defaultInvoiceType: initialConfig?.defaultInvoiceType ?? 6,
+      autoIssue: initialConfig?.autoIssue ?? false,
+    });
+    // After a save, if certs now exist, exit replace mode
+    setReplacingCert(!initialConfig?.certificateContent);
+    setReplacingKey(!initialConfig?.privateKeyContent);
+  }, [initialConfig]);
 
   const newCertContent = replacingCert ? (formData.certificateContent || "") : "";
   const newKeyContent = replacingKey ? (formData.privateKeyContent || "") : "";

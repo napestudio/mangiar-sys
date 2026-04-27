@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SalesPointsConfigProps {
   initialConfig: FiscalConfigData | null;
@@ -40,6 +40,20 @@ export function SalesPointsConfig({
   );
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync form state when initialConfig changes (triggered by revalidatePath after any tab saves)
+  useEffect(() => {
+    setFormData({
+      defaultPtoVta: initialConfig?.defaultPtoVta ?? 1,
+      isEnabled: initialConfig?.isEnabled ?? false,
+      businessName: initialConfig?.businessName ?? "",
+      cuit: initialConfig?.cuit ?? "",
+      environment: initialConfig?.environment ?? "test",
+      defaultInvoiceType: initialConfig?.defaultInvoiceType ?? 6,
+      autoIssue: initialConfig?.autoIssue ?? false,
+    });
+    setAvailablePoints((initialConfig?.availablePtoVta as unknown as number[]) || []);
+  }, [initialConfig]);
 
   const handleSync = async () => {
     setIsSyncing(true);
