@@ -760,12 +760,12 @@ export async function prepareInvoicePrint(
     // Get the branch ID from the order
     const branchId = invoice.order.branchId ?? "";
 
-    // Get first online network printer from the branch (for invoices we typically use one printer)
+    // Get first active full-order printer from the branch (USB or Network)
     const printer = await prisma.printer.findFirst({
       where: {
         branchId,
-        status: PrinterStatus.ONLINE,
-        connectionType: "NETWORK", // Preferably network for invoice printers
+        isActive: true,
+        printMode: { in: ["FULL_ORDER", "BOTH"] },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -773,7 +773,7 @@ export async function prepareInvoicePrint(
     if (!printer) {
       return {
         success: false,
-        error: "No hay impresoras activas configuradas para este local",
+        error: "No hay impresoras configuradas para impresión de facturas en este local",
       };
     }
 
@@ -824,6 +824,7 @@ export async function prepareInvoicePrint(
       invoiceDate: formatTimestampDateAR(invoice.invoiceDate.toISOString()),
       businessName,
       cuit: businessCuit,
+      customerName: invoice.customerName || undefined,
       customerDoc: `${invoice.customerDocType === 80 ? "CUIT" : invoice.customerDocType === 96 ? "DNI" : "Doc"}: ${invoice.customerDocNumber}`,
       items,
       subtotal: Number(invoice.subtotal),
@@ -848,6 +849,17 @@ export async function prepareInvoicePrint(
       copies: 1,
     };
 
+    // Create print job record for tracking
+    const printJob = await prisma.printJob.create({
+      data: {
+        printerId: printer.id,
+        orderId: invoice.order?.id ?? null,
+        content: JSON.stringify(invoiceData),
+        jobType: "FULL_ORDER",
+        status: PrintJobStatus.PENDING,
+      },
+    });
+
     return {
       success: true,
       jobs: [
@@ -859,7 +871,7 @@ export async function prepareInvoicePrint(
           copies: 1,
         },
       ],
-      printJobIds: [], // Optional: could create print job records for tracking
+      printJobIds: [printJob.id],
     };
   } catch (error) {
     console.error("Error preparing invoice print:", error);

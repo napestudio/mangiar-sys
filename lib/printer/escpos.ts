@@ -1419,6 +1419,7 @@ export interface AfipInvoiceData {
   cuit: string; // Issuer CUIT formatted (e.g., "20-12345678-9")
 
   // Customer information
+  customerName?: string; // Business or person name (e.g. "Mi Empresa SRL")
   customerDoc: string; // e.g., "Consumidor Final" or "DNI: 12345678"
 
   // Line items
@@ -1493,7 +1494,10 @@ export function generateAfipInvoiceData(
   // ========== INVOICE DETAILS ==========
   content += formatTwoColumns("Fecha:", invoice.invoiceDate, width) + "\n";
   content += formatTwoColumns("CUIT:", invoice.cuit, width) + "\n";
-  content += formatTwoColumns("Cliente:", invoice.customerDoc, width) + "\n";
+  if (invoice.customerName) {
+    content += formatTwoColumns("Cliente:", invoice.customerName, width) + "\n";
+  }
+  content += formatTwoColumns("Doc:", invoice.customerDoc, width) + "\n";
 
   content += separator(width, "=") + "\n";
 
