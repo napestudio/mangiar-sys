@@ -1,9 +1,9 @@
 "use client";
 
-import { prepareInvoicePrint } from "@/actions/PrinterActions";
 import { OrderStatus, OrderType } from "@/app/generated/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { usePrint } from "@/hooks/use-print";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
 import { calculateDiscountAmount } from "@/lib/discount";
@@ -92,6 +92,7 @@ const typeLabels = {
 
 export function OrderListView({ orders, onOrderClick, activeTab }: OrderListViewProps) {
   const { toast } = useToast();
+  const { printInvoice } = usePrint();
 
   const [printingInvoice, setPrintingInvoice] = useState<string | null>(null);
 
@@ -104,9 +105,9 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
     setPrintingInvoice(orderId);
 
     try {
-      const result = await prepareInvoicePrint(invoiceId);
+      const success = await printInvoice(invoiceId);
 
-      if (result.success) {
+      if (success) {
         toast({
           title: "Factura enviada a impresión",
           description: "La factura se envió a la impresora térmica",
@@ -114,9 +115,7 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
       } else {
         toast({
           title: "Error",
-          description: !result.success
-            ? result.error || "No se pudo imprimir la factura"
-            : "No se pudo imprimir la factura",
+          description: "No se pudo imprimir la factura",
           variant: "destructive",
         });
       }
