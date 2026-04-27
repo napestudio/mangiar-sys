@@ -87,10 +87,20 @@ export function formatDateTimeShortAR(isoString: string): string {
 /**
  * "YYYYMMDD" — AFIP/ARCA required date format, Argentina timezone.
  * Use for any invoice date sent to AFIP, including reference dates from DB.
+ *
+ * Uses "en-CA" locale which outputs "YYYY-MM-DD" (ISO 8601 style) regardless
+ * of Node.js version. "en-AR" without options outputs "M/D/YYYY" on Node.js 18
+ * which cannot be stripped to YYYYMMDD.
  */
 export function toAFIPDateAR(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-AR")
-    .format(typeof date === "string" ? new Date(date) : date)
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(d)
     .replace(/-/g, "");
 }
 
