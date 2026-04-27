@@ -1006,6 +1006,12 @@ model FiscalConfiguration {
   privateKeyContent    String?   @db.Text // PEM content of the private key .key
   certificateExpiresAt DateTime? // Track expiration for alerts
 
+  // WSAA ticket cache — persists TA across Vercel Lambda cold starts
+  wsaaToken     String?   @db.Text // WSAA TA token string
+  wsaaSign      String?   @db.Text // WSAA TA sign string
+  wsaaExpiresAt DateTime?          // TA expiration for quick validity check
+  wsaaHeader    Json?               // Full TA header (source, destination, uniqueid, etc.)
+
   // ========== SALES POINTS ==========
   defaultPtoVta   Int       @default(1) // Default Punto de Venta
   availablePtoVta Json?     // Array of available sales points from ARCA, e.g. [1, 2, 3]

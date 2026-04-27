@@ -6,6 +6,10 @@ import {
   getActiveArcaConfig,
   getCurrentArcaEnvironment,
 } from "@/lib/arca-config";
+import {
+  loadAndPreloadTicket,
+  saveTicketAfterOp,
+} from "@/lib/wsaa-ticket";
 import { authorizeAction } from "@/lib/permissions/middleware";
 import { UserRole } from "@/app/generated/prisma";
 import type {
@@ -47,6 +51,52 @@ async function resolveArcaConfig(restaurantId?: string) {
 }
 
 /**
+ * Create an Arca SDK instance with WSAA ticket pre-loading from DB.
+ *
+ * On Vercel, each Lambda invocation starts with an empty /tmp directory. Without
+ * this helper, the SDK would try to authenticate with WSAA on every invocation,
+ * causing `coe.alreadyAuthenticated` errors when a valid TA already exists.
+ *
+ * Flow:
+ *   1. If restaurantId provided: load cached ticket from DB → write to ticketPath
+ *   2. Create new Arca(config) — SDK finds ticket on disk, skips WSAA auth
+ *   3. Caller is responsible for calling saveTicket() after the operation completes
+ */
+async function createArca(restaurantId?: string) {
+  const config = await resolveArcaConfig(restaurantId);
+
+  if (restaurantId && config.ticketPath) {
+    await loadAndPreloadTicket(
+      restaurantId,
+      config.ticketPath,
+      config.cuit,
+      !!config.production,
+    );
+  }
+
+  return { arca: new Arca(config), config, restaurantId };
+}
+
+/**
+ * Persist the WSAA ticket written to disk by the SDK to the database.
+ * Call this after every successful ARCA operation so the next Lambda invocation
+ * can reuse the ticket without re-authenticating.
+ */
+async function saveTicket(
+  restaurantId: string | undefined,
+  config: { ticketPath?: string; cuit: number; production?: boolean },
+) {
+  if (restaurantId && config.ticketPath) {
+    await saveTicketAfterOp(
+      restaurantId,
+      config.ticketPath,
+      config.cuit,
+      !!config.production,
+    );
+  }
+}
+
+/**
  * Test connection to ARCA servers
  *
  * Verifies that credentials are valid and ARCA servers are accessible.
@@ -62,14 +112,12 @@ export async function testArcaConnection(
     // Authorization check - MANAGER and above
     await authorizeAction(UserRole.MANAGER);
 
-    const config = await resolveArcaConfig(restaurantId);
-    // Derive environment from the resolved config, not from global env vars
+    const { arca, config } = await createArca(restaurantId);
     const environment = config.production ? "production" : "test";
     console.log(`[ARCA] Testing connection to ${environment} environment...`);
-    const arca = new Arca(config);
 
-    // Get actual server status from ARCA
     const serverStatus = await arca.electronicBillingService.getServerStatus();
+    await saveTicket(restaurantId, config);
 
     console.log("[ARCA] Connection test successful:", serverStatus);
 
@@ -82,17 +130,39 @@ export async function testArcaConnection(
       },
     };
   } catch (error) {
+    // Retry once on coe.alreadyAuthenticated — another Lambda instance may have
+    // just authenticated; wait for it to save the ticket to DB, then retry
+    if (
+      error instanceof Error &&
+      error.message.includes("coe.alreadyAuthenticated")
+    ) {
+      console.warn("[ARCA] coe.alreadyAuthenticated on testConnection — retrying after 800ms");
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const { arca, config } = await createArca(restaurantId);
+        const serverStatus = await arca.electronicBillingService.getServerStatus();
+        await saveTicket(restaurantId, config);
+        return {
+          success: true,
+          data: {
+            environment: config.production ? "production" : "test",
+            cuit: config.cuit,
+            serverStatus,
+          },
+        };
+      } catch (retryError) {
+        console.error("[ARCA] Retry also failed:", retryError);
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : "Error al conectar con ARCA",
+        };
+      }
+    }
+
     console.error("[ARCA] Connection test error:", error);
-
-    // Return user-friendly error message
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Error desconocido al conectar con ARCA";
-
     return {
       success: false,
-      error: errorMessage,
+      error: error instanceof Error ? error.message : "Error desconocido al conectar con ARCA",
     };
   }
 }
@@ -112,39 +182,36 @@ export async function getLastInvoiceNumber(
   cbteTipo: number,
   restaurantId?: string,
 ): Promise<ActionResult<ArcaLastVoucherResponse>> {
+  const run = async () => {
+    const { arca, config } = await createArca(restaurantId);
+    const response = await arca.electronicBillingService.getLastVoucher(ptoVta, cbteTipo);
+    await saveTicket(restaurantId, config);
+    return response;
+  };
+
   try {
     await authorizeAction(UserRole.MANAGER);
-
-    console.log(
-      `[ARCA] Getting last invoice number for PtoVta ${ptoVta}, Type ${cbteTipo}...`,
-    );
-
-    const config = await resolveArcaConfig(restaurantId);
-    const arca = new Arca(config);
-
-    // Get last voucher number
-    const response = await arca.electronicBillingService.getLastVoucher(
-      ptoVta,
-      cbteTipo,
-    );
-
+    console.log(`[ARCA] Getting last invoice number for PtoVta ${ptoVta}, Type ${cbteTipo}...`);
+    const response = await run();
     console.log("[ARCA] Last invoice number retrieved:", response);
-
-    return {
-      success: true,
-      data: response,
-    };
+    return { success: true, data: response };
   } catch (error) {
+    if (error instanceof Error && error.message.includes("coe.alreadyAuthenticated")) {
+      console.warn("[ARCA] coe.alreadyAuthenticated on getLastVoucher — retrying after 800ms");
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        return { success: true, data: await run() };
+      } catch (retryError) {
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : "Error al obtener número de comprobante",
+        };
+      }
+    }
     console.error("[ARCA] Get last invoice error:", error);
-
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Error al obtener último número de comprobante";
-
     return {
       success: false,
-      error: errorMessage,
+      error: error instanceof Error ? error.message : "Error al obtener último número de comprobante",
     };
   }
 }
@@ -163,9 +230,15 @@ export async function emitTestInvoice(
   invoiceData: ArcaInvoiceInput,
   restaurantId?: string,
 ): Promise<ActionResult<ArcaCreateVoucherResponse>> {
+  const run = async () => {
+    const { arca, config } = await createArca(restaurantId);
+    const response = await arca.electronicBillingService.createVoucher(invoiceData);
+    await saveTicket(restaurantId, config);
+    return { response, config };
+  };
+
   try {
     await authorizeAction(UserRole.MANAGER);
-
     const environment = getCurrentArcaEnvironment();
     console.log(`[ARCA] Emitting invoice to ${environment} environment...`, {
       PtoVta: invoiceData.PtoVta,
@@ -174,41 +247,32 @@ export async function emitTestInvoice(
       ImpTotal: invoiceData.ImpTotal,
     });
 
-    const config = await resolveArcaConfig(restaurantId);
-    const arca = new Arca(config);
-
-    // Create voucher (invoice)
-    const response =
-      await arca.electronicBillingService.createVoucher(invoiceData);
-
+    const { response, config } = await run();
     console.log("[ARCA] Invoice emission response:", response);
-
-    // Check if invoice was approved
     if (response.cae) {
       console.log(`[ARCA] Invoice approved! CAE: ${response.cae}`);
     } else {
-      console.error(
-        "[ARCA] Invoice may have been rejected. Check response:",
-        response,
-      );
+      console.error("[ARCA] Invoice may have been rejected. Check response:", response);
     }
-
-    return {
-      success: true,
-      data: {
-        ...response,
-        cuit: config.cuit, // Include CUIT for QR code generation
-      },
-    };
+    return { success: true, data: { ...response, cuit: config.cuit } };
   } catch (error) {
+    if (error instanceof Error && error.message.includes("coe.alreadyAuthenticated")) {
+      console.warn("[ARCA] coe.alreadyAuthenticated on emitInvoice — retrying after 800ms");
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const { response, config } = await run();
+        return { success: true, data: { ...response, cuit: config.cuit } };
+      } catch (retryError) {
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : "Error al emitir factura",
+        };
+      }
+    }
     console.error("[ARCA] Invoice emission error:", error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : "Error al emitir factura";
-
     return {
       success: false,
-      error: errorMessage,
+      error: error instanceof Error ? error.message : "Error al emitir factura",
     };
   }
 }
@@ -242,37 +306,37 @@ type SalesPointsResult = {
 export async function getSalesPoints(
   restaurantId?: string,
 ): Promise<ActionResult<SalesPointsResult>> {
+  const run = async () => {
+    const { arca, config } = await createArca(restaurantId);
+    const response = await arca.electronicBillingService.getSalesPoints();
+    await saveTicket(restaurantId, config);
+    return response;
+  };
+
   try {
     await authorizeAction(UserRole.MANAGER);
-
     const environment = getCurrentArcaEnvironment();
-    console.log(
-      `[ARCA] Getting sales points for ${environment} environment...`,
-    );
-
-    const config = await resolveArcaConfig(restaurantId);
-    const arca = new Arca(config);
-
-    // Get sales points
-    const response = await arca.electronicBillingService.getSalesPoints();
-
+    console.log(`[ARCA] Getting sales points for ${environment} environment...`);
+    const response = await run();
     console.log("[ARCA] Sales points retrieved:", response);
-
-    return {
-      success: true,
-      data: response,
-    };
+    return { success: true, data: response };
   } catch (error) {
+    if (error instanceof Error && error.message.includes("coe.alreadyAuthenticated")) {
+      console.warn("[ARCA] coe.alreadyAuthenticated on getSalesPoints — retrying after 800ms");
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        return { success: true, data: await run() };
+      } catch (retryError) {
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : "Error al obtener puntos de venta",
+        };
+      }
+    }
     console.error("[ARCA] Get sales points error:", error);
-
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Error al obtener puntos de venta";
-
     return {
       success: false,
-      error: errorMessage,
+      error: error instanceof Error ? error.message : "Error al obtener puntos de venta",
     };
   }
 }
@@ -305,37 +369,37 @@ type VoucherTypesResult = {
 export async function getInvoiceTypes(
   restaurantId?: string,
 ): Promise<ActionResult<VoucherTypesResult>> {
+  const run = async () => {
+    const { arca, config } = await createArca(restaurantId);
+    const response = await arca.electronicBillingService.getVoucherTypes();
+    await saveTicket(restaurantId, config);
+    return response;
+  };
+
   try {
     await authorizeAction(UserRole.MANAGER);
-
     const environment = getCurrentArcaEnvironment();
-    console.log(
-      `[ARCA] Getting invoice types for ${environment} environment...`,
-    );
-
-    const config = await resolveArcaConfig(restaurantId);
-    const arca = new Arca(config);
-
-    // Get invoice types
-    const response = await arca.electronicBillingService.getVoucherTypes();
-
+    console.log(`[ARCA] Getting invoice types for ${environment} environment...`);
+    const response = await run();
     console.log("[ARCA] Invoice types retrieved");
-
-    return {
-      success: true,
-      data: response,
-    };
+    return { success: true, data: response };
   } catch (error) {
+    if (error instanceof Error && error.message.includes("coe.alreadyAuthenticated")) {
+      console.warn("[ARCA] coe.alreadyAuthenticated on getInvoiceTypes — retrying after 800ms");
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        return { success: true, data: await run() };
+      } catch (retryError) {
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : "Error al obtener tipos de comprobantes",
+        };
+      }
+    }
     console.error("[ARCA] Get invoice types error:", error);
-
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Error al obtener tipos de comprobantes";
-
     return {
       success: false,
-      error: errorMessage,
+      error: error instanceof Error ? error.message : "Error al obtener tipos de comprobantes",
     };
   }
 }
