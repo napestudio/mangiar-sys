@@ -664,11 +664,19 @@ export async function prepareAfipInvoicePrint(
     // Prepare invoice data
     const invoiceData = {
       invoiceType: params.invoiceType,
+      invoiceTypeCode: params.invoiceTypeCode,
+      ptoVta: params.ptoVta,
       invoiceNumber: params.invoiceNumber,
       invoiceDate: params.invoiceDate,
       businessName: params.businessName,
+      address: params.address,
       cuit: params.cuit,
+      taxStatus: params.taxStatus,
+      grossIncome: params.grossIncome,
+      activityStartDate: params.activityStartDate,
+      customerName: params.customerName,
       customerDoc: params.customerDoc,
+      customerTaxCondition: params.customerTaxCondition,
       items: params.items,
       subtotal: params.subtotal,
       vatBreakdown: params.vatBreakdown,
@@ -715,6 +723,20 @@ export async function prepareAfipInvoicePrint(
           : "Error al preparar la impresión de factura ARCA",
     };
   }
+}
+
+// Converts ARCA date string "YYYYMMDD" → "DD/MM/YYYY"
+function formatArcaDate(yyyymmdd: string | null | undefined): string {
+  if (!yyyymmdd || yyyymmdd.length !== 8) return yyyymmdd ?? "";
+  return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
+}
+
+// Derives customer tax condition from invoice type and doc type
+function deriveCustomerTaxCondition(invoiceType: number, docType: number): string {
+  if (invoiceType === 1) return "Responsable Inscripto"; // Factura A
+  if (docType === 99) return "Consumidor Final";
+  if (docType === 80 || docType === 86) return "Responsable Inscripto / Exento";
+  return "Consumidor Final";
 }
 
 /**
@@ -819,20 +841,35 @@ export async function prepareInvoicePrint(
 
     // Prepare invoice data
     const invoiceData = {
-      invoiceType: `Factura ${invoice.invoiceType === 1 ? "A" : invoice.invoiceType === 6 ? "B" : "C"}`,
-      invoiceNumber: `${invoice.ptoVta.toString().padStart(4, "0")}-${invoice.invoiceNumber.toString().padStart(8, "0")}`,
+      invoiceType: `FACTURA ${invoice.invoiceType === 1 ? "A" : invoice.invoiceType === 6 ? "B" : "C"}`,
+      invoiceTypeCode: invoice.invoiceType,
+      ptoVta: invoice.ptoVta.toString().padStart(5, "0"),
+      invoiceNumber: invoice.invoiceNumber.toString().padStart(8, "0"),
       invoiceDate: formatTimestampDateAR(invoice.invoiceDate.toISOString()),
       businessName,
       cuit: businessCuit,
+      address: fiscalConfig?.address || undefined,
+      taxStatus: fiscalConfig?.taxStatus || undefined,
+      grossIncome: fiscalConfig?.grossIncome || undefined,
+      activityStartDate: fiscalConfig?.activityStartDate
+        ? formatTimestampDateAR(fiscalConfig.activityStartDate.toISOString())
+        : undefined,
       customerName: invoice.customerName || undefined,
-      customerDoc: `${invoice.customerDocType === 80 ? "CUIT" : invoice.customerDocType === 96 ? "DNI" : "Doc"}: ${invoice.customerDocNumber}`,
+      customerDoc:
+        invoice.customerDocType === 99
+          ? "Consumidor Final"
+          : `${invoice.customerDocType === 80 ? "CUIT" : invoice.customerDocType === 86 ? "CUIL" : "DNI"}: ${invoice.customerDocNumber}`,
+      customerTaxCondition: deriveCustomerTaxCondition(
+        invoice.invoiceType,
+        invoice.customerDocType,
+      ),
       items,
       subtotal: Number(invoice.subtotal),
       vatBreakdown,
       totalVat: Number(invoice.vatAmount),
       total: Number(invoice.totalAmount),
       cae: invoice.cae || "",
-      caeExpiration: invoice.caeFchVto || "",
+      caeExpiration: formatArcaDate(invoice.caeFchVto),
       qrUrl: invoice.qrUrl || "",
     };
 

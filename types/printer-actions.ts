@@ -23,16 +23,23 @@ export interface PreparedPrintResult {
 export interface AfipInvoicePrintParams {
   // Invoice header
   invoiceType: string;
+  invoiceTypeCode?: number;
   invoiceNumber: string;
+  ptoVta: string;
   invoiceDate: string;
 
   // Issuer
   businessName?: string;
+  address?: string;
   cuit: string;
+  taxStatus?: string;
+  grossIncome?: string;
+  activityStartDate?: string;
 
   // Customer
-  customerName?: string; // Business or person name
+  customerName?: string;
   customerDoc: string;
+  customerTaxCondition?: string;
 
   // Items
   items: Array<{

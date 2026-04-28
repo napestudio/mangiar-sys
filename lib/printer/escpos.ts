@@ -1410,17 +1410,24 @@ export async function testConnection(
  */
 export interface AfipInvoiceData {
   // Invoice header
-  invoiceType: string; // e.g., "FACTURA B"
-  invoiceNumber: string; // e.g., "00001-00000123"
-  invoiceDate: string; // e.g., "25/01/2026"
+  invoiceType: string;        // e.g., "FACTURA B"
+  invoiceTypeCode?: number;   // Numeric ARCA code e.g. 6 → prints "Codigo 6"
+  invoiceNumber: string;      // Sequential number only e.g. "00011474"
+  ptoVta: string;             // Punto de venta e.g. "00004"
+  invoiceDate: string;        // e.g., "17/03/2026"
 
   // Issuer information
-  businessName?: string; // Optional business name
-  cuit: string; // Issuer CUIT formatted (e.g., "20-12345678-9")
+  businessName?: string;
+  address?: string;           // Domicilio comercial e.g. "Av. Corrientes 1234"
+  cuit: string;               // Issuer CUIT e.g. "30-12345678-9"
+  taxStatus?: string;         // e.g. "IVA RESPONSABLE INSCRIPTO"
+  grossIncome?: string;       // Ingresos Brutos number e.g. "30-12345678-9"
+  activityStartDate?: string; // Pre-formatted "DD/MM/YYYY"
 
   // Customer information
-  customerName?: string; // Business or person name (e.g. "Mi Empresa SRL")
-  customerDoc: string; // e.g., "Consumidor Final" or "DNI: 12345678"
+  customerName?: string;
+  customerDoc: string;        // e.g. "Consumidor Final" or "DNI: 12345678"
+  customerTaxCondition?: string; // e.g. "Consumidor Final" → "A CONSUMIDOR FINAL"
 
   // Line items
   items: Array<{
@@ -1442,17 +1449,24 @@ export interface AfipInvoiceData {
   total: number;
 
   // ARCA authorization
-  cae: string; // CAE code (14 digits)
-  caeExpiration: string; // CAE expiration date (e.g., "31/01/2026")
+  cae: string;           // CAE code (14 digits)
+  caeExpiration: string; // CAE expiration date pre-formatted "DD/MM/YYYY"
 
   // QR code URL
-  qrUrl: string; // ARCA verification URL
+  qrUrl: string;
 }
 
 /**
  * Generate ARCA invoice ESC/POS data for thermal printing
- * Formats electronic invoice according to ARCA requirements with QR code
+ * Formats electronic invoice according to ARCA requirements with QR code.
+ * Layout matches official Argentine fiscal receipt format.
  */
+// Format price for thermal receipt: always 2 decimal places, no currency symbol padding
+// e.g. 4000 → "$4.000,00"
+function receiptPrice(amount: number): string {
+  return `$${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function generateAfipInvoiceData(
   invoice: AfipInvoiceData,
   config?: { charactersPerLine?: number },
@@ -1460,66 +1474,68 @@ export function generateAfipInvoiceData(
   const width = config?.charactersPerLine || 48; // 80mm printer standard
 
   let content = Commands.INIT;
+  content += Commands.ALIGN_LEFT;
 
-  // ========== HEADER ==========
-  content += Commands.ALIGN_CENTER;
-
-  // Business name if provided
+  // ========== ISSUER BLOCK (left-aligned) ==========
   if (invoice.businessName) {
-    content += Commands.DOUBLE_HEIGHT_ON;
-    content += Commands.BOLD_ON;
-    content += `${invoice.businessName}\n`;
-    content += Commands.BOLD_OFF;
-    content += Commands.NORMAL_SIZE;
-    content += Commands.FEED_LINE;
+    content += `Razon social: ${invoice.businessName}\n`;
+  }
+  if (invoice.address) {
+    content += `Direccion: ${invoice.address}\n`;
+  }
+  content += `C.U.I.T: ${invoice.cuit}\n`;
+  if (invoice.taxStatus) {
+    content += `${invoice.taxStatus}\n`;
+  }
+  if (invoice.grossIncome) {
+    content += `IIBB: ${invoice.grossIncome}\n`;
+  }
+  if (invoice.activityStartDate) {
+    content += `Inicio de actividad: ${invoice.activityStartDate}\n`;
   }
 
-  // Invoice type (large)
+  content += separator(width) + "\n";
+
+  // ========== INVOICE TYPE (centered, bold, large) ==========
+  content += Commands.ALIGN_CENTER;
   content += Commands.DOUBLE_SIZE_ON;
   content += Commands.BOLD_ON;
   content += `${invoice.invoiceType}\n`;
   content += Commands.BOLD_OFF;
   content += Commands.NORMAL_SIZE;
-  content += Commands.FEED_LINE;
-
-  // Invoice number
-  content += Commands.DOUBLE_HEIGHT_ON;
-  content += `N° ${invoice.invoiceNumber}\n`;
-  content += Commands.NORMAL_SIZE;
-  content += Commands.FEED_LINE;
+  if (invoice.invoiceTypeCode !== undefined) {
+    content += `Codigo ${invoice.invoiceTypeCode}\n`;
+  }
 
   content += Commands.ALIGN_LEFT;
-  content += separator(width, "=") + "\n";
+  content += separator(width) + "\n";
 
   // ========== INVOICE DETAILS ==========
-  content += formatTwoColumns("Fecha:", invoice.invoiceDate, width) + "\n";
-  content += formatTwoColumns("CUIT:", invoice.cuit, width) + "\n";
-  if (invoice.customerName) {
-    content += formatTwoColumns("Cliente:", invoice.customerName, width) + "\n";
-  }
-  content += formatTwoColumns("Doc:", invoice.customerDoc, width) + "\n";
+  content += `P.V.: ${invoice.ptoVta}\n`;
+  content += `Nro: ${invoice.invoiceNumber}\n`;
+  content += `Fecha: ${invoice.invoiceDate}\n`;
+  content += `Concepto: Productos\n`;
 
-  content += separator(width, "=") + "\n";
+  content += separator(width) + "\n";
+
+  // ========== CUSTOMER SECTION ==========
+  if (invoice.customerTaxCondition) {
+    content += Commands.BOLD_ON;
+    content += `A ${invoice.customerTaxCondition.toUpperCase()}\n`;
+    content += Commands.BOLD_OFF;
+  }
+  content += "\n";
+  if (invoice.customerName) {
+    content += `Nombre: ${invoice.customerName}\n`;
+  }
+
+  content += separator(width) + "\n";
 
   // ========== LINE ITEMS ==========
-  content += Commands.BOLD_ON;
-  content += "DETALLE\n";
-  content += Commands.BOLD_OFF;
-  content += separator(width) + "\n";
-
-  // Column headers
-  const headerLine =
-    formatLine("Cant Descripcion", width - 10, "left") +
-    formatLine("Total", 10, "right");
-  content += headerLine + "\n";
-  content += separator(width) + "\n";
-
-  // Items
   for (const item of invoice.items) {
-    const itemLine = `${item.quantity}x ${item.description}`;
-    const priceStr = `$${item.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+    const itemLine = `${item.quantity}  ${item.description}`;
+    const priceStr = receiptPrice(item.total);
 
-    // If item name is too long, wrap to next line
     const maxDescLength = width - priceStr.length - 1;
     if (itemLine.length > maxDescLength) {
       content += itemLine.substring(0, maxDescLength) + "\n";
@@ -1527,66 +1543,44 @@ export function generateAfipInvoiceData(
     } else {
       content += formatTwoColumns(itemLine, priceStr, width) + "\n";
     }
-
-    // Show unit price and VAT rate on separate line
-    const detailLine = `  ${formatCurrency(item.unitPrice)} c/u (IVA ${item.vatRate}%)`;
-    content += detailLine + "\n";
   }
 
   content += separator(width) + "\n";
 
-  // ========== TOTALS ==========
-  content +=
-    formatTwoColumns(
-      "Subtotal:",
-      `$${invoice.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`,
-      width,
-    ) + "\n";
-
-  // VAT breakdown
-  for (const vat of invoice.vatBreakdown) {
-    content +=
-      formatTwoColumns(
-        `IVA ${vat.rate}%:`,
-        `$${vat.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`,
-        width,
-      ) + "\n";
-  }
-
-  content += separator(width) + "\n";
-
-  // Total (bold and large)
+  // ========== TOTAL (bold, large) ==========
   content += Commands.BOLD_ON;
   content += Commands.DOUBLE_HEIGHT_ON;
-  content +=
-    formatTwoColumns(
-      "TOTAL:",
-      `$${invoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`,
-      width,
-    ) + "\n";
+  content += formatTwoColumns("TOTAL", receiptPrice(invoice.total), width) + "\n";
   content += Commands.NORMAL_SIZE;
   content += Commands.BOLD_OFF;
 
-  content += separator(width, "=") + "\n";
+  content += separator(width) + "\n";
 
-  // ========== ARCA AUTHORIZATION ==========
-  content += Commands.BOLD_ON;
-  content += "AUTORIZACION ARCA\n";
-  content += Commands.BOLD_OFF;
+  // ========== TRANSPARENCIA FISCAL (only when IVA > 0) ==========
+  if (invoice.totalVat > 0) {
+    content += "REGIMEN DE TRANSPARENCIA FISCAL AL CONSUMIDOR\n";
+    content += "(LEY 27.743)\n";
+    content +=
+      formatTwoColumns("IVA CONTENIDO", receiptPrice(invoice.totalVat), width) + "\n";
+    content +=
+      formatTwoColumns("OTROS IMPUESTOS NACIONALES", receiptPrice(0), width) + "\n";
+    content += separator(width) + "\n";
+  }
 
-  content += formatTwoColumns("CAE:", invoice.cae, width) + "\n";
-  content += formatTwoColumns("Vto. CAE:", invoice.caeExpiration, width) + "\n";
+  // ========== CAE SECTION ==========
+  content += `C.A.E: ${invoice.cae}\n`;
+  content += `Vto.: ${invoice.caeExpiration}\n`;
 
   content += separator(width) + "\n";
 
-  // ========== QR CODE ==========
+  // ========== FOOTER ==========
   content += Commands.ALIGN_CENTER;
-  content += "Codigo QR ARCA\n";
-  content += "Escanear para verificar\n";
+  if (invoice.businessName) {
+    content += `${invoice.businessName}\n`;
+  }
   content += Commands.FEED_LINE;
 
-  // Try to print QR code using ESC/POS command (Model 2)
-  // This works with most ESC/POS compatible printers
+  // QR code
   try {
     content += Commands.QR_CODE(invoice.qrUrl);
     content += Commands.FEED_LINE;
@@ -1594,15 +1588,7 @@ export function generateAfipInvoiceData(
     console.warn("QR code generation failed");
   }
 
-  content += Commands.ALIGN_CENTER;
-  content += separator(width, "=") + "\n";
-
-  // ========== FOOTER ==========
-  content += Commands.ALIGN_CENTER;
-  content += Commands.NORMAL_SIZE;
-  // content += "Documento no valido como factura\n";
-  // content += "COMPROBANTE DE PRUEBA\n";
-  content += Commands.FEED_LINE;
+  content += Commands.ALIGN_LEFT;
 
   // Note: Feed and cut commands are handled by gg-ez-print automatically
 

@@ -3,6 +3,7 @@
 import { OrderStatus, OrderType } from "@/app/generated/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { downloadInvoicePDF } from "@/actions/Invoice";
 import { usePrint } from "@/hooks/use-print";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
@@ -10,7 +11,13 @@ import { calculateDiscountAmount } from "@/lib/discount";
 import { Order } from "@/types/orders";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Package, Printer, Truck, UtensilsCrossed } from "lucide-react";
+import {
+  Download,
+  Package,
+  Printer,
+  Truck,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useState } from "react";
 // type Order = {
 //   id: string;
@@ -90,11 +97,18 @@ const typeLabels = {
   [OrderType.DELIVERY]: "Delivery",
 };
 
-export function OrderListView({ orders, onOrderClick, activeTab }: OrderListViewProps) {
+export function OrderListView({
+  orders,
+  onOrderClick,
+  activeTab,
+}: OrderListViewProps) {
   const { toast } = useToast();
   const { printInvoice } = usePrint();
 
   const [printingInvoice, setPrintingInvoice] = useState<string | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(
+    null,
+  );
 
   const handlePrintInvoice = async (
     e: React.MouseEvent,
@@ -127,6 +141,43 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
       });
     } finally {
       setPrintingInvoice(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (
+    e: React.MouseEvent,
+    invoiceId: string,
+    orderId: string,
+  ) => {
+    e.stopPropagation();
+    setDownloadingInvoice(orderId);
+
+    try {
+      const result = await downloadInvoicePDF(invoiceId);
+
+      if (result.success) {
+        const link = document.createElement("a");
+        link.href = result.data.dataUrl;
+        link.download = result.data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: "PDF descargado" });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Error al descargar el PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingInvoice(null);
     }
   };
 
@@ -251,34 +302,39 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
                         ) : (
                           <div className="text-gray-400">-</div>
                         )
-                      ) : activeTab === "TAKE_AWAY" || activeTab === "DELIVERY" ? (
+                      ) : activeTab === "TAKE_AWAY" ||
+                        activeTab === "DELIVERY" ? (
                         order.client ? (
-                          <div className="text-gray-900">{order.client.name}</div>
+                          <div className="text-gray-900">
+                            {order.client.name}
+                          </div>
                         ) : order.customerName ? (
-                          <div className="text-gray-900">{order.customerName}</div>
+                          <div className="text-gray-900">
+                            {order.customerName}
+                          </div>
                         ) : (
                           <div className="text-gray-400">-</div>
                         )
-                      ) : (
-                        order.table ? (
-                          <>
-                            <div className="text-gray-900 font-medium">
-                              Mesa {order.table.number}
+                      ) : order.table ? (
+                        <>
+                          <div className="text-gray-900 font-medium">
+                            Mesa {order.table.number}
+                          </div>
+                          {order.partySize && (
+                            <div className="text-xs text-gray-500">
+                              {order.partySize}{" "}
+                              {order.partySize === 1 ? "persona" : "personas"}
                             </div>
-                            {order.partySize && (
-                              <div className="text-xs text-gray-500">
-                                {order.partySize}{" "}
-                                {order.partySize === 1 ? "persona" : "personas"}
-                              </div>
-                            )}
-                          </>
-                        ) : order.client ? (
-                          <div className="text-gray-900">{order.client.name}</div>
-                        ) : order.customerName ? (
-                          <div className="text-gray-900">{order.customerName}</div>
-                        ) : (
-                          <div className="text-gray-400">-</div>
-                        )
+                          )}
+                        </>
+                      ) : order.client ? (
+                        <div className="text-gray-900">{order.client.name}</div>
+                      ) : order.customerName ? (
+                        <div className="text-gray-900">
+                          {order.customerName}
+                        </div>
+                      ) : (
+                        <div className="text-gray-400">-</div>
                       )}
                     </div>
                   </td>
@@ -351,8 +407,26 @@ export function OrderListView({ orders, onOrderClick, activeTab }: OrderListView
                             }
                             disabled={printingInvoice === order.id}
                             title="Re-imprimir"
+                            className="cursor-pointer"
                           >
                             <Printer className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) =>
+                              handleDownloadInvoice(
+                                e,
+                                status.emittedInvoice!.id,
+                                order.id,
+                              )
+                            }
+                            disabled={downloadingInvoice === order.id}
+                            title="Descargar PDF"
+                            className="cursor-pointer"
+                          >
+                            <Download className="h-4 w-4" />
                           </Button>
                         </div>
                       );
