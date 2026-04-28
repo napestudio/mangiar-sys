@@ -483,10 +483,9 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
       const invoiceTypeName =
         invoiceTypeObj?.name || `Tipo ${qrInvoiceData.tipoCmp}`;
 
-      // Format invoice number (PtoVta-Number)
-      const invoiceNumber = `${String(qrInvoiceData.ptoVta).padStart(5, "0")}-${String(
-        qrInvoiceData.nroCmp,
-      ).padStart(8, "0")}`;
+      // Format invoice number fields
+      const invoiceNumber = String(qrInvoiceData.nroCmp).padStart(8, "0");
+      const ptoVta = String(qrInvoiceData.ptoVta).padStart(5, "0");
 
       // Format invoice date (YYYYMMDD -> DD/MM/YYYY)
       const dateStr = qrInvoiceData.fecha;
@@ -539,7 +538,9 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
       // Prepare print job via Server Action
       const result = await prepareAfipInvoicePrint({
         invoiceType: invoiceTypeName,
+        invoiceTypeCode: qrInvoiceData.tipoCmp,
         invoiceNumber,
+        ptoVta,
         invoiceDate: formattedDate,
         businessName: "PRUEBA - TEST",
         cuit: formattedCuit,

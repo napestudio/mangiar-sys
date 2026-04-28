@@ -112,8 +112,10 @@ export async function generateInvoicePDF(params: InvoicePDFParams): Promise<Buff
         doc.moveDown(0.5);
         const qrSize = 120;
         const xCenter = (doc.page.width - qrSize) / 2;
-        doc.image(qrImageBuffer, xCenter, doc.y, { width: qrSize, height: qrSize });
-        doc.moveDown(9); // Move cursor past the image
+        const qrY = doc.y;
+        doc.image(qrImageBuffer, xCenter, qrY, { width: qrSize, height: qrSize });
+        // Move cursor explicitly below the image
+        doc.text("", 50, qrY + qrSize + 8);
         doc.fontSize(8).text(
           "Escaneá el código QR para verificar la autenticidad de esta factura en el sitio de ARCA",
           { align: "center" }
