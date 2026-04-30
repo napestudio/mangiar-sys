@@ -19,9 +19,10 @@ export async function generateMetadata({
   const data = await getMenuBySlug(slug);
   const menuName = data?.menu.name;
   const restaurantName = data?.restaurant.name;
-  const title = menuName && restaurantName
-    ? `Carta ${menuName} - ${restaurantName}`
-    : menuName ?? "Carta";
+  const title =
+    menuName && restaurantName
+      ? `Carta ${menuName} - ${restaurantName}`
+      : (menuName ?? "Carta");
   const description = data?.menu.description || "Descubrí nuestra carta";
 
   return {
@@ -52,18 +53,25 @@ export default async function CartaPage({ params }: CartaPageProps) {
   return (
     <div
       className="min-h-svh py-16"
-      style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+      style={{
+        background: "var(--rt-bg)",
+        color: "var(--rt-text)",
+        fontFamily: "var(--rt-font)",
+      }}
     >
       <div className="max-w-4xl mx-auto px-4 md:px-8">
-        <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-6 px-4">
           <Avatar alt={restaurant.name} src={restaurant.logoUrl} />
         </div>
 
-        <div className="py-12 px-4 md:px-8">
+        <div className="py-6 px-0 md:px-8">
           <div className="text-center space-y-2 mb-8">
             <h1 className="text-4xl font-bold">{menu.name}</h1>
             {menu.description && (
-              <p className="whitespace-pre-wrap text-center" style={{ color: "var(--rt-text-muted)" }}>
+              <p
+                className="whitespace-pre-wrap text-center"
+                style={{ color: "var(--rt-text-muted)" }}
+              >
                 {menu.description}
               </p>
             )}
