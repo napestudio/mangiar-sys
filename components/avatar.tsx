@@ -11,7 +11,7 @@ export default function Avatar({
   alt = "Logo",
 }: AvatarProps) {
   return (
-    <div className="relative w-full max-w-[90svw] h-64">
+    <div className="relative w-full max-w-[80svw] h-64">
       <Image
         src={
           src ||
