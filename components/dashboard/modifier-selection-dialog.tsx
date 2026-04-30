@@ -23,7 +23,7 @@ interface ModifierSelectionDialogProps {
   open: boolean;
   onConfirm: (item: PreOrderItem) => void;
   onCancel: () => void;
-  consumedIngredients: Record<string, number>;
+  consumedIngredients?: Record<string, number>;
 }
 
 function isOptionDisabled(option: { isAvailable: boolean; isOutOfStock: boolean }): boolean {
@@ -68,7 +68,7 @@ export function ModifierSelectionDialog({
   open,
   onConfirm,
   onCancel,
-  consumedIngredients,
+  consumedIngredients = {},
 }: ModifierSelectionDialogProps) {
   const groups: ResolvedModifierGroup[] = product.modifierGroups ?? [];
 
