@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createOrderWithItems, getAvailableProductsForOrder } from "@/actions/Order";
 import { OrderType } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
@@ -46,63 +46,6 @@ interface CreateOrderSidebarProps {
 }
 
 
-function applyIngredientDeductions(
-  products: OrderProduct[],
-  item: PreOrderItem,
-): OrderProduct[] {
-  if (!item.modifiers || item.modifiers.length === 0) return products;
-
-  const consumed: Record<string, number> = {};
-
-  for (const mod of item.modifiers) {
-    for (const product of products) {
-      for (const group of product.modifierGroups ?? []) {
-        const option = group.options.find((o) => o.id === mod.modifierOptionId);
-        if (!option) continue;
-        for (const link of option.ingredientLinks) {
-          const perUnit = convertLinkQuantityToBase(
-            link.quantity,
-            link.ingredientUnitType,
-            link.weightUnit,
-            link.volumeUnit,
-            link.ingredientWeightUnit,
-            link.ingredientVolumeUnit,
-          );
-          const total = perUnit * (mod.quantity ?? 1) * item.quantity;
-          consumed[link.ingredientId] = (consumed[link.ingredientId] ?? 0) + total;
-        }
-      }
-    }
-  }
-
-  if (Object.keys(consumed).length === 0) return products;
-
-  return products.map((product) => ({
-    ...product,
-    modifierGroups: product.modifierGroups?.map((group) => ({
-      ...group,
-      options: group.options.map((option) => {
-        const updatedLinks = option.ingredientLinks.map((link) =>
-          consumed[link.ingredientId] !== undefined
-            ? { ...link, stock: Math.max(0, link.stock - consumed[link.ingredientId]) }
-            : link,
-        );
-        const isOutOfStock = updatedLinks.some((link) => {
-          const required = convertLinkQuantityToBase(
-            link.quantity,
-            link.ingredientUnitType,
-            link.weightUnit,
-            link.volumeUnit,
-            link.ingredientWeightUnit,
-            link.ingredientVolumeUnit,
-          );
-          return link.stock < required;
-        });
-        return { ...option, ingredientLinks: updatedLinks, isOutOfStock };
-      }),
-    })),
-  }));
-}
 
 export function CreateOrderSidebar({
   branchId,
@@ -161,6 +104,35 @@ export function CreateOrderSidebar({
     }
   }, [initialOrderType]);
 
+  // Aggregate ingredient quantities already committed to the pre-order, in each
+  // ingredient's base unit. Recomputed whenever localItems or products change.
+  const consumedIngredients = useMemo(() => {
+    const consumed: Record<string, number> = {};
+    for (const item of localItems) {
+      for (const mod of item.modifiers ?? []) {
+        for (const product of products) {
+          for (const group of product.modifierGroups ?? []) {
+            const option = group.options.find((o) => o.id === mod.modifierOptionId);
+            if (!option) continue;
+            for (const link of option.ingredientLinks) {
+              const perUnit = convertLinkQuantityToBase(
+                link.quantity,
+                link.ingredientUnitType,
+                link.weightUnit,
+                link.volumeUnit,
+                link.ingredientWeightUnit,
+                link.ingredientVolumeUnit,
+              );
+              const total = perUnit * (mod.quantity ?? 1) * item.quantity;
+              consumed[link.ingredientId] = (consumed[link.ingredientId] ?? 0) + total;
+            }
+          }
+        }
+      }
+    }
+    return consumed;
+  }, [localItems, products]);
+
   // ==================== PRODUCT MANAGEMENT (Local State) ====================
 
   const handleSelectProduct = (product: OrderProduct) => {
@@ -194,7 +166,6 @@ export function CreateOrderSidebar({
 
   const handleModifierConfirm = (item: PreOrderItem) => {
     setLocalItems((prev) => [...prev, item]);
-    setProducts((prev) => applyIngredientDeductions(prev, item));
     setPendingProduct(null);
   };
 
@@ -633,6 +604,7 @@ export function CreateOrderSidebar({
           open={!!pendingProduct}
           onConfirm={handleModifierConfirm}
           onCancel={() => setPendingProduct(null)}
+          consumedIngredients={consumedIngredients}
         />
       )}
       </div>

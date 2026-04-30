@@ -23,13 +23,17 @@ interface ModifierSelectionDialogProps {
   open: boolean;
   onConfirm: (item: PreOrderItem) => void;
   onCancel: () => void;
+  consumedIngredients: Record<string, number>;
 }
 
 function isOptionDisabled(option: { isAvailable: boolean; isOutOfStock: boolean }): boolean {
   return !option.isAvailable || option.isOutOfStock;
 }
 
-function getOptionMaxQuantity(option: ModifierOptionData): number {
+function getOptionMaxQuantity(
+  option: ModifierOptionData,
+  consumed: Record<string, number>,
+): number {
   if (option.ingredientLinks.length === 0) return Infinity;
   return Math.min(
     ...option.ingredientLinks.map((link) => {
@@ -42,7 +46,8 @@ function getOptionMaxQuantity(option: ModifierOptionData): number {
         link.ingredientVolumeUnit,
       );
       if (requiredInBase <= 0) return Infinity;
-      return Math.floor(link.stock / requiredInBase);
+      const remaining = Math.max(0, link.stock - (consumed[link.ingredientId] ?? 0));
+      return Math.floor(remaining / requiredInBase);
     }),
   );
 }
@@ -63,6 +68,7 @@ export function ModifierSelectionDialog({
   open,
   onConfirm,
   onCancel,
+  consumedIngredients,
 }: ModifierSelectionDialogProps) {
   const groups: ResolvedModifierGroup[] = product.modifierGroups ?? [];
 
@@ -99,7 +105,7 @@ export function ModifierSelectionDialog({
     option: ModifierOptionData,
     delta: number,
   ) => {
-    const maxQty = getOptionMaxQuantity(option);
+    const maxQty = getOptionMaxQuantity(option, consumedIngredients);
     setQuantities((prev) => {
       const current = prev[option.id] ?? 1;
       const next = current + delta;
@@ -209,9 +215,9 @@ export function ModifierSelectionDialog({
                 <div className="space-y-1 pl-1">
                   {group.options.map((option) => {
                     const isChecked = selected.includes(option.id);
-                    const disabled = isOptionDisabled(option);
+                    const maxQty = getOptionMaxQuantity(option, consumedIngredients);
+                    const disabled = isOptionDisabled(option) || maxQty <= 0;
                     const qty = quantities[option.id] ?? 1;
-                    const maxQty = getOptionMaxQuantity(option);
                     const effectiveQty = isChecked ? qty : 1;
                     const priceLabel =
                       option.priceAdjustment !== 0
@@ -220,7 +226,7 @@ export function ModifierSelectionDialog({
 
                     const disabledLabel = !option.isAvailable
                       ? "No disponible"
-                      : option.isOutOfStock
+                      : option.isOutOfStock || maxQty <= 0
                         ? "Sin stock"
                         : null;
 
