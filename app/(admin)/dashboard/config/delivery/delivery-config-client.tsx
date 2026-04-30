@@ -391,7 +391,7 @@ export default function DeliveryConfigClient({
           onClick={handleSave}
           disabled={isPending}
           size="lg"
-          className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white"
+          className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-neutral-50"
         >
           {isPending ? "Guardando..." : "Guardar Configuración"}
         </Button>

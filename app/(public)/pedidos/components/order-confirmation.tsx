@@ -20,7 +20,7 @@ export function OrderConfirmation({
     <Card className="bg-white text-black text-center py-12">
       <CardContent className="space-y-6">
         <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-          <Check className="h-8 w-8 text-white" />
+          <Check className="h-8 w-8 text-neutral-50" />
         </div>
 
         <div>
@@ -49,7 +49,7 @@ export function OrderConfirmation({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center w-full rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold text-lg py-1 transition-colors"
+              className="flex items-center justify-center w-full rounded-md bg-green-500 hover:bg-green-600 text-neutral-50 font-semibold text-lg py-1 transition-colors"
             >
               Abrir WhatsApp
             </Link>

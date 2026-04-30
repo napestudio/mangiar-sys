@@ -37,8 +37,18 @@ type CategoryDialogProps = {
 };
 
 type OptimisticAction =
-  | { type: "create"; tempId: string; name: string; station: StationInfo | null }
-  | { type: "update"; id: string; name: string; station: StationInfo | null | undefined }
+  | {
+      type: "create";
+      tempId: string;
+      name: string;
+      station: StationInfo | null;
+    }
+  | {
+      type: "update";
+      id: string;
+      name: string;
+      station: StationInfo | null | undefined;
+    }
   | { type: "delete"; id: string };
 
 export function CategoryDialog({
@@ -78,7 +88,8 @@ export function CategoryDialog({
               ? {
                   ...cat,
                   name: action.name,
-                  station: action.station === undefined ? cat.station : action.station,
+                  station:
+                    action.station === undefined ? cat.station : action.station,
                 }
               : cat,
           );
@@ -99,7 +110,9 @@ export function CategoryDialog({
     const tempId = `temp-${Date.now()}`;
     const name = newCategoryName.trim();
     const stationId = newCategoryStationId || undefined;
-    const station = stationId ? (stations.find((s) => s.id === stationId) ?? null) : null;
+    const station = stationId
+      ? (stations.find((s) => s.id === stationId) ?? null)
+      : null;
 
     setNewCategoryName("");
     setNewCategoryStationId("");
@@ -130,7 +143,9 @@ export function CategoryDialog({
 
     const trimmedName = name.trim();
     const stationId = editingStationId || null;
-    const station = stationId ? (stations.find((s) => s.id === stationId) ?? null) : null;
+    const station = stationId
+      ? (stations.find((s) => s.id === stationId) ?? null)
+      : null;
 
     setEditingId(null);
     setEditingName("");
@@ -138,7 +153,12 @@ export function CategoryDialog({
     setError(null);
 
     startTransition(async () => {
-      setOptimisticCategories({ type: "update", id, name: trimmedName, station });
+      setOptimisticCategories({
+        type: "update",
+        id,
+        name: trimmedName,
+        station,
+      });
 
       const result = await updateCategory({
         id,
@@ -251,7 +271,7 @@ export function CategoryDialog({
               <button
                 onClick={handleCreate}
                 disabled={isPending || !newCategoryName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-neutral-50 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Agregar
@@ -259,7 +279,8 @@ export function CategoryDialog({
             </div>
             {stations.length === 0 && (
               <p className="text-xs text-amber-600">
-                No hay estaciones configuradas. Configura estaciones e impresoras para que las categorías puedan imprimir.
+                No hay estaciones configuradas. Configura estaciones e
+                impresoras para que las categorías puedan imprimir.
               </p>
             )}
           </div>
@@ -300,7 +321,9 @@ export function CategoryDialog({
                         {stations.length > 0 && (
                           <select
                             value={editingStationId}
-                            onChange={(e) => setEditingStationId(e.target.value)}
+                            onChange={(e) =>
+                              setEditingStationId(e.target.value)
+                            }
                             disabled={isPending}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
                           >
@@ -315,14 +338,14 @@ export function CategoryDialog({
                         <button
                           onClick={() => handleUpdate(category.id, editingName)}
                           disabled={isPending || !editingName.trim()}
-                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 text-sm"
+                          className="px-3 py-2 bg-green-600 text-neutral-50 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 text-sm"
                         >
                           Guardar
                         </button>
                         <button
                           onClick={cancelEditing}
                           disabled={isPending}
-                          className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                          className="px-3 py-2 bg-gray-600 text-neutral-50 rounded-lg hover:bg-gray-700 transition-colors text-sm"
                         >
                           Cancelar
                         </button>
@@ -343,7 +366,9 @@ export function CategoryDialog({
                             >
                               <span
                                 className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: category.station.color }}
+                                style={{
+                                  backgroundColor: category.station.color,
+                                }}
                               />
                               {category.station.name}
                             </span>

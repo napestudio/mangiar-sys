@@ -6,11 +6,13 @@ import {
   BarChart2,
   CalendarDays,
   ClipboardList,
+  FlaskConical,
   House,
   Menu,
   Package,
   Receipt,
   Settings,
+  Sliders,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -31,6 +33,8 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   Archive,
   Receipt,
   Settings,
+  FlaskConical,
+  Sliders,
 };
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -78,7 +82,12 @@ export function DashboardNav({
           </div>
 
           <div className="flex items-center gap-2">
-            <UserDropdown userName={userName} userRole={userRole} userImage={userImage} restaurantName={restaurantName} />
+            <UserDropdown
+              userName={userName}
+              userRole={userRole}
+              userImage={userImage}
+              restaurantName={restaurantName}
+            />
 
             {/* Mobile menu button */}
             <button
@@ -110,7 +119,7 @@ export function DashboardNav({
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                       isActive
-                        ? "font-bold text-white bg-red-500"
+                        ? "font-bold text-neutral-50 bg-red-500"
                         : "text-neutral-800 hover:bg-gray-100 hover:text-red-500",
                     )}
                   >

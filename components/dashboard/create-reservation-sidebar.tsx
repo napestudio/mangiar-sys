@@ -89,8 +89,7 @@ function generateFifteenMinuteIntervals(
 
   // Detect cross-midnight: if end is before start (e.g. 20:00 → 00:30), add 24 to end hour
   const isCrossMidnight =
-    rawEndHour < startHour ||
-    (rawEndHour === startHour && endMin < startMin);
+    rawEndHour < startHour || (rawEndHour === startHour && endMin < startMin);
   const endHour = isCrossMidnight ? rawEndHour + 24 : rawEndHour;
 
   let currentHour = startHour;
@@ -375,7 +374,7 @@ export function CreateReservationSidebar({
       {/* Sidebar */}
       <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl z-50 flex flex-col">
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Nueva Reserva</h2>
@@ -383,7 +382,7 @@ export function CreateReservationSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-red-600"
+            className="text-neutral-50 hover:bg-red-600"
             onClick={handleClose}
           >
             <X className="h-4 w-4" />
@@ -529,7 +528,7 @@ export function CreateReservationSidebar({
                       className={cn(
                         "h-12 text-sm font-semibold transition-all duration-200",
                         {
-                          "bg-red-600 hover:bg-red-700 text-white":
+                          "bg-red-600 hover:bg-red-700 text-neutral-50":
                             newReservation.exactTime === interval.value,
                           "hover:border-red-300 hover:bg-red-50":
                             newReservation.exactTime !== interval.value &&

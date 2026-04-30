@@ -93,7 +93,7 @@ export function TableEditSidebar({
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity",
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
+          open ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -102,11 +102,11 @@ export function TableEditSidebar({
       <div
         className={cn(
           "fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <LayoutGrid className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Mesa {table.number}</h2>
@@ -114,7 +114,7 @@ export function TableEditSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-amber-600"
+            className="text-neutral-50 hover:bg-amber-600"
             onClick={onClose}
           >
             <X className="h-4 w-4" />

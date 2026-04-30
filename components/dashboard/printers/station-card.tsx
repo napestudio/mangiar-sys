@@ -83,7 +83,7 @@ export function StationCard({
               className="w-12 h-12 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: station.color }}
             >
-              <Settings className="h-6 w-6 text-white" />
+              <Settings className="h-6 w-6 text-neutral-50" />
             </div>
             <div>
               <h3 className="font-medium">{station.name}</h3>

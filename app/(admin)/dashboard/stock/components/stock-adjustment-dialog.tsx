@@ -98,11 +98,12 @@ export function StockAdjustmentDialog({
             Ajuste no disponible
           </h2>
           <p className="text-gray-600 mb-6">
-            Este producto no tiene seguimiento de stock habilitado y siempre está disponible.
+            Este producto no tiene seguimiento de stock habilitado y siempre
+            está disponible.
           </p>
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="w-full px-4 py-2 bg-gray-600 text-neutral-50 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Cerrar
           </button>
@@ -115,7 +116,7 @@ export function StockAdjustmentDialog({
   const unit = getUnitLabel(
     productOnBranch.product.unitType,
     productOnBranch.product.weightUnit,
-    productOnBranch.product.volumeUnit
+    productOnBranch.product.volumeUnit,
   );
 
   const calculateNewStock = (): number => {
@@ -188,7 +189,9 @@ export function StockAdjustmentDialog({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al ajustar el stock");
+      setError(
+        err instanceof Error ? err.message : "Error al ajustar el stock",
+      );
     } finally {
       setLoading(false);
     }
@@ -200,9 +203,7 @@ export function StockAdjustmentDialog({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Ajustar Stock
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Ajustar Stock</h2>
             <p className="text-sm text-gray-600 mt-1">
               {productOnBranch.product.name}
             </p>
@@ -222,13 +223,15 @@ export function StockAdjustmentDialog({
             <div className="flex items-center gap-3">
               <Package className="w-8 h-8 text-blue-600" />
               <div>
-                <div className="text-sm text-blue-600 font-medium">Stock Actual</div>
+                <div className="text-sm text-blue-600 font-medium">
+                  Stock Actual
+                </div>
                 <div className="text-2xl font-bold text-blue-900">
                   {formatStock(
                     currentStock,
                     productOnBranch.product.unitType,
                     productOnBranch.product.weightUnit,
-                    productOnBranch.product.volumeUnit
+                    productOnBranch.product.volumeUnit,
                   )}
                 </div>
               </div>
@@ -236,21 +239,23 @@ export function StockAdjustmentDialog({
 
             {quantity && !isNaN(parseFloat(quantity)) && (
               <div className="text-right">
-                <div className="text-sm text-gray-600 font-medium">Nuevo Stock</div>
+                <div className="text-sm text-gray-600 font-medium">
+                  Nuevo Stock
+                </div>
                 <div
                   className={`text-2xl font-bold ${
                     newStock < 0
                       ? "text-red-600"
                       : newStock > currentStock
-                      ? "text-green-600"
-                      : "text-yellow-600"
+                        ? "text-green-600"
+                        : "text-yellow-600"
                   }`}
                 >
                   {formatStock(
                     newStock,
                     productOnBranch.product.unitType,
                     productOnBranch.product.weightUnit,
-                    productOnBranch.product.volumeUnit
+                    productOnBranch.product.volumeUnit,
                   )}
                 </div>
               </div>
@@ -393,18 +398,24 @@ export function StockAdjustmentDialog({
               <div className="space-y-1 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Stock actual:</span>
-                  <span className="font-medium">{currentStock.toFixed(2)} {unit}</span>
+                  <span className="font-medium">
+                    {currentStock.toFixed(2)} {unit}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>
                     {adjustmentType === "add"
                       ? "Agregando:"
                       : adjustmentType === "subtract"
-                      ? "Restando:"
-                      : "Estableciendo:"}
+                        ? "Restando:"
+                        : "Estableciendo:"}
                   </span>
                   <span className="font-medium">
-                    {adjustmentType === "set" ? "" : adjustmentType === "add" ? "+" : "-"}
+                    {adjustmentType === "set"
+                      ? ""
+                      : adjustmentType === "add"
+                        ? "+"
+                        : "-"}
                     {parseFloat(quantity).toFixed(2)} {unit}
                   </span>
                 </div>
@@ -415,8 +426,8 @@ export function StockAdjustmentDialog({
                       newStock < 0
                         ? "text-red-600"
                         : newStock > currentStock
-                        ? "text-green-600"
-                        : "text-yellow-600"
+                          ? "text-green-600"
+                          : "text-yellow-600"
                     }`}
                   >
                     {newStock.toFixed(2)} {unit}
@@ -439,7 +450,7 @@ export function StockAdjustmentDialog({
             <button
               type="submit"
               disabled={loading || newStock < 0}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-neutral-50 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

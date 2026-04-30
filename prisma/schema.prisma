@@ -258,6 +258,8 @@ model Restaurant {
   menus               Menu[]
   businessHours       BusinessHours[]
   fiscalConfiguration FiscalConfiguration?
+  ingredients         Ingredient[]
+  modifierGroups      ModifierGroup[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -309,9 +311,10 @@ model Branch {
   clients        Client[]
   stations       Station[]
   printers       Printer[]
-  deliveryConfig DeliveryConfig?
+  deliveryConfig   DeliveryConfig?
   homePageLinks    HomePageLink[]
   permissionGrants UserPermissionGrant[]
+  ingredientStock  IngredientStock[]
 
   /**
    * Evita duplicar nombres de sucursal dentro del mismo restaurante
@@ -723,6 +726,8 @@ model Product {
   menuItems       MenuItem[]
   comboComponents ProductComponent[] @relation("ComboProduct")
   usedInCombos    ProductComponent[] @relation("ComponentProduct")
+  ingredients     ProductIngredient[]
+  modifierGroups  ProductModifierGroup[]
 
   @@unique([restaurantId, name]) // evita duplicar nombres de producto dentro del restaurante
   @@unique([restaurantId, sku]) // SKU único por restaurante
@@ -922,6 +927,7 @@ model OrderItem {
   price         Decimal @db.Decimal(10, 2) // Current price (can be modified)
   originalPrice Decimal? @db.Decimal(10, 2) // Original price from product
   notes         String? // Special instructions (e.g., "no sugar", "extra spicy")
+  modifiers     OrderItemModifier[]
 
   @@index([orderId])
 }
@@ -1294,4 +1300,153 @@ model CashMovement {
   @@index([branchId])
   @@index([type])
   @@index([orderId])
+}
+
+//
+// INGREDIENTES Y RECETAS
+//
+
+model Ingredient {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  unitType    UnitType
+  weightUnit  WeightUnit?
+  volumeUnit  VolumeUnit?
+  costPerUnit Decimal     @db.Decimal(10, 4)
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  branchStock         IngredientStock[]
+  productIngredients  ProductIngredient[]
+  modifierIngredients ModifierOptionIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
+}
+
+model IngredientStock {
+  id           String     @id @default(cuid())
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredientId String
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId     String
+
+  stock         Decimal   @default(0) @db.Decimal(10, 3)
+  minStock      Decimal?  @db.Decimal(10, 3)
+  lastRestocked DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ingredientId, branchId])
+  @@index([branchId])
+}
+
+model ProductIngredient {
+  id           String      @id @default(cuid())
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId    String
+  ingredient   Ingredient  @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  ingredientId String
+  quantity     Decimal     @db.Decimal(10, 4)
+  weightUnit   WeightUnit? // unit override (only when ingredient is WEIGHT type)
+  volumeUnit   VolumeUnit? // unit override (only when ingredient is VOLUME type)
+
+  @@unique([productId, ingredientId])
+  @@index([productId])
+}
+
+//
+// MODIFICADORES
+//
+
+model ModifierGroup {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  required      Boolean  @default(false)
+  minSelections Int      @default(0)
+  maxSelections Int      @default(1)
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  options       ModifierOption[]
+  productGroups ProductModifierGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
+}
+
+model ModifierOption {
+  id              String        @id @default(cuid())
+  group           ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId         String
+  name            String
+  priceAdjustment Decimal       @default(0) @db.Decimal(10, 2)
+  isDefault       Boolean       @default(false)
+  isAvailable     Boolean       @default(true)
+  order           Int           @default(0)
+
+  ingredientLinks    ModifierOptionIngredient[]
+  orderItemModifiers OrderItemModifier[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId, order])
+}
+
+model ModifierOptionIngredient {
+  id           String         @id @default(cuid())
+  option       ModifierOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId     String
+  ingredient   Ingredient     @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  ingredientId String
+  quantity     Decimal        @db.Decimal(10, 4)
+  weightUnit   WeightUnit?    // unit override (only when ingredient is WEIGHT type)
+  volumeUnit   VolumeUnit?    // unit override (only when ingredient is VOLUME type)
+
+  @@unique([optionId, ingredientId])
+  @@index([optionId])
+}
+
+model ProductModifierGroup {
+  id        String        @id @default(cuid())
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  group     ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  order     Int           @default(0)
+
+  requiredOverride      Boolean?
+  minSelectionsOverride Int?
+  maxSelectionsOverride Int?
+
+  @@unique([productId, groupId])
+  @@index([productId, order])
+}
+
+model OrderItemModifier {
+  id          String    @id @default(cuid())
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId String
+
+  modifierOptionId String
+  optionName       String
+  groupName        String
+  priceAdjustment  Decimal @db.Decimal(10, 2)
+  quantity         Int     @default(1)
+
+  option ModifierOption? @relation(fields: [modifierOptionId], references: [id])
+
+  @@index([orderItemId])
 }

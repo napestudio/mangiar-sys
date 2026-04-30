@@ -63,7 +63,7 @@ export function PartySizePicker({
               transition-all duration-200
               ${
                 value === size && !showCustomInput
-                  ? "bg-black text-white scale-110"
+                  ? "bg-black text-neutral-50 scale-110"
                   : "bg-white text-black border-2 border-gray-300 hover:border-gray-400 hover:scale-105"
               }
             `}
@@ -93,7 +93,7 @@ export function PartySizePicker({
         </button>
 
         {showCustomInput || value > 6 ? (
-          <div className="w-32 h-12 rounded-full bg-black text-white flex items-center justify-center">
+          <div className="w-32 h-12 rounded-full bg-black text-neutral-50 flex items-center justify-center">
             <span className="font-semibold text-lg">{value}</span>
           </div>
         ) : (
@@ -101,7 +101,7 @@ export function PartySizePicker({
             type="button"
             onClick={handleCustomClick}
             className="
-              w-32 h-12 rounded-full bg-black text-white font-semibold
+              w-32 h-12 rounded-full bg-black text-neutral-50 font-semibold
               hover:bg-gray-800 transition-all duration-200
               hover:scale-105 active:scale-95 active:bg-black
             "
