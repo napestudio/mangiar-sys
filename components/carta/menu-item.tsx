@@ -35,7 +35,7 @@ export function MenuItem({
           />
         </div>
       )}
-      <div className="flex-1 flex flex-col min-h-full justify-between pb-3">
+      <div className="flex-1 flex flex-col min-h-full justify-start pb-3">
         <div className="flex flex-col md:flex-row items-start justify-start gap-2">
           <h3
             className="font-semibold text-lg leading-none"
