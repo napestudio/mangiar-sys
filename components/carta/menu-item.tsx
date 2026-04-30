@@ -36,8 +36,11 @@ export function MenuItem({
         </div>
       )}
       <div className="flex-1 flex flex-col min-h-full justify-between pb-3">
-        <div className="flex flex-col md:flex-row items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-none" style={{ color: "var(--rt-card-text)" }}>
+        <div className="flex flex-col md:flex-row items-start justify-start gap-2">
+          <h3
+            className="font-semibold text-lg leading-none"
+            style={{ color: "var(--rt-card-text)" }}
+          >
             <div className="flex md:flex-row flex-col gap-1 items-center">
               {name}
               {tags.length > 0 && (
@@ -53,18 +56,29 @@ export function MenuItem({
               </span>
             )} */}
           </h3>
-          <div className="hidden md:block flex-1 h-px w-full mb-1.5 self-end" style={{ background: "var(--rt-card-text)", opacity: "0.3" }}></div>
+          <div
+            className="hidden md:block flex-1 h-px w-full mb-1.5 self-end"
+            style={{ background: "var(--rt-card-text)", opacity: "0.3" }}
+          ></div>
           {price !== null &&
             price !== undefined &&
             price !== 0 &&
             showPrice && (
-              <div className="font-bold text-sm md:text-lg block" style={{ color: "var(--rt-card-text)" }}>
+              <div
+                className="font-bold text-sm md:text-lg block"
+                style={{ color: "var(--rt-card-text)" }}
+              >
                 {formatCurrency(price)}
               </div>
             )}
         </div>
         {description && (
-          <p className="text-sm mt-1" style={{ color: "var(--rt-card-text-muted)" }}>{description}</p>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--rt-card-text-muted)" }}
+          >
+            {description}
+          </p>
         )}
         {tags.length > 0 && (
           <div className="mt-1.5 block md:hidden">
