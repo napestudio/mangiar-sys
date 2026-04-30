@@ -23,6 +23,8 @@ import type {
   PriceType,
   ProductTag,
 } from "@/app/generated/prisma";
+import type { IngredientWithStats } from "@/types/ingredients";
+import type { ModifierGroupWithOptions } from "@/types/modifiers";
 import LoadingToast from "@/components/dashboard/loading-toast";
 import {
   AlertDialog,
@@ -154,6 +156,8 @@ type ProductsProps = {
   restaurantId: string;
   branchId: string;
   stations: Station[];
+  availableIngredients: IngredientWithStats[];
+  availableModifierGroups: ModifierGroupWithOptions[];
 };
 
 export function ProductsClient({
@@ -164,6 +168,8 @@ export function ProductsClient({
   restaurantId,
   branchId,
   stations,
+  availableIngredients,
+  availableModifierGroups,
 }: ProductsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -772,6 +778,8 @@ export function ProductsClient({
           availableComponents={menuItems
             .filter((p) => !p.isCombo && p.isActive)
             .map((p) => ({ id: p.id, name: p.name }))}
+          availableIngredients={availableIngredients}
+          availableModifierGroups={availableModifierGroups}
           restaurantId={restaurantId}
           branchId={branchId}
           onClose={handleCloseDialog}

@@ -34,6 +34,7 @@ import { CreateClientDialog } from "./create-client-dialog";
 import { EditOrderDialog } from "./edit-order-dialog";
 import { MoveOrderDialog } from "./move-order-dialog";
 import { OrderTabs } from "./order-tabs";
+import { ModifierSelectionDialog } from "./modifier-selection-dialog";
 import { PreOrderItemsList, type PreOrderItem } from "./pre-order-items-list";
 import { ProductPicker } from "./product-picker";
 import { WaiterPicker } from "./waiter-picker";
@@ -99,6 +100,9 @@ export function TableOrderSidebar({
 
   // Pre-order state: items that haven't been confirmed/added to the actual order yet
   const [preOrderItems, setPreOrderItems] = useState<PreOrderItem[]>([]);
+  const [pendingProduct, setPendingProduct] = useState<OrderProduct | null>(
+    null,
+  );
 
   // Use cached products from context
   const {
@@ -244,19 +248,27 @@ export function TableOrderSidebar({
   };
 
   const handleSelectProduct = (product: OrderProduct) => {
-    // Add to pre-order state instead of directly to order
-    setPreOrderItems((prev) => [
-      ...prev,
-      {
-        productId: product.id,
-        itemName: product.name,
-        quantity: 1,
-        price: Number(product.price),
-        originalPrice: Number(product.price),
-        notes: undefined,
-        categoryId: product.categoryId,
-      },
-    ]);
+    if (product.modifierGroups && product.modifierGroups.length > 0) {
+      setPendingProduct(product);
+    } else {
+      setPreOrderItems((prev) => [
+        ...prev,
+        {
+          productId: product.id,
+          itemName: product.name,
+          quantity: 1,
+          price: Number(product.price),
+          originalPrice: Number(product.price),
+          notes: undefined,
+          categoryId: product.categoryId,
+        },
+      ]);
+    }
+  };
+
+  const handleModifierConfirm = (item: PreOrderItem) => {
+    setPreOrderItems((prev) => [...prev, item]);
+    setPendingProduct(null);
   };
 
   const handleUpdatePreOrderItem = (index: number, item: PreOrderItem) => {
@@ -544,7 +556,7 @@ export function TableOrderSidebar({
   return (
     <div className="h-full flex flex-col bg-neutral-50 overflow-hidden relative">
       <div className="flex flex-row items-center justify-between shrink-0 bg-red-500 shadow-sm">
-        <div className="flex items-center gap-2 px-2 py-1 text-white">
+        <div className="flex items-center gap-2 px-2 py-1 text-neutral-50">
           <div className="text-xl">
             Mesa {tableNumber}
             {tableIsShared && (
@@ -564,7 +576,7 @@ export function TableOrderSidebar({
             onClick={() => refresh()}
             disabled={isLoading}
             title="Actualizar datos"
-            className="text-white"
+            className="text-neutral-50"
           >
             <RefreshCw
               className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -573,7 +585,7 @@ export function TableOrderSidebar({
           {order && (
             <button
               onClick={() => setShowEditOrderDialog(true)}
-              className="w-max text-white cursor-pointer"
+              className="w-max text-neutral-50 cursor-pointer"
               disabled={isLoading}
             >
               <Edit className="w-4" />
@@ -717,6 +729,7 @@ export function TableOrderSidebar({
                       price: item.price,
                       originalPrice: item.originalPrice,
                       notes: item.notes,
+                      modifiers: item.modifiers,
                     })) || []
                   }
                   onRemoveItem={handleRemoveItem}
@@ -955,6 +968,16 @@ export function TableOrderSidebar({
         onSuccess={handleClientCreated}
         initialName={clientSearchQuery}
       />
+
+      {/* Modifier Selection Dialog */}
+      {pendingProduct && (
+        <ModifierSelectionDialog
+          product={pendingProduct}
+          open={!!pendingProduct}
+          onConfirm={handleModifierConfirm}
+          onCancel={() => setPendingProduct(null)}
+        />
+      )}
 
       {/* Edit Order Dialog */}
       {order && (

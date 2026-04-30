@@ -80,7 +80,7 @@ export default function ConfigSideBar({
         <div className="lg:hidden flex justify-end p-4">
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/10 rounded-lg p-2"
+            className="text-neutral-50 hover:bg-white/10 rounded-lg p-2"
             aria-label="Close menu"
           >
             <X className="h-6 w-6" />
@@ -94,7 +94,7 @@ export default function ConfigSideBar({
               href={item.href}
               onClick={onClose}
               className={cn(
-                "block px-4 py-2 rounded text-xl hover:bg-white hover:text-red-500 text-white font-medium",
+                "block px-4 py-2 rounded text-xl hover:bg-white hover:text-red-500 text-neutral-50 font-medium",
                 currentPath === item.href
                   ? "bg-white text-red-500 font-bold"
                   : "",

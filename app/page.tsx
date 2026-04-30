@@ -3,10 +3,7 @@ import { Navbar } from "@/components/home/navbar";
 import RestaurantLandingPage from "@/components/landing/restaurant-landing";
 import { Features } from "@/components/website/features";
 import { Footer } from "@/components/website/footer";
-import { Pricing } from "@/components/website/pricing";
-import { TrustedBy } from "@/components/website/trusted-by";
 import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
-import { CheckCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -77,20 +74,6 @@ export default async function Home() {
                   Todo lo que necesitás para hacer crecer tu negocio
                   gastronómico.
                 </p>
-                <div className="hidden md:flex items-center gap-8 pt-4">
-                  <div className="flex items-center gap-2 bg-white px-4 py-5 rounded-xl shadow-md">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-sm text-gray-600">
-                      33 funcionalidades
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white px-4 py-5 rounded-xl shadow-md">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-sm text-gray-600">
-                      En menos de 2 minutos
-                    </span>
-                  </div>
-                </div>
               </div>
               <div className="col-span-7 relative p-2">
                 <Image
@@ -105,10 +88,10 @@ export default async function Home() {
           </div>
           <div className="absolute lg:-top-10 bottom-[-85%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
         </section>
-        {/* <Features />
-        <Pricing />
-        <TrustedBy />
-        <Footer /> */}
+        <Features />
+        {/*<Pricing />
+        <TrustedBy />*/}
+        <Footer />
       </div>
     </>
   );

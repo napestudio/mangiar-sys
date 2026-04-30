@@ -30,11 +30,12 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                   className={cn(
                     "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200",
                     {
-                      "bg-green-600 border-green-600 text-white": isCompleted,
-                      "bg-red-600 border-red-600 text-white scale-110":
+                      "bg-green-600 border-green-600 text-neutral-50":
+                        isCompleted,
+                      "bg-red-600 border-red-600 text-neutral-50 scale-110":
                         isCurrent,
                       "bg-white border-gray-300 text-gray-400": isUpcoming,
-                    }
+                    },
                   )}
                 >
                   {isCompleted ? (
@@ -70,7 +71,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                       "bg-green-600": isCompleted,
                       "bg-red-600": isCurrent,
                       "bg-gray-300": isUpcoming,
-                    }
+                    },
                   )}
                 />
               )}

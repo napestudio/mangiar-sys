@@ -78,7 +78,7 @@ export function WeekDatePicker({
     const firstDay = weekDates[0];
     const lastDay = weekDates[6];
     return `${getMonthName(firstDay)} ${firstDay.getDate()} - ${getMonthName(
-      lastDay
+      lastDay,
     )} ${lastDay.getDate()}`;
   };
 
@@ -137,17 +137,17 @@ export function WeekDatePicker({
                 relative flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all
                 ${
                   selected
-                    ? "bg-red-600 border-red-600 text-white shadow-md"
+                    ? "bg-red-600 border-red-600 text-neutral-50 shadow-md"
                     : available
-                    ? "bg-white border-gray-200 hover:border-red-300 hover:bg-red-50 cursor-pointer"
-                    : "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
+                      ? "bg-white border-gray-200 hover:border-red-300 hover:bg-red-50 cursor-pointer"
+                      : "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
                 }
                 ${today && !selected ? "ring-2 ring-red-400 ring-offset-1" : ""}
               `}
             >
               <div
                 className={`text-xs font-medium ${
-                  selected ? "text-white" : "text-gray-500"
+                  selected ? "text-neutral-50" : "text-gray-500"
                 }`}
               >
                 {getDayName(date)}
@@ -155,10 +155,10 @@ export function WeekDatePicker({
               <div
                 className={`text-lg font-bold ${
                   selected
-                    ? "text-white"
+                    ? "text-neutral-50"
                     : available
-                    ? "text-gray-900"
-                    : "text-gray-300"
+                      ? "text-gray-900"
+                      : "text-gray-300"
                 }`}
               >
                 {date.getDate()}

@@ -2,17 +2,32 @@
 
 import Logo from "@/components/dashboard/logo";
 import { navItems } from "@/components/website/nav-items";
-import { Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ChefHatIcon from "../ui/icons/ChefHat";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 250);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <nav className="bg-transparent border-0 fixed inset-x-0 z-50 font-sans">
-      <div className="flex items-center justify-between gap-8 pt-10 py-4 px-6 lg:px-32">
+    <nav
+      className={cn(
+        "bg-transparent border-0 fixed inset-x-0 z-50 font-sans transition-colors duration-300",
+        scrolled && "bg-white shadow-md",
+      )}
+    >
+      <div className="flex items-center justify-between gap-8 py-4 px-6 lg:px-32">
         <Link href="/" className="text-2xl font-bold text-black shrink-0">
           <Logo />
         </Link>

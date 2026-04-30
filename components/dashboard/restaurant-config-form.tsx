@@ -1,7 +1,13 @@
 "use client";
 
-import { updateRestaurant, type RestaurantUpdateInput } from "@/actions/Restaurant";
-import { saveBusinessHours, type BusinessHoursPeriodData } from "@/actions/business-hours";
+import {
+  updateRestaurant,
+  type RestaurantUpdateInput,
+} from "@/actions/Restaurant";
+import {
+  saveBusinessHours,
+  type BusinessHoursPeriodData,
+} from "@/actions/business-hours";
 import { deleteProductImage } from "@/actions/Products";
 import ProvinceCitySelect from "@/components/ui/province-city-select";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -39,13 +45,13 @@ type RestaurantConfigFormProps = {
 // ── Business Hours helpers ─────────────────────────────────────────────────
 
 const DAYS = [
-  { value: "monday",    short: "Lun" },
-  { value: "tuesday",   short: "Mar" },
+  { value: "monday", short: "Lun" },
+  { value: "tuesday", short: "Mar" },
   { value: "wednesday", short: "Mié" },
-  { value: "thursday",  short: "Jue" },
-  { value: "friday",    short: "Vie" },
-  { value: "saturday",  short: "Sáb" },
-  { value: "sunday",    short: "Dom" },
+  { value: "thursday", short: "Jue" },
+  { value: "friday", short: "Vie" },
+  { value: "saturday", short: "Sáb" },
+  { value: "sunday", short: "Dom" },
 ] as const;
 
 type DayValue = (typeof DAYS)[number]["value"];
@@ -181,7 +187,11 @@ export default function RestaurantConfigForm({
     setSlots((prev) => prev.filter((s) => s._key !== _key));
   };
 
-  const updateSlot = (_key: string, field: keyof Omit<Slot, "_key" | "days">, value: string) => {
+  const updateSlot = (
+    _key: string,
+    field: keyof Omit<Slot, "_key" | "days">,
+    value: string,
+  ) => {
     setSlots((prev) =>
       prev.map((s) => (s._key === _key ? { ...s, [field]: value } : s)),
     );
@@ -210,7 +220,10 @@ export default function RestaurantConfigForm({
         </h3>
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Nombre del Restaurante *
             </label>
             <input
@@ -224,7 +237,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Descripción
             </label>
             <textarea
@@ -243,13 +259,18 @@ export default function RestaurantConfigForm({
             </label>
             <ImageUpload
               value={formData.logoUrl ?? ""}
-              onChange={(url) => setFormData((prev) => ({ ...prev, logoUrl: url }))}
+              onChange={(url) =>
+                setFormData((prev) => ({ ...prev, logoUrl: url }))
+              }
               onRemove={() => setFormData((prev) => ({ ...prev, logoUrl: "" }))}
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Número de Teléfono
             </label>
             <input
@@ -281,7 +302,10 @@ export default function RestaurantConfigForm({
             disabled={isSubmitting}
           />
           <div className="md:col-span-2">
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="address"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Dirección
             </label>
             <input
@@ -295,7 +319,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="postalCode"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Código Postal
             </label>
             <input
@@ -309,7 +336,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="country"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               País
             </label>
             <input
@@ -328,10 +358,15 @@ export default function RestaurantConfigForm({
 
       {/* Redes Sociales */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Redes Sociales</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          Redes Sociales
+        </h3>
         <div className="space-y-4">
           <div>
-            <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="websiteUrl"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Sitio Web
             </label>
             <input
@@ -345,7 +380,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="facebookUrl" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="facebookUrl"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Facebook
             </label>
             <input
@@ -359,7 +397,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="instagramUrl" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="instagramUrl"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Instagram
             </label>
             <input
@@ -373,7 +414,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="tiktokUrl" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="tiktokUrl"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               TikTok
             </label>
             <input
@@ -387,7 +431,10 @@ export default function RestaurantConfigForm({
             />
           </div>
           <div>
-            <label htmlFor="whatsappNumber" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="whatsappNumber"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               WhatsApp
             </label>
             <input
@@ -400,10 +447,13 @@ export default function RestaurantConfigForm({
               placeholder="5491112345678"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Código de país + número, sin espacios ni símbolos. Ej: 5491112345678
+              Código de país + número, sin espacios ni símbolos. Ej:
+              5491112345678
             </p>
             <p className="text-xs text-amber-600 mt-1">
-              Si este número también está siendo usado para notificaciones de pedidos, deberás actualizarlo manualmente en la configuración de pedidos.
+              Si este número también está siendo usado para notificaciones de
+              pedidos, deberás actualizarlo manualmente en la configuración de
+              pedidos.
             </p>
           </div>
         </div>
@@ -412,7 +462,9 @@ export default function RestaurantConfigForm({
       {/* Horarios de Atención */}
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Horarios de Atención</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            Horarios de Atención
+          </h3>
           <button
             type="button"
             onClick={addSlot}
@@ -425,7 +477,8 @@ export default function RestaurantConfigForm({
 
         {slots.length === 0 ? (
           <p className="text-sm text-gray-400 italic">
-            No hay turnos configurados. Hacé clic en &quot;Agregar turno&quot; para empezar.
+            No hay turnos configurados. Hacé clic en &quot;Agregar turno&quot;
+            para empezar.
           </p>
         ) : (
           <div className="space-y-3">
@@ -443,7 +496,7 @@ export default function RestaurantConfigForm({
                       onClick={() => toggleDay(slot._key, value)}
                       className={`px-2 py-0.5 text-xs font-medium rounded-full border transition-colors ${
                         slot.days.includes(value)
-                          ? "bg-red-600 text-white border-red-600"
+                          ? "bg-red-600 text-neutral-50 border-red-600"
                           : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
                       }`}
                     >
@@ -459,14 +512,18 @@ export default function RestaurantConfigForm({
                   <input
                     type="time"
                     value={slot.openTime}
-                    onChange={(e) => updateSlot(slot._key, "openTime", e.target.value)}
+                    onChange={(e) =>
+                      updateSlot(slot._key, "openTime", e.target.value)
+                    }
                     className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                   />
                   <span className="text-gray-400 text-sm">–</span>
                   <input
                     type="time"
                     value={slot.closeTime}
-                    onChange={(e) => updateSlot(slot._key, "closeTime", e.target.value)}
+                    onChange={(e) =>
+                      updateSlot(slot._key, "closeTime", e.target.value)
+                    }
                     className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                   />
                 </div>
@@ -475,7 +532,9 @@ export default function RestaurantConfigForm({
                 <input
                   type="text"
                   value={slot.label}
-                  onChange={(e) => updateSlot(slot._key, "label", e.target.value)}
+                  onChange={(e) =>
+                    updateSlot(slot._key, "label", e.target.value)
+                  }
                   placeholder="Ej: Almuerzo"
                   maxLength={40}
                   className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 w-32"
@@ -497,16 +556,12 @@ export default function RestaurantConfigForm({
       </div>
 
       <div className="flex flex-col items-end gap-3">
-        {error && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
-        {success && (
-          <p className="text-sm text-green-600">{success}</p>
-        )}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {success && <p className="text-sm text-green-600">{success}</p>}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="px-6 py-3 text-sm font-medium text-neutral-50 bg-red-600 hover:bg-red-700 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Guardando..." : "Guardar Cambios"}
         </button>

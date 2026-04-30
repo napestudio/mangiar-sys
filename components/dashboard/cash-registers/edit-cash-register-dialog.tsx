@@ -166,7 +166,7 @@ export function EditCashRegisterDialog({
                   return (
                     <div
                       key={id}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-neutral-50"
                       style={{ backgroundColor: sector.color }}
                     >
                       {sector.name}

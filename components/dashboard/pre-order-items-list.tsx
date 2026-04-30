@@ -7,6 +7,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, MessageSquare, Minus, Plus } from "lucide-react";
+import type { SelectedModifier } from "@/types/orders";
 
 export type PreOrderItem = {
   productId: string;
@@ -16,6 +17,7 @@ export type PreOrderItem = {
   originalPrice: number;
   notes?: string;
   categoryId?: string | null;
+  modifiers?: SelectedModifier[];
 };
 
 interface PreOrderItemsListProps {
@@ -86,6 +88,17 @@ export function PreOrderItemsList({
             <div className="flex items-start gap-2">
               <div className="flex-1">
                 <div className="font-medium text-sm">{item.itemName}</div>
+                {item.modifiers && item.modifiers.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {item.modifiers
+                      .map((m) =>
+                        m.quantity && m.quantity > 1
+                          ? `${m.quantity}x ${m.optionName}`
+                          : m.optionName,
+                      )
+                      .join(", ")}
+                  </div>
+                )}
 
                 {/* Quantity Controls */}
                 <div className="flex gap-2 items-center">

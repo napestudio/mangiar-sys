@@ -184,7 +184,7 @@ export default function AppearanceConfigClient({
                     "px-5 py-2 border-2 font-semibold text-sm transition-colors",
                     preview,
                     theme.buttonShape === value
-                      ? "border-gray-900 bg-gray-900 text-white"
+                      ? "border-gray-900 bg-gray-900 text-neutral-50"
                       : "border-gray-300 text-gray-600 hover:border-gray-500",
                   )}
                 >
@@ -206,7 +206,7 @@ export default function AppearanceConfigClient({
                   className={cn(
                     "px-5 py-2 rounded border-2 font-semibold text-sm transition-colors",
                     theme.buttonVariant === value
-                      ? "border-gray-900 bg-gray-900 text-white"
+                      ? "border-gray-900 bg-gray-900 text-neutral-50"
                       : "border-gray-300 text-gray-600 hover:border-gray-500",
                   )}
                 >
@@ -236,7 +236,7 @@ export default function AppearanceConfigClient({
                 className={cn(
                   "px-5 py-3 rounded border-2 text-base transition-colors",
                   theme.fontFamily === value
-                    ? "border-gray-900 bg-gray-900 text-white"
+                    ? "border-gray-900 bg-gray-900 text-neutral-50"
                     : "border-gray-300 text-gray-600 hover:border-gray-500",
                 )}
                 style={style}

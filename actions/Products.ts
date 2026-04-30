@@ -22,6 +22,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import type { CreateMenuItemInput, UpdateMenuItemInput, SetProductBranchInput } from "@/types/products";
 export type { CreateMenuItemInput, UpdateMenuItemInput, SetProductBranchInput };
 
+
 import type { PaginationInfo } from "@/types/pagination";
 export type { PaginationInfo };
 
@@ -888,6 +889,27 @@ export async function getMenuItemsPaginated(params: {
               },
             },
           },
+          ingredients: {
+            include: { ingredient: true },
+            orderBy: { ingredient: { name: "asc" } },
+          },
+          modifierGroups: {
+            orderBy: { order: "asc" },
+            include: {
+              group: {
+                include: {
+                  options: {
+                    orderBy: { order: "asc" },
+                    include: {
+                      ingredientLinks: {
+                        include: { ingredient: { select: { name: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: {
           name: "asc",
@@ -950,6 +972,33 @@ export async function getMenuItemsPaginated(params: {
       comboComponents: product.comboComponents.map((cc) => ({
         ...cc,
         quantity: Number(cc.quantity),
+      })),
+      ingredients: product.ingredients.map((pi) => ({
+        ingredientId: pi.ingredientId,
+        ingredientName: pi.ingredient.name,
+        quantity: Number(pi.quantity),
+        unitType: pi.ingredient.unitType,
+        weightUnit: pi.ingredient.weightUnit,
+        volumeUnit: pi.ingredient.volumeUnit,
+        linkWeightUnit: pi.weightUnit,
+        linkVolumeUnit: pi.volumeUnit,
+        costPerUnit: Number(pi.ingredient.costPerUnit),
+      })),
+      modifierGroups: product.modifierGroups.map((pmg) => ({
+        ...pmg,
+        group: {
+          ...pmg.group,
+          options: pmg.group.options.map((opt) => ({
+            ...opt,
+            priceAdjustment: Number(opt.priceAdjustment),
+            createdAt: opt.createdAt.toISOString(),
+            updatedAt: opt.updatedAt.toISOString(),
+            ingredientLinks: opt.ingredientLinks.map((link) => ({
+              ...link,
+              quantity: Number(link.quantity),
+            })),
+          })),
+        },
       })),
     }));
 

@@ -10,6 +10,7 @@ import {
   type Product,
 } from "@/app/generated/prisma";
 import { calculateDiscountAmount } from "@/lib/discount";
+import { convertLinkQuantityToBase } from "@/lib/unit-conversions";
 import { serializeClient } from "@/lib/serializers";
 import { serializeForClient } from "@/lib/serialize";
 import {
@@ -71,6 +72,110 @@ async function validateTableForOrder(
 }
 
 /**
+ * Deduct ingredient stock for a single order item, including modifier option ingredients.
+ * Must be called inside a Prisma transaction (tx).
+ */
+async function _deductIngredientStock(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  branchId: string,
+  productId: string | null | undefined,
+  itemQuantity: number,
+  modifiers: SelectedModifier[]
+): Promise<void> {
+  // Deduct base product recipe ingredients
+  if (productId) {
+    const recipeRows = await tx.productIngredient.findMany({
+      where: { productId },
+      include: { ingredient: { select: { name: true } } },
+    });
+    for (const row of recipeRows) {
+      const deductQty = Number(row.quantity) * itemQuantity;
+      const stockRow = await tx.ingredientStock.findUnique({
+        where: {
+          ingredientId_branchId: {
+            ingredientId: row.ingredientId,
+            branchId,
+          },
+        },
+      });
+      const currentStock = stockRow ? Number(stockRow.stock) : 0;
+      const newStock = currentStock - deductQty;
+      if (newStock < 0) {
+        throw new Error(
+          `Stock insuficiente del ingrediente "${row.ingredient.name}"`
+        );
+      }
+      await tx.ingredientStock.upsert({
+        where: {
+          ingredientId_branchId: {
+            ingredientId: row.ingredientId,
+            branchId,
+          },
+        },
+        create: {
+          ingredientId: row.ingredientId,
+          branchId,
+          stock: Math.max(0, -deductQty),
+        },
+        update: { stock: { decrement: deductQty } },
+      });
+    }
+  }
+
+  // Deduct modifier option ingredients
+  for (const mod of modifiers) {
+    const modIngredients = await tx.modifierOptionIngredient.findMany({
+      where: { optionId: mod.modifierOptionId },
+      include: {
+        ingredient: {
+          select: { name: true, unitType: true, weightUnit: true, volumeUnit: true },
+        },
+      },
+    });
+    for (const row of modIngredients) {
+      const quantityInBase = convertLinkQuantityToBase(
+        Number(row.quantity),
+        row.ingredient.unitType,
+        row.weightUnit,
+        row.volumeUnit,
+        row.ingredient.weightUnit,
+        row.ingredient.volumeUnit,
+      );
+      const deductQty = quantityInBase * itemQuantity * (mod.quantity ?? 1);
+      const stockRow = await tx.ingredientStock.findUnique({
+        where: {
+          ingredientId_branchId: {
+            ingredientId: row.ingredientId,
+            branchId,
+          },
+        },
+      });
+      const currentStock = stockRow ? Number(stockRow.stock) : 0;
+      const newStock = currentStock - deductQty;
+      if (newStock < 0) {
+        throw new Error(
+          `Stock insuficiente del ingrediente "${row.ingredient.name}"`
+        );
+      }
+      await tx.ingredientStock.upsert({
+        where: {
+          ingredientId_branchId: {
+            ingredientId: row.ingredientId,
+            branchId,
+          },
+        },
+        create: {
+          ingredientId: row.ingredientId,
+          branchId,
+          stock: Math.max(0, -deductQty),
+        },
+        update: { stock: { decrement: deductQty } },
+      });
+    }
+  }
+}
+
+/**
  * Get client discount percentage and type
  * Returns 0 / PERCENTAGE defaults if client not found or no discount set
  */
@@ -102,6 +207,7 @@ import type {
   PaymentMethodExtended,
   PaymentEntry,
   OrderWithoutInvoice,
+  SelectedModifier,
 } from "@/types/orders";
 export type {
   OrderItemInput,
@@ -326,18 +432,61 @@ export async function createOrderWithItems(data: {
         },
       });
 
-      // Bulk create all order items
-      await tx.orderItem.createMany({
-        data: items.map((item) => ({
-          orderId: newOrder.id,
-          productId: item.productId,
-          itemName: item.itemName,
-          quantity: item.quantity,
-          price: item.price,
-          originalPrice: item.originalPrice,
-          notes: item.notes || null,
-        })),
-      });
+      // Create order items — use individual creates when any item has modifiers
+      const hasModifiers = items.some(
+        (item) => item.modifiers && item.modifiers.length > 0
+      );
+      if (hasModifiers) {
+        for (const item of items) {
+          await tx.orderItem.create({
+            data: {
+              orderId: newOrder.id,
+              productId: item.productId,
+              itemName: item.itemName,
+              quantity: item.quantity,
+              price: item.price,
+              originalPrice: item.originalPrice,
+              notes: item.notes || null,
+              ...(item.modifiers && item.modifiers.length > 0
+                ? {
+                    modifiers: {
+                      create: item.modifiers.map((mod) => ({
+                        modifierOptionId: mod.modifierOptionId,
+                        optionName: mod.optionName,
+                        groupName: mod.groupName,
+                        priceAdjustment: mod.priceAdjustment,
+                        quantity: mod.quantity ?? 1,
+                      })),
+                    },
+                  }
+                : {}),
+            },
+          });
+        }
+      } else {
+        await tx.orderItem.createMany({
+          data: items.map((item) => ({
+            orderId: newOrder.id,
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
+            price: item.price,
+            originalPrice: item.originalPrice,
+            notes: item.notes || null,
+          })),
+        });
+      }
+
+      // Deduct ingredient stock for product recipes and modifier options
+      for (const item of items) {
+        await _deductIngredientStock(
+          tx,
+          branchId,
+          item.productId,
+          item.quantity,
+          item.modifiers ?? []
+        );
+      }
 
       // Auto-decrement component stocks for combo products
       for (const item of items) {
@@ -409,6 +558,7 @@ export async function createOrderWithItems(data: {
           items: {
             include: {
               product: true,
+              modifiers: true,
             },
             orderBy: {
               id: "asc",
@@ -566,6 +716,7 @@ export async function getTableOrder(tableId: string) {
         items: {
           include: {
             product: true,
+            modifiers: true,
           },
           orderBy: {
             id: "asc",
@@ -604,6 +755,12 @@ export async function getTableOrder(tableId: string) {
               ? Number(item.originalPrice)
               : null,
             product: serializeProduct(item.product),
+            modifiers: item.modifiers.map((m) => ({
+              id: m.id,
+              optionName: m.optionName,
+              groupName: m.groupName,
+              priceAdjustment: Number(m.priceAdjustment),
+            })),
           })),
           invoices: order.invoices || [],
           client: order.client
@@ -650,6 +807,7 @@ export async function getTableOrders(tableId: string) {
         items: {
           include: {
             product: true,
+            modifiers: true,
           },
           orderBy: {
             id: "asc",
@@ -685,6 +843,12 @@ export async function getTableOrders(tableId: string) {
         price: Number(item.price),
         originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
         product: serializeProduct(item.product),
+        modifiers: item.modifiers.map((m) => ({
+          id: m.id,
+          optionName: m.optionName,
+          groupName: m.groupName,
+          priceAdjustment: Number(m.priceAdjustment),
+        })),
       })),
       invoices: order.invoices || [],
       client: order.client
@@ -739,9 +903,30 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
           price: item.price,
           originalPrice: item.originalPrice,
           notes: item.notes || null,
+          ...(item.modifiers && item.modifiers.length > 0
+            ? {
+                modifiers: {
+                  create: item.modifiers.map((mod) => ({
+                    modifierOptionId: mod.modifierOptionId,
+                    optionName: mod.optionName,
+                    groupName: mod.groupName,
+                    priceAdjustment: mod.priceAdjustment,
+                  })),
+                },
+              }
+            : {}),
         },
-        include: { product: true },
+        include: { product: true, modifiers: true },
       });
+
+      // Deduct ingredient stock
+      await _deductIngredientStock(
+        tx,
+        branchId,
+        item.productId,
+        item.quantity,
+        item.modifiers ?? []
+      );
 
       // Auto-decrement component stocks for combo products
       if (item.productId) {
@@ -809,6 +994,12 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
         ? Number(orderItem.originalPrice)
         : null,
       product: serializeProduct(orderItem.product),
+      modifiers: orderItem.modifiers.map((mod) => ({
+        id: mod.id,
+        optionName: mod.optionName,
+        groupName: mod.groupName,
+        priceAdjustment: Number(mod.priceAdjustment),
+      })),
     };
 
     return {
@@ -828,30 +1019,89 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
 // Add multiple items to order (bulk operation)
 export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
   try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { branchId: true },
+    });
+    if (!order) {
+      return { success: false, error: "Orden no encontrada" };
+    }
+    const branchId = order.branchId;
+
     const updatedItems = await prisma.$transaction(async (tx) => {
-      await tx.orderItem.createMany({
-        data: items.map((item) => ({
-          orderId,
-          productId: item.productId,
-          itemName: item.itemName,
-          quantity: item.quantity,
-          price: item.price,
-          originalPrice: item.originalPrice,
-          notes: item.notes || null,
-        })),
-      });
+      const hasModifiers = items.some(
+        (item) => item.modifiers && item.modifiers.length > 0
+      );
+      if (hasModifiers) {
+        for (const item of items) {
+          await tx.orderItem.create({
+            data: {
+              orderId,
+              productId: item.productId,
+              itemName: item.itemName,
+              quantity: item.quantity,
+              price: item.price,
+              originalPrice: item.originalPrice,
+              notes: item.notes || null,
+              ...(item.modifiers && item.modifiers.length > 0
+                ? {
+                    modifiers: {
+                      create: item.modifiers.map((mod) => ({
+                        modifierOptionId: mod.modifierOptionId,
+                        optionName: mod.optionName,
+                        groupName: mod.groupName,
+                        priceAdjustment: mod.priceAdjustment,
+                        quantity: mod.quantity ?? 1,
+                      })),
+                    },
+                  }
+                : {}),
+            },
+          });
+        }
+      } else {
+        await tx.orderItem.createMany({
+          data: items.map((item) => ({
+            orderId,
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
+            price: item.price,
+            originalPrice: item.originalPrice,
+            notes: item.notes || null,
+          })),
+        });
+      }
+
+      // Deduct ingredient stock for each item
+      for (const item of items) {
+        await _deductIngredientStock(
+          tx,
+          branchId,
+          item.productId,
+          item.quantity,
+          item.modifiers ?? []
+        );
+      }
 
       const allItems = await tx.orderItem.findMany({
         where: { orderId },
-        include: { product: true },
+        include: { product: true, modifiers: true },
         orderBy: { id: "asc" },
       });
 
       return allItems.map((item) => ({
         ...item,
         price: Number(item.price),
-        originalPrice: item.originalPrice !== null ? Number(item.originalPrice) : null,
+        originalPrice:
+          item.originalPrice !== null ? Number(item.originalPrice) : null,
         product: serializeProduct(item.product),
+        modifiers: item.modifiers.map((mod) => ({
+          id: mod.id,
+          optionName: mod.optionName,
+          groupName: mod.groupName,
+          priceAdjustment: Number(mod.priceAdjustment),
+        })),
       }));
     });
 
@@ -860,7 +1110,8 @@ export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
     console.error("Error adding order items:", error);
     return {
       success: false,
-      error: "Error al agregar los productos",
+      error:
+        error instanceof Error ? error.message : "Error al agregar los productos",
     };
   }
 }
@@ -1269,6 +1520,58 @@ async function _getAvailableProductsForOrder(
             },
           },
         },
+        modifierGroups: {
+          orderBy: { order: "asc" },
+          select: {
+            order: true,
+            requiredOverride: true,
+            minSelectionsOverride: true,
+            maxSelectionsOverride: true,
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                required: true,
+                minSelections: true,
+                maxSelections: true,
+                restaurantId: true,
+                options: {
+                  orderBy: { order: "asc" },
+                  select: {
+                    id: true,
+                    groupId: true,
+                    name: true,
+                    priceAdjustment: true,
+                    isDefault: true,
+                    isAvailable: true,
+                    order: true,
+                    ingredientLinks: {
+                      select: {
+                        ingredientId: true,
+                        quantity: true,
+                        weightUnit: true,
+                        volumeUnit: true,
+                        ingredient: {
+                          select: {
+                            name: true,
+                            unitType: true,
+                            weightUnit: true,
+                            volumeUnit: true,
+                            branchStock: {
+                              where: { branchId },
+                              select: { stock: true },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: [
         {
@@ -1326,6 +1629,61 @@ async function _getAvailableProductsForOrder(
           stock: Number(product.branches[0]?.stock ?? 0),
           isCombo: product.isCombo,
           comboAvailability,
+          modifierGroups: product.modifierGroups.map((mg) => ({
+            id: mg.group.id,
+            name: mg.group.name,
+            description: mg.group.description,
+            required: mg.group.required,
+            minSelections: mg.group.minSelections,
+            maxSelections: mg.group.maxSelections,
+            restaurantId: mg.group.restaurantId,
+            options: mg.group.options.map((opt) => {
+              const isOutOfStock = opt.ingredientLinks.some((link) => {
+                const stock = Number(link.ingredient.branchStock[0]?.stock ?? 0);
+                const required = convertLinkQuantityToBase(
+                  Number(link.quantity),
+                  link.ingredient.unitType,
+                  link.weightUnit,
+                  link.volumeUnit,
+                  link.ingredient.weightUnit,
+                  link.ingredient.volumeUnit,
+                );
+                return stock < required;
+              });
+              return {
+                id: opt.id,
+                groupId: opt.groupId,
+                name: opt.name,
+                priceAdjustment: Number(opt.priceAdjustment),
+                isDefault: opt.isDefault,
+                isAvailable: opt.isAvailable,
+                isOutOfStock,
+                order: opt.order,
+                ingredientLinks: opt.ingredientLinks.map((link) => ({
+                  ingredientId: link.ingredientId,
+                  ingredientName: link.ingredient.name,
+                  ingredientUnitType: link.ingredient.unitType,
+                  quantity: Number(link.quantity),
+                  stock: Number(link.ingredient.branchStock[0]?.stock ?? 0),
+                  ingredientWeightUnit: link.ingredient.weightUnit,
+                  ingredientVolumeUnit: link.ingredient.volumeUnit,
+                  weightUnit: link.weightUnit,
+                  volumeUnit: link.volumeUnit,
+                })),
+              };
+            }),
+            productOverride: {
+              requiredOverride: mg.requiredOverride,
+              minSelectionsOverride: mg.minSelectionsOverride,
+              maxSelectionsOverride: mg.maxSelectionsOverride,
+              order: mg.order,
+            },
+            effectiveRequired: mg.requiredOverride ?? mg.group.required,
+            effectiveMin:
+              mg.minSelectionsOverride ?? mg.group.minSelections,
+            effectiveMax:
+              mg.maxSelectionsOverride ?? mg.group.maxSelections,
+          })),
         };
       })
       .filter((p) => {

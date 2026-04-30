@@ -628,7 +628,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
               <button
                 onClick={handleTestConnection}
                 disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                className="bg-blue-600 text-neutral-50 px-6 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isLoading ? "Conectando..." : "Probar Conexión"}
               </button>
@@ -636,7 +636,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
               <button
                 onClick={handleGetSalesPoints}
                 disabled={isLoading}
-                className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                className="bg-blue-500 text-neutral-50 px-6 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 Obtener Puntos de Venta
               </button>
@@ -644,7 +644,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
               <button
                 onClick={handleGetInvoiceTypes}
                 disabled={isLoading}
-                className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                className="bg-blue-500 text-neutral-50 px-6 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 Obtener Tipos de Comprobantes
               </button>
@@ -888,7 +888,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
                 <button
                   type="button"
                   onClick={addItem}
-                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  className="text-sm bg-blue-500 text-neutral-50 px-3 py-1 rounded hover:bg-blue-600"
                 >
                   + Agregar Item
                 </button>
@@ -1056,14 +1056,14 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
             <button
               onClick={handleGetLastInvoice}
               disabled={isLoading}
-              className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              className="bg-gray-600 text-neutral-50 px-6 py-2 rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
               Obtener Último Número
             </button>
             <button
               onClick={handleEmitInvoice}
               disabled={isLoading}
-              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              className="bg-green-600 text-neutral-50 px-6 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {isLoading ? "Emitiendo..." : "✓ Emitir Factura de Prueba"}
             </button>
@@ -1127,7 +1127,7 @@ export function TestArcaClient({ printers }: TestArcaClientProps) {
                           disabled={
                             isPrinting || !printerConnected || !selectedPrinter
                           }
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full px-4 py-2 bg-blue-600 text-neutral-50 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                           {isPrinting ? (
                             <>

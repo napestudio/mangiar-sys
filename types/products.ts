@@ -1,4 +1,6 @@
 import type { UnitType, WeightUnit, VolumeUnit, PriceType, ProductTag } from "@/app/generated/prisma";
+import type { ResolvedModifierGroup } from "@/types/modifiers";
+import type { ProductIngredientEntry } from "@/types/ingredients";
 
 export type ComboComponent = {
   componentId: string;
@@ -61,6 +63,8 @@ export type OrderProduct = {
   stock: number;
   isCombo: boolean;
   comboAvailability?: number; // computed for combos (min units possible from component stocks)
+  modifierGroups?: ResolvedModifierGroup[];
+  recipe?: ProductIngredientEntry[];
 };
 
 export type CreateMenuItemInput = {

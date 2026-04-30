@@ -56,7 +56,9 @@ import { formatCurrency } from "@/lib/currency";
 import { calculateDiscountAmount } from "@/lib/discount";
 import { cn } from "@/lib/utils";
 
-type MovementData = Awaited<ReturnType<typeof getMovementWithOrderDetails>>["data"];
+type MovementData = Awaited<
+  ReturnType<typeof getMovementWithOrderDetails>
+>["data"];
 
 const PAYMENT_METHOD_ICONS: Record<string, React.ReactNode> = {
   CASH: <Banknote className="h-4 w-4" />,
@@ -106,7 +108,9 @@ export function MovementDetailsSidebar({
   const [cashRegisterId, setCashRegisterId] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">("INCOME");
+  const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">(
+    "INCOME",
+  );
   const [isPending, setIsPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -117,12 +121,10 @@ export function MovementDetailsSidebar({
   const [itemsExpanded, setItemsExpanded] = useState(false);
 
   const canEdit =
-    userRole === "MANAGER" ||
-    userRole === "ADMIN" ||
-    userRole === "SUPERADMIN";
+    userRole === "MANAGER" || userRole === "ADMIN" || userRole === "SUPERADMIN";
 
   const registersWithOpenSessions = (cashRegisters ?? []).filter(
-    (r) => r.hasOpenSession && r.isActive
+    (r) => r.hasOpenSession && r.isActive,
   );
 
   // Fetch data when movementId changes
@@ -241,7 +243,11 @@ export function MovementDetailsSidebar({
     if (!movement) return "";
     if (movement.type === "INCOME") return "Ingreso Manual";
     if (movement.type === "EXPENSE") return "Egreso Manual";
-    return MOVEMENT_TYPE_LABELS[movement.type as keyof typeof MOVEMENT_TYPE_LABELS] ?? movement.type;
+    return (
+      MOVEMENT_TYPE_LABELS[
+        movement.type as keyof typeof MOVEMENT_TYPE_LABELS
+      ] ?? movement.type
+    );
   };
 
   const formatDate = (dateStr: string) =>
@@ -280,7 +286,7 @@ export function MovementDetailsSidebar({
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity",
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
+          open ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -289,7 +295,7 @@ export function MovementDetailsSidebar({
       <div
         className={cn(
           "fixed top-0 right-0 h-full w-full sm:w-112.5 bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
@@ -387,7 +393,6 @@ export function MovementDetailsSidebar({
 
               {/* Read-only info */}
               <div className="px-4 py-4 space-y-3 border-b">
-
                 {/* Payment method */}
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
@@ -396,7 +401,9 @@ export function MovementDetailsSidebar({
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Medio de pago</p>
+                    <p className="text-xs text-muted-foreground">
+                      Medio de pago
+                    </p>
                     <p className="font-medium text-sm">
                       {PAYMENT_METHOD_LABELS[
                         movement.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS
@@ -437,7 +444,9 @@ export function MovementDetailsSidebar({
                     <User className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Registrado por</p>
+                    <p className="text-xs text-muted-foreground">
+                      Registrado por
+                    </p>
                     <p className="font-medium text-sm">
                       {movement.createdByName ?? "Sistema"}
                     </p>
@@ -451,7 +460,9 @@ export function MovementDetailsSidebar({
                       <User className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Atendido por</p>
+                      <p className="text-xs text-muted-foreground">
+                        Atendido por
+                      </p>
                       <p className="font-medium text-sm">
                         {order.assignedTo.name ?? order.assignedTo.username}
                       </p>
@@ -466,7 +477,9 @@ export function MovementDetailsSidebar({
                       <FileText className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">Descripción</p>
+                      <p className="text-xs text-muted-foreground">
+                        Descripción
+                      </p>
                       <p className="font-medium text-sm">
                         {movement.description
                           .replace(/\bTable\b/g, "Mesa")
@@ -573,7 +586,8 @@ export function MovementDetailsSidebar({
                       )}
 
                       {/* Discount / delivery fee */}
-                      {(order.discountPercentage > 0 || order.deliveryFee > 0) && (
+                      {(order.discountPercentage > 0 ||
+                        order.deliveryFee > 0) && (
                         <div className="space-y-1 px-1">
                           {order.discountPercentage > 0 && (
                             <div className="flex justify-between text-sm text-gray-500">
@@ -585,15 +599,18 @@ export function MovementDetailsSidebar({
                                 )
                               </span>
                               <span className="text-red-500">
-                                -{formatCurrency(
+                                -
+                                {formatCurrency(
                                   calculateDiscountAmount(
                                     order.items.reduce(
                                       (sum, i) => sum + i.price * i.quantity,
-                                      0
+                                      0,
                                     ),
                                     order.discountPercentage,
-                                    order.discountType as "PERCENTAGE" | "FIXED"
-                                  )
+                                    order.discountType as
+                                      | "PERCENTAGE"
+                                      | "FIXED",
+                                  ),
                                 )}
                               </span>
                             </div>
@@ -661,8 +678,8 @@ export function MovementDetailsSidebar({
                           className={cn(
                             "flex-1 py-2 text-sm font-medium transition-colors",
                             movementType === "INCOME"
-                              ? "bg-green-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"
+                              ? "bg-green-600 text-neutral-50"
+                              : "bg-white text-gray-600 hover:bg-gray-50",
                           )}
                         >
                           Ingreso
@@ -674,8 +691,8 @@ export function MovementDetailsSidebar({
                           className={cn(
                             "flex-1 py-2 text-sm font-medium transition-colors",
                             movementType === "EXPENSE"
-                              ? "bg-red-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"
+                              ? "bg-red-600 text-neutral-50"
+                              : "bg-white text-gray-600 hover:bg-gray-50",
                           )}
                         >
                           Egreso
@@ -801,10 +818,10 @@ export function MovementDetailsSidebar({
             <Button
               onClick={handleSave}
               disabled={
-              isPending ||
-              !paymentMethod ||
-              (!isGlobalMovement && !cashRegisterId)
-            }
+                isPending ||
+                !paymentMethod ||
+                (!isGlobalMovement && !cashRegisterId)
+              }
               className="flex-1 bg-red-600 hover:bg-red-700"
             >
               {isPending ? "Guardando..." : "Guardar cambios"}

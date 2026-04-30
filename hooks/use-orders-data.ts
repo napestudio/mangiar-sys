@@ -18,6 +18,12 @@ type OrderWithItems = Order & {
       name: string;
       description: string | null;
     };
+    modifiers?: Array<{
+      id: string;
+      optionName: string;
+      groupName: string;
+      priceAdjustment: number;
+    }>;
   }>;
   client?: {
     id: string;
