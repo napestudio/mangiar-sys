@@ -14,7 +14,10 @@ interface PrintersTableProps {
   onPrinterClick: (printer: PrinterWithStation) => void;
 }
 
-export function PrintersTable({ printers, onPrinterClick }: PrintersTableProps) {
+export function PrintersTable({
+  printers,
+  onPrinterClick,
+}: PrintersTableProps) {
   return (
     <div className="bg-white rounded-lg border overflow-hidden">
       <table className="w-full">
@@ -68,7 +71,7 @@ export function PrintersTable({ printers, onPrinterClick }: PrintersTableProps) 
                 {printer.station ? (
                   <Badge
                     style={{ backgroundColor: printer.station.color }}
-                    className="text-white"
+                    className="text-neutral-50"
                   >
                     {printer.station.name}
                   </Badge>

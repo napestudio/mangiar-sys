@@ -29,7 +29,7 @@ export default function GgEzPrintSetupPage() {
       {/* Step 1: Install gg-ez-print */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-neutral-50 text-sm font-bold">
             1
           </span>
           Instalar gg-ez-print
@@ -78,7 +78,7 @@ export default function GgEzPrintSetupPage() {
           href="https://github.com/RenzoCostarelli/gg-ez-print/releases"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          className="inline-flex items-center gap-2 bg-blue-600 text-neutral-50 px-4 py-2 rounded hover:bg-blue-700 transition"
         >
           <svg
             className="w-4 h-4"
@@ -100,7 +100,7 @@ export default function GgEzPrintSetupPage() {
       {/* Step 2: Verify Service */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-neutral-50 text-sm font-bold">
             2
           </span>
           Verificar que el Servicio Está Ejecutándose
@@ -140,7 +140,7 @@ export default function GgEzPrintSetupPage() {
       {/* Step 3: Configure Printers */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-neutral-50 text-sm font-bold">
             3
           </span>
           Configurar Impresoras en el Sistema

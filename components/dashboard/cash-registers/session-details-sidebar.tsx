@@ -321,13 +321,13 @@ export function SessionDetailsSidebar({
         )}
       >
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-semibold">ARQUEO DE CAJA</h2>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-red-600"
+              className="text-neutral-50 hover:bg-red-600"
               onClick={loadMovements}
               disabled={isLoading}
             >
@@ -338,7 +338,7 @@ export function SessionDetailsSidebar({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-red-600"
+              className="text-neutral-50 hover:bg-red-600"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
@@ -377,7 +377,7 @@ export function SessionDetailsSidebar({
 
         {/* System Section */}
         <div>
-          <div className="bg-gray-400 text-white px-4 py-2 font-semibold text-sm">
+          <div className="bg-gray-400 text-neutral-50 px-4 py-2 font-semibold text-sm">
             SEGÚN SISTEMA
           </div>
 
@@ -517,7 +517,7 @@ export function SessionDetailsSidebar({
         {/* User Section - Only show for OPEN sessions */}
         {session.status === "OPEN" && (
           <div>
-            <div className="bg-gray-400 text-white px-4 py-2 font-semibold text-sm">
+            <div className="bg-gray-400 text-neutral-50 px-4 py-2 font-semibold text-sm">
               SEGÚN USUARIO
             </div>
 
@@ -588,7 +588,7 @@ export function SessionDetailsSidebar({
         {/* Closed session info */}
         {session.status === "CLOSED" && (
           <div>
-            <div className="bg-gray-400 text-white px-4 py-2 font-semibold text-sm">
+            <div className="bg-gray-400 text-neutral-50 px-4 py-2 font-semibold text-sm">
               SEGÚN USUARIO
             </div>
             <div className="p-4 space-y-3">
@@ -639,7 +639,7 @@ export function SessionDetailsSidebar({
         {/* Variance Footer */}
         <div
           className={cn(
-            "flex justify-between px-4 py-4 font-semibold text-white",
+            "flex justify-between px-4 py-4 font-semibold text-neutral-50",
             session.status === "OPEN"
               ? variance < 0
                 ? "bg-red-500"

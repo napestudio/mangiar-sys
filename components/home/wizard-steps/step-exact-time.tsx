@@ -26,7 +26,7 @@ interface TimeInterval {
 function generateFifteenMinuteIntervals(
   startTime: Date,
   endTime: Date,
-  dateStr: string
+  dateStr: string,
 ): TimeInterval[] {
   const intervals: TimeInterval[] = [];
   // Parse date string as local date (not UTC) by using yyyy/mm/dd format or splitting
@@ -41,8 +41,7 @@ function generateFifteenMinuteIntervals(
   const endMin = endTime.getUTCMinutes();
   // Detect cross-midnight: if end is before start (e.g. 20:00 → 00:30), add 24 to end hour
   const isCrossMidnight =
-    rawEndHour < startHour ||
-    (rawEndHour === startHour && endMin < startMin);
+    rawEndHour < startHour || (rawEndHour === startHour && endMin < startMin);
   const endHour = isCrossMidnight ? rawEndHour + 24 : rawEndHour;
 
   // Generate 15-min intervals
@@ -85,7 +84,7 @@ export function StepExactTime({
   const intervals = generateFifteenMinuteIntervals(
     selectedSlot.startTime,
     selectedSlot.endTime,
-    selectedDate
+    selectedDate,
   );
 
   return (
@@ -117,12 +116,12 @@ export function StepExactTime({
             className={cn(
               "h-16 text-lg font-semibold transition-all duration-200",
               {
-                "bg-red-600 hover:bg-red-700 text-white":
+                "bg-red-600 hover:bg-red-700 text-neutral-50":
                   value === interval.value,
                 "hover:border-red-300 hover:bg-red-50":
                   value !== interval.value && !interval.isPast,
                 "opacity-40 cursor-not-allowed": interval.isPast,
-              }
+              },
             )}
           >
             {interval.label}

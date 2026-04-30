@@ -55,6 +55,13 @@ export type Order = {
     price: number;
     originalPrice: number | null;
     notes: string | null;
+    modifiers?: Array<{
+      id: string;
+      optionName: string;
+      groupName: string;
+      priceAdjustment: number;
+      quantity?: number;
+    }>;
 
     product: {
       name: string;
@@ -75,6 +82,14 @@ export type Order = {
   }>;
 };
 
+export type SelectedModifier = {
+  modifierOptionId: string;
+  optionName: string;
+  groupName: string;
+  priceAdjustment: number;
+  quantity?: number;
+};
+
 export type OrderItemInput = {
   productId: string;
   itemName: string;
@@ -82,6 +97,7 @@ export type OrderItemInput = {
   price: number;
   originalPrice: number;
   notes?: string;
+  modifiers?: SelectedModifier[];
 };
 
 export type OrderFilters = {

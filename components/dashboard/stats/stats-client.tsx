@@ -80,7 +80,7 @@ export function StatsClient({ branchId, initialStats }: StatsClientProps) {
               disabled={isPending}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 period === key
-                  ? "bg-gray-900 text-white"
+                  ? "bg-gray-900 text-neutral-50"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               } disabled:opacity-50`}
             >

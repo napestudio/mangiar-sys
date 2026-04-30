@@ -31,7 +31,7 @@ export default function Hero({
           <div className="mt-10 flex justify-star gap-4">
             <Link
               href="/reservations"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-neutral-50 bg-indigo-600 hover:bg-indigo-700"
             >
               {ctaButton}
             </Link>

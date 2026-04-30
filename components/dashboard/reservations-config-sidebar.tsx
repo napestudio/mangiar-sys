@@ -60,7 +60,7 @@ export default function ReservationsConfigSidebar({
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity",
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
+          open ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={() => setOpen(false)}
       />
@@ -69,11 +69,11 @@ export default function ReservationsConfigSidebar({
       <div
         className={cn(
           "fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Notificaciones</h2>
@@ -81,7 +81,7 @@ export default function ReservationsConfigSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-red-600"
+            className="text-neutral-50 hover:bg-red-600"
             onClick={() => setOpen(false)}
           >
             <X className="h-4 w-4" />
@@ -91,13 +91,21 @@ export default function ReservationsConfigSidebar({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-medium text-gray-900">Email de reservas</h3>
+            <h3 className="text-sm font-medium text-gray-900">
+              Email de reservas
+            </h3>
             <p className="text-sm text-gray-500">
               Las nuevas reservas web se enviarán a este correo electrónico.
             </p>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Label htmlFor="notification-email">Email</Label>
               <Input
@@ -113,7 +121,9 @@ export default function ReservationsConfigSidebar({
               <p
                 className={cn(
                   "text-sm",
-                  message.type === "success" ? "text-green-600" : "text-red-600"
+                  message.type === "success"
+                    ? "text-green-600"
+                    : "text-red-600",
                 )}
               >
                 {message.text}
@@ -130,7 +140,7 @@ export default function ReservationsConfigSidebar({
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-red-500 hover:bg-red-600 text-white"
+            className="bg-red-500 hover:bg-red-600 text-neutral-50"
           >
             {loading ? "Guardando..." : "Guardar"}
           </Button>

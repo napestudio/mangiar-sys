@@ -7,10 +7,12 @@ import {
   BarChart2,
   CalendarDays,
   ClipboardList,
+  FlaskConical,
   House,
   Package,
   Receipt,
   Settings,
+  Sliders,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import ArqueosIcon from "@/components/ui/icons/ArqueosIcon";
@@ -34,6 +36,8 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   Archive,
   Receipt,
   Settings,
+  FlaskConical,
+  Sliders,
 };
 
 export default function DashBoardNavItems({

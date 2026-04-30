@@ -147,7 +147,11 @@ export default function DeliveryPage({
   return (
     <div
       className="min-h-svh"
-      style={{ background: "var(--rt-bg)", color: "var(--rt-text)", fontFamily: "var(--rt-font)" }}
+      style={{
+        background: "var(--rt-bg)",
+        color: "var(--rt-text)",
+        fontFamily: "var(--rt-font)",
+      }}
     >
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -276,7 +280,7 @@ export default function DeliveryPage({
           <div className="fixed bottom-6 z-50 w-full flex items-center justify-center">
             <button
               onClick={() => setStep("cart")}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-2 shadow-lg flex items-center gap-3 transition-all"
+              className="bg-red-500 hover:bg-red-600 text-neutral-50 rounded-full px-6 py-2 shadow-lg flex items-center gap-3 transition-all"
             >
               <span className="font-semibold">Pedido</span>
               <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">

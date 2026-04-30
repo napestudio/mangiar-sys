@@ -171,7 +171,7 @@ export function ClientsManager({
             <Filter className="h-4 w-4 mr-2" />
             Filtros
             {hasActiveFilters && (
-              <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+              <span className="ml-2 bg-red-500 text-neutral-50 rounded-full w-5 h-5 text-xs flex items-center justify-center">
                 !
               </span>
             )}

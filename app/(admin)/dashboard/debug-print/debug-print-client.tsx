@@ -32,16 +32,14 @@ export function DebugPrintClient({
   const [selectedUsb, setSelectedUsb] = useState("");
   const [networkIp, setNetworkIp] = useState(() => rawAddress.split(":")[0]);
   const [log, setLog] = useState<LogEntry[]>([]);
-  const [customMsg, setCustomMsg] = useState(
-    '{"action":"list"}'
-  );
+  const [customMsg, setCustomMsg] = useState('{"action":"list"}');
 
   const addLog = useCallback(
     (direction: LogEntry["direction"], payload: string) => {
       const ts = new Date().toLocaleTimeString("es-AR", { hour12: false });
       setLog((prev) => [...prev, { ts, direction, payload }]);
     },
-    []
+    [],
   );
 
   const connect = useCallback(() => {
@@ -112,7 +110,7 @@ export function DebugPrintClient({
       wsRef.current.send(raw);
       addLog("sent", raw);
     },
-    [addLog]
+    [addLog],
   );
 
   const listPrinters = () => send({ action: "list" });
@@ -158,7 +156,11 @@ export function DebugPrintClient({
         </div>
 
         <div className="text-sm text-gray-600 font-mono break-all">
-          {serverUrl || <span className="text-red-500">GGEZPRINTADDRESS no configurado</span>}
+          {serverUrl || (
+            <span className="text-red-500">
+              GGEZPRINTADDRESS no configurado
+            </span>
+          )}
         </div>
 
         {!isConnected && certUrl && (
@@ -180,14 +182,14 @@ export function DebugPrintClient({
           <button
             onClick={connect}
             disabled={!serverUrl || isConnected}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded disabled:bg-gray-300"
+            className="px-4 py-2 text-sm bg-blue-600 text-neutral-50 rounded disabled:bg-gray-300"
           >
             Conectar
           </button>
           <button
             onClick={disconnect}
             disabled={!isConnected}
-            className="px-4 py-2 text-sm bg-gray-600 text-white rounded disabled:bg-gray-300"
+            className="px-4 py-2 text-sm bg-gray-600 text-neutral-50 rounded disabled:bg-gray-300"
           >
             Desconectar
           </button>
@@ -200,7 +202,7 @@ export function DebugPrintClient({
         <button
           onClick={listPrinters}
           disabled={!isConnected}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded disabled:bg-gray-300"
+          className="px-4 py-2 text-sm bg-blue-600 text-neutral-50 rounded disabled:bg-gray-300"
         >
           Listar impresoras
         </button>
@@ -245,7 +247,7 @@ export function DebugPrintClient({
           <button
             onClick={() => testPrint("USB")}
             disabled={!isConnected || !selectedUsb}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded disabled:bg-gray-300"
+            className="px-4 py-2 text-sm bg-green-600 text-neutral-50 rounded disabled:bg-gray-300"
           >
             Enviar Test
           </button>
@@ -266,7 +268,7 @@ export function DebugPrintClient({
           <button
             onClick={() => testPrint("Network")}
             disabled={!isConnected || !networkIp}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded disabled:bg-gray-300"
+            className="px-4 py-2 text-sm bg-green-600 text-neutral-50 rounded disabled:bg-gray-300"
           >
             Enviar Test
           </button>
@@ -284,7 +286,7 @@ export function DebugPrintClient({
         <button
           onClick={sendCustom}
           disabled={!isConnected}
-          className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:bg-gray-300"
+          className="px-4 py-2 text-sm bg-gray-700 text-neutral-50 rounded disabled:bg-gray-300"
         >
           Enviar
         </button>

@@ -15,7 +15,7 @@ const legal = [
 
 export function Footer() {
   return (
-    <footer className="font-sans bg-[#171717] text-white py-16 px-6 lg:px-28">
+    <footer className="font-sans bg-neutral-100 text-neutral-900 py-16 px-6 lg:px-28">
       <div className="mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           {/* Brand */}
@@ -27,17 +27,16 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Navigation */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-300">
-              Plataforma
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-800">
+              Web
             </h4>
             <ul className="space-y-3">
               {[...navItems, ...extraLinks].map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                    className="text-sm text-gray-800 hover:text-neutral-900 transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -47,7 +46,7 @@ export function Footer() {
           </div>
 
           {/* Legal */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-300">
               Legal
             </h4>
@@ -56,14 +55,14 @@ export function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                    className="text-sm text-gray-400 hover:text-neutral-50 transition-colors"
                   >
                     {item.label}
                   </Link>
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
         </div>
 
         <div className="border-t border-white/10 pt-8">

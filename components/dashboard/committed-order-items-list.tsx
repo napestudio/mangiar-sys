@@ -11,6 +11,12 @@ export type CommittedOrderItem = {
   price: number;
   originalPrice: number | null;
   notes?: string | null;
+  modifiers?: Array<{
+    id: string;
+    optionName: string;
+    groupName: string;
+    priceAdjustment: number;
+  }>;
 };
 
 interface CommittedOrderItemsListProps {
@@ -46,6 +52,11 @@ export function CommittedOrderItemsList({
           >
             <div className="flex-1">
               <div className="font-medium text-sm">{item.itemName}</div>
+              {item.modifiers && item.modifiers.length > 0 && (
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {item.modifiers.map((m) => m.optionName).join(", ")}
+                </div>
+              )}
               <div className="text-sm text-gray-600 mt-1">
                 Cantidad: {item.quantity}
               </div>
