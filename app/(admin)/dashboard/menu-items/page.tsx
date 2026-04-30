@@ -4,6 +4,8 @@ import { requireRole } from "@/lib/permissions/middleware";
 import { UserRole, PermissionGrant } from "@/app/generated/prisma";
 import { getBranchCached } from "@/actions/Branch";
 import { getStationsByBranch } from "@/actions/Station";
+import { getIngredientsByRestaurant } from "@/actions/Ingredients";
+import { getModifierGroupsByRestaurant } from "@/actions/ModifierGroups";
 
 type SearchParams = {
   page?: string;
@@ -38,8 +40,8 @@ export default async function MenuItemsPage({
   const unitType = params.unitType || "all";
   const includeInactive = params.includeInactive === "true";
 
-  // Fetch paginated menu items, categories and stations
-  const [productsResult, categoriesResult, stationsResult] = await Promise.all([
+  // Fetch paginated menu items, categories, stations, ingredients, and modifier groups
+  const [productsResult, categoriesResult, stationsResult, ingredientsResult, modifierGroupsResult] = await Promise.all([
     getMenuItemsPaginated({
       restaurantId,
       branchId,
@@ -53,6 +55,8 @@ export default async function MenuItemsPage({
     }),
     getCategories(restaurantId),
     getStationsByBranch(branchId),
+    getIngredientsByRestaurant(restaurantId, branchId),
+    getModifierGroupsByRestaurant(restaurantId),
   ]);
 
   const menuItems =
@@ -71,6 +75,16 @@ export default async function MenuItemsPage({
   const stations =
     stationsResult.success && stationsResult.data
       ? stationsResult.data.map((s) => ({ id: s.id, name: s.name, color: s.color }))
+      : [];
+
+  const availableIngredients =
+    ingredientsResult.success && ingredientsResult.data
+      ? ingredientsResult.data
+      : [];
+
+  const availableModifierGroups =
+    modifierGroupsResult.success && modifierGroupsResult.data
+      ? modifierGroupsResult.data
       : [];
 
   // Data is already serialized by the server action
@@ -98,6 +112,8 @@ export default async function MenuItemsPage({
           restaurantId={restaurantId}
           branchId={branchId}
           stations={stations}
+          availableIngredients={availableIngredients}
+          availableModifierGroups={availableModifierGroups}
         />
       </main>
     </div>

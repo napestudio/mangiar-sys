@@ -53,6 +53,18 @@
       "permissionGrant": "MANAGE_PRODUCTS"
     },
     {
+      "label": "Ingredientes",
+      "href": "/dashboard/ingredientes",
+      "icon": "FlaskConical",
+      "minimumRole": "ADMIN"
+    },
+    {
+      "label": "Modificadores",
+      "href": "/dashboard/modificadores",
+      "icon": "Sliders",
+      "minimumRole": "ADMIN"
+    },
+    {
       "label": "Stock",
       "href": "/dashboard/stock",
       "icon": "Archive",

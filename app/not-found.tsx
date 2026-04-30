@@ -13,7 +13,7 @@ export default function NotFound() {
     <div className="bg-neutral-950 h-svh w-svw relative">
       <CanvasExperience />
       <div className="absolute bottom-6 w-full text-center">
-        <Link href="/" className="text-white underline">
+        <Link href="/" className="text-neutral-50 underline">
           Volver al inicio
         </Link>
       </div>

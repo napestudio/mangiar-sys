@@ -7,6 +7,13 @@ import {
   setProductOnBranch,
   updateMenuItem,
 } from "@/actions/Products";
+import { setProductModifierGroupsBulk as setProductModifierGroups } from "@/actions/ModifierGroups";
+import { setProductRecipe } from "@/actions/Ingredients";
+import type { IngredientWithStats } from "@/types/ingredients";
+import type {
+  AttachModifierGroupInput,
+  ModifierGroupWithOptions,
+} from "@/types/modifiers";
 import type {
   PriceType,
   ProductTag,
@@ -28,7 +35,12 @@ import {
   UNIT_TYPE_OPTIONS,
   VOLUME_UNIT_OPTIONS,
   WEIGHT_UNIT_OPTIONS,
+  getWeightUnitShortLabel,
+  getVolumeUnitShortLabel,
 } from "../lib/units";
+import { convertLinkQuantityToBase } from "@/lib/unit-conversions";
+import { UnitType as PrismaUnitType } from "@/app/generated/prisma";
+import type { WeightUnit as PrismaWeightUnit, VolumeUnit as PrismaVolumeUnit } from "@/app/generated/prisma";
 
 // Serialized types for client components
 type SerializedProductPrice = {
@@ -99,6 +111,24 @@ type ProductWithRelations = {
   category: SerializedCategory | null;
   branches: SerializedProductOnBranch[];
   comboComponents: SerializedComboComponent[];
+  ingredients?: Array<{
+    ingredientId: string;
+    ingredientName: string;
+    quantity: number;
+    unitType: string;
+    weightUnit: string | null;
+    volumeUnit: string | null;
+    linkWeightUnit: string | null;
+    linkVolumeUnit: string | null;
+  }>;
+  modifierGroups?: Array<{
+    groupId: string;
+    groupName: string;
+    order: number;
+    requiredOverride: boolean | null;
+    minSelectionsOverride: number | null;
+    maxSelectionsOverride: number | null;
+  }>;
 };
 
 type AvailableComponent = {
@@ -165,6 +195,8 @@ type ProductDialogProps = {
   item: ProductWithRelations | null;
   categories: SerializedCategory[];
   availableComponents: AvailableComponent[];
+  availableIngredients?: IngredientWithStats[];
+  availableModifierGroups?: ModifierGroupWithOptions[];
   restaurantId: string;
   branchId: string;
   onClose: () => void;
@@ -174,6 +206,21 @@ type ProductDialogProps = {
 type ComponentRow = {
   componentId: string;
   quantity: string;
+};
+
+type RecipeRow = {
+  ingredientId: string;
+  quantity: string;
+  weightUnit: string;
+  volumeUnit: string;
+};
+
+type ModifierGroupRow = {
+  groupId: string;
+  order: number;
+  requiredOverride: boolean | null;
+  minSelectionsOverride: number | null;
+  maxSelectionsOverride: number | null;
 };
 
 type FormData = {
@@ -203,6 +250,8 @@ export function ProductDialog({
   item,
   categories,
   availableComponents,
+  availableIngredients = [],
+  availableModifierGroups = [],
   restaurantId,
   branchId,
   onClose,
@@ -214,8 +263,31 @@ export function ProductDialog({
     id: string;
   } | null>(null);
   const [currentTab, setCurrentTab] = useState<
-    "basic" | "prices" | "stock" | "components"
+    "basic" | "prices" | "stock" | "components" | "receta" | "modificadores"
   >("basic");
+
+  // Recipe state
+  const [recipeRows, setRecipeRows] = useState<RecipeRow[]>(
+    item?.ingredients?.map((ing) => ({
+      ingredientId: ing.ingredientId,
+      quantity: String(ing.quantity),
+      weightUnit: ing.linkWeightUnit ?? ing.weightUnit ?? "",
+      volumeUnit: ing.linkVolumeUnit ?? ing.volumeUnit ?? "",
+    })) ?? [],
+  );
+
+  // Modifier groups state
+  const [modifierGroupRows, setModifierGroupRows] = useState<
+    ModifierGroupRow[]
+  >(
+    item?.modifierGroups?.map((mg) => ({
+      groupId: mg.groupId,
+      order: mg.order,
+      requiredOverride: mg.requiredOverride,
+      minSelectionsOverride: mg.minSelectionsOverride,
+      maxSelectionsOverride: mg.maxSelectionsOverride,
+    })) ?? [],
+  );
 
   // Track original image URL for cleanup
   const [originalImageUrl] = useState(item?.imageUrl ?? null);
@@ -491,6 +563,35 @@ export function ProductDialog({
         }
       }
 
+      // Save recipe ingredients
+      if (productId) {
+        await setProductRecipe(
+          productId,
+          recipeRows
+            .filter((r) => r.ingredientId && parseFloat(r.quantity) > 0)
+            .map((r) => ({
+              ingredientId: r.ingredientId,
+              quantity: parseFloat(r.quantity),
+              weightUnit: r.weightUnit || null,
+              volumeUnit: r.volumeUnit || null,
+            })),
+        );
+      }
+
+      // Save modifier groups
+      if (productId) {
+        const modifierPayload: AttachModifierGroupInput[] =
+          modifierGroupRows.map((mg, idx) => ({
+            productId,
+            groupId: mg.groupId,
+            order: idx,
+            requiredOverride: mg.requiredOverride,
+            minSelectionsOverride: mg.minSelectionsOverride,
+            maxSelectionsOverride: mg.maxSelectionsOverride,
+          }));
+        await setProductModifierGroups(productId, modifierPayload);
+      }
+
       // Clean up old image if it changed
       if (originalImageUrl && originalImageUrl !== formData.imageUrl) {
         // Image was changed or removed - delete old one from Cloudinary
@@ -599,6 +700,38 @@ export function ProductDialog({
               )}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setCurrentTab("receta")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              currentTab === "receta"
+                ? "border-green-600 text-green-600"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Receta
+            {recipeRows.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs bg-green-100 text-green-700 rounded-full">
+                {recipeRows.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentTab("modificadores")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              currentTab === "modificadores"
+                ? "border-purple-600 text-purple-600"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Modificadores
+            {modifierGroupRows.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                {modifierGroupRows.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Form */}
@@ -641,7 +774,7 @@ export function ProductDialog({
                         setLoading(false);
                       }
                     }}
-                    className="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                    className="px-3 py-1.5 text-sm font-medium bg-amber-600 text-neutral-50 rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
                   >
                     {loading ? (
                       <Loader2 className="w-4 h-4 animate-spin inline" />
@@ -1193,6 +1326,278 @@ export function ProductDialog({
             )}
           </div>
 
+          {/* Tab: Receta */}
+          {currentTab === "receta" && (
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-base font-medium text-gray-900 mb-1">
+                  Receta del producto
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Definí los ingredientes necesarios para preparar una unidad de
+                  este producto. Se usa para calcular el costo y descontar stock
+                  de ingredientes al confirmar pedidos.
+                </p>
+              </div>
+
+              {recipeRows.map((row, idx) => {
+                const ing = availableIngredients.find((i) => i.id === row.ingredientId) ?? null;
+                const isWeight = ing?.unitType === PrismaUnitType.WEIGHT;
+                const isVolume = ing?.unitType === PrismaUnitType.VOLUME;
+
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    {/* Ingredient selector */}
+                    <select
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                      value={row.ingredientId}
+                      onChange={(e) => {
+                        const selected = availableIngredients.find((i) => i.id === e.target.value) ?? null;
+                        setRecipeRows((prev) =>
+                          prev.map((r, i) =>
+                            i === idx
+                              ? {
+                                  ...r,
+                                  ingredientId: e.target.value,
+                                  weightUnit: selected?.unitType === PrismaUnitType.WEIGHT ? (selected.weightUnit ?? "") : "",
+                                  volumeUnit: selected?.unitType === PrismaUnitType.VOLUME ? (selected.volumeUnit ?? "") : "",
+                                }
+                              : r,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">Seleccioná ingrediente</option>
+                      {availableIngredients.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Quantity */}
+                    <input
+                      type="number"
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                      value={row.quantity}
+                      onChange={(e) =>
+                        setRecipeRows((prev) =>
+                          prev.map((r, i) =>
+                            i === idx ? { ...r, quantity: e.target.value } : r,
+                          ),
+                        )
+                      }
+                      min="0"
+                      step="0.001"
+                      placeholder="Cant."
+                    />
+
+                    {/* Unit selector */}
+                    {isWeight && (
+                      <select
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                        value={row.weightUnit}
+                        onChange={(e) =>
+                          setRecipeRows((prev) =>
+                            prev.map((r, i) =>
+                              i === idx ? { ...r, weightUnit: e.target.value } : r,
+                            ),
+                          )
+                        }
+                      >
+                        {WEIGHT_UNIT_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {isVolume && (
+                      <select
+                        className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                        value={row.volumeUnit}
+                        onChange={(e) =>
+                          setRecipeRows((prev) =>
+                            prev.map((r, i) =>
+                              i === idx ? { ...r, volumeUnit: e.target.value } : r,
+                            ),
+                          )
+                        }
+                      >
+                        {VOLUME_UNIT_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {!isWeight && !isVolume && row.ingredientId && (
+                      <span className="px-2 text-sm text-gray-500">u</span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRecipeRows((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="p-2 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+
+              {recipeRows.length === 0 && (
+                <p className="text-sm text-gray-400 italic">
+                  Sin ingredientes definidos.
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setRecipeRows((prev) => [
+                    ...prev,
+                    { ingredientId: "", quantity: "1", weightUnit: "", volumeUnit: "" },
+                  ])
+                }
+                className="flex items-center gap-2 px-4 py-2 text-sm text-green-700 border border-green-300 rounded-lg hover:bg-green-50"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar ingrediente
+              </button>
+
+              {recipeRows.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-800">
+                  Costo estimado: $
+                  {recipeRows
+                    .reduce((sum, row) => {
+                      const ing = availableIngredients.find(
+                        (i) => i.id === row.ingredientId,
+                      );
+                      if (!ing) return sum;
+                      const baseQty = convertLinkQuantityToBase(
+                        parseFloat(row.quantity) || 0,
+                        ing.unitType as PrismaUnitType,
+                        (row.weightUnit || null) as PrismaWeightUnit | null,
+                        (row.volumeUnit || null) as PrismaVolumeUnit | null,
+                        ing.weightUnit as PrismaWeightUnit | null,
+                        ing.volumeUnit as PrismaVolumeUnit | null,
+                      );
+                      return sum + ing.costPerUnit * baseQty;
+                    }, 0)
+                    .toFixed(4)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Modificadores */}
+          {currentTab === "modificadores" && (
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-base font-medium text-gray-900 mb-1">
+                  Grupos de modificadores
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Asociá grupos de opciones a este producto (sabores, proteínas,
+                  toppings, etc.). El cliente podrá seleccionar al crear un
+                  pedido.
+                </p>
+              </div>
+
+              {modifierGroupRows.map((row, idx) => {
+                const group = availableModifierGroups.find(
+                  (g) => g.id === row.groupId,
+                );
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900 text-sm">
+                        {group?.name ?? row.groupId}
+                      </span>
+                      {group && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          {group.options.length} opciones ·{" "}
+                          {(row.requiredOverride ?? group.required)
+                            ? "Obligatorio"
+                            : "Opcional"}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModifierGroupRows((prev) =>
+                          prev.filter((_, i) => i !== idx),
+                        )
+                      }
+                      className="p-1.5 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+
+              {modifierGroupRows.length === 0 && (
+                <p className="text-sm text-gray-400 italic">
+                  Sin modificadores vinculados.
+                </p>
+              )}
+
+              {/* Picker to add a group */}
+              {availableModifierGroups.filter(
+                (g) => !modifierGroupRows.some((r) => r.groupId === g.id),
+              ).length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const groupId = e.target.value;
+                      if (!groupId) return;
+                      setModifierGroupRows((prev) => [
+                        ...prev,
+                        {
+                          groupId,
+                          order: prev.length,
+                          requiredOverride: null,
+                          minSelectionsOverride: null,
+                          maxSelectionsOverride: null,
+                        },
+                      ]);
+                      e.target.value = "";
+                    }}
+                  >
+                    <option value="">+ Agregar grupo de modificadores</option>
+                    {availableModifierGroups
+                      .filter(
+                        (g) =>
+                          !modifierGroupRows.some((r) => r.groupId === g.id),
+                      )
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name} ({g.options.length} opciones)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {availableModifierGroups.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+                  No hay grupos de modificadores creados. Creálos primero desde{" "}
+                  <strong>Modificadores</strong> en el menú.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200">
             <button
@@ -1206,7 +1611,7 @@ export function ProductDialog({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-neutral-50 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <>

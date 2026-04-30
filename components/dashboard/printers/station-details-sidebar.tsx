@@ -232,7 +232,7 @@ export function StationDetailsSidebar({
       >
         {/* Header */}
         <div
-          className="text-white p-4 flex items-center justify-between sticky top-0 z-10"
+          className="text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10"
           style={{ backgroundColor: station.color }}
         >
           <div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ export function StationDetailsSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20"
+            className="text-neutral-50 hover:bg-white/20"
             onClick={onClose}
           >
             <X className="h-4 w-4" />

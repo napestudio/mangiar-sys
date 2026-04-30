@@ -216,7 +216,7 @@ export function PrinterDetailsSidebar({
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity",
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
+          open ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -225,11 +225,11 @@ export function PrinterDetailsSidebar({
       <div
         className={cn(
           "fixed top-0 right-0 h-full w-full sm:w-112.5 bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <PrinterIcon className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Detalles de Impresora</h2>
@@ -238,7 +238,7 @@ export function PrinterDetailsSidebar({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-red-600"
+              className="text-neutral-50 hover:bg-red-600"
               onClick={() => setEditDialogOpen(true)}
             >
               <Pencil className="h-4 w-4" />
@@ -246,7 +246,7 @@ export function PrinterDetailsSidebar({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-red-600"
+              className="text-neutral-50 hover:bg-red-600"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
@@ -299,7 +299,7 @@ export function PrinterDetailsSidebar({
                     "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
                     printer.isActive
                       ? "bg-green-100 text-green-800"
-                      : "bg-gray-100 text-gray-800"
+                      : "bg-gray-100 text-gray-800",
                   )}
                 >
                   {printer.isActive ? "Activa" : "Inactiva"}
@@ -313,8 +313,8 @@ export function PrinterDetailsSidebar({
                   {isTogglingStatus
                     ? "..."
                     : printer.isActive
-                    ? "Desactivar"
-                    : "Activar"}
+                      ? "Desactivar"
+                      : "Activar"}
                 </Button>
               </div>
             </div>
@@ -329,7 +329,9 @@ export function PrinterDetailsSidebar({
             <div className="space-y-2">
               <Label>Tipo de Conexión</Label>
               <p className="text-sm">
-                {printer.connectionType === "NETWORK" ? "Red (Ethernet)" : "USB"}
+                {printer.connectionType === "NETWORK"
+                  ? "Red (Ethernet)"
+                  : "USB"}
               </p>
             </div>
 
@@ -356,7 +358,7 @@ export function PrinterDetailsSidebar({
               {printer.station ? (
                 <Badge
                   style={{ backgroundColor: printer.station.color }}
-                  className="text-white"
+                  className="text-neutral-50"
                 >
                   {printer.station.name}
                 </Badge>
@@ -422,10 +424,10 @@ export function PrinterDetailsSidebar({
                     {printer.ticketHeaderSize === 0
                       ? "Pequeño"
                       : printer.ticketHeaderSize === 1
-                      ? "Normal"
-                      : printer.ticketHeaderSize === 2
-                      ? "Mediano"
-                      : "Grande"}
+                        ? "Normal"
+                        : printer.ticketHeaderSize === 2
+                          ? "Mediano"
+                          : "Grande"}
                   </p>
                 </div>
               )}
@@ -439,10 +441,10 @@ export function PrinterDetailsSidebar({
                     {printer.ticketFooterSize === 0
                       ? "Pequeño"
                       : printer.ticketFooterSize === 1
-                      ? "Normal"
-                      : printer.ticketFooterSize === 2
-                      ? "Mediano"
-                      : "Grande"}
+                        ? "Normal"
+                        : printer.ticketFooterSize === 2
+                          ? "Mediano"
+                          : "Grande"}
                   </p>
                 </div>
               )}

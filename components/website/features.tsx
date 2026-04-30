@@ -37,9 +37,8 @@ const features = [
   },
   {
     icon: Truck,
-    title: "Delivery",
-    description:
-      "Administrá pedidos a domicilio y para llevar con seguimiento de estado por pedido.",
+    title: "Delivery y Takeaway",
+    description: "Administrá pedidos a domicilio y para llevar.",
   },
   {
     icon: Receipt,
@@ -69,7 +68,10 @@ const features = [
 
 export function Features() {
   return (
-    <section id="funcionalidades" className="font-sans bg-[#f9f9f9] py-24 px-6 lg:px-28">
+    <section
+      id="funcionalidades"
+      className="font-sans bg-neutral-50 py-24 px-6 lg:px-28"
+    >
       <div className="mx-auto">
         <div className="mb-16 space-y-4">
           <div className="inline-block py-4 bg-white rounded-full leading-none px-5 shadow-md text-sm font-semibold uppercase text-red">

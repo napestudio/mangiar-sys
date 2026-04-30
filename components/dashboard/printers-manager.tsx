@@ -345,7 +345,7 @@ export function PrintersManager({
                             className="w-10 h-10 rounded-lg flex items-center justify-center"
                             style={{ backgroundColor: station.color }}
                           >
-                            <Settings className="h-5 w-5 text-white" />
+                            <Settings className="h-5 w-5 text-neutral-50" />
                           </div>
                           <div>
                             <p className="font-medium">{station.name}</p>

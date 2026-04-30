@@ -198,7 +198,7 @@ export function ClientDetailsSidebar({
         )}
       >
         {/* Header */}
-        <div className="bg-red-500 text-white p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-red-500 text-neutral-50 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <User className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Detalles del Cliente</h2>
@@ -206,7 +206,7 @@ export function ClientDetailsSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-red-600"
+            className="text-neutral-50 hover:bg-red-600"
             onClick={onClose}
           >
             <X className="h-4 w-4" />

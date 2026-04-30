@@ -422,7 +422,7 @@ export function StockManagementClient({
           <button
             onClick={handleExportCSV}
             disabled={filteredProducts.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-neutral-50 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             <Download className="w-5 h-5" />
             Exportar CSV
@@ -439,7 +439,7 @@ export function StockManagementClient({
               }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterView === "all"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-neutral-50"
                   : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
@@ -452,7 +452,7 @@ export function StockManagementClient({
               }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterView === "low"
-                  ? "bg-yellow-600 text-white"
+                  ? "bg-yellow-600 text-neutral-50"
                   : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
@@ -465,7 +465,7 @@ export function StockManagementClient({
               }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterView === "out"
-                  ? "bg-red-600 text-white"
+                  ? "bg-red-600 text-neutral-50"
                   : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
@@ -601,9 +601,7 @@ export function StockManagementClient({
                           : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                      {dineInPrice
-                        ? formatCurrency(dineInPrice.price)
-                        : "-"}
+                      {dineInPrice ? formatCurrency(dineInPrice.price) : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       {trackStock ? (
@@ -680,7 +678,7 @@ export function StockManagementClient({
                             onClick={() => setCurrentPage(page)}
                             className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                               currentPage === page
-                                ? "bg-blue-600 text-white"
+                                ? "bg-blue-600 text-neutral-50"
                                 : "text-gray-700 hover:bg-gray-100"
                             }`}
                           >
@@ -771,8 +769,7 @@ export function StockManagementClient({
                               className={`font-medium text-xs ${
                                 comp.canMake === 0
                                   ? "text-red-600"
-                                  : comp.canMake !== null &&
-                                      comp.canMake <= 2
+                                  : comp.canMake !== null && comp.canMake <= 2
                                     ? "text-amber-600"
                                     : "text-green-700"
                               }`}

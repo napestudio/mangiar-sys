@@ -34,15 +34,17 @@ export function Pricing() {
           {/* Left: plan info */}
           <div className="bg-red p-10 flex flex-col justify-between gap-8">
             <div className="space-y-2">
-              <p className="text-white/70 text-sm font-semibold uppercase tracking-widest">
+              <p className="text-neutral-50/70 text-sm font-semibold uppercase tracking-widest">
                 Plan único
               </p>
-              <p className="text-white text-5xl font-bold leading-none">
+              <p className="text-neutral-50 text-5xl font-bold leading-none">
                 A consultar
               </p>
-              <p className="text-white/60 text-sm">por mes · sin permanencia</p>
+              <p className="text-neutral-50/60 text-sm">
+                por mes · sin permanencia
+              </p>
             </div>
-            <p className="text-white/80 text-base leading-relaxed">
+            <p className="text-neutral-50/80 text-base leading-relaxed">
               Activá tu restaurante hoy y empezá a gestionar todo desde un mismo
               lugar. Precios accesibles para negocios de todos los tamaños.
             </p>

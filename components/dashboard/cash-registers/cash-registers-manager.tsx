@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  CircleDot,
-  CircleOff,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Plus, CircleDot, CircleOff, Pencil, Trash2 } from "lucide-react";
 import { CashRegisterWithStatus } from "@/types/cash-register";
 import { Sector } from "@/app/generated/prisma";
 import { CreateCashRegisterDialog } from "./create-cash-register-dialog";
@@ -42,7 +36,7 @@ export function CashRegistersManager({
 
   const handleUpdated = (updatedRegister: CashRegisterWithStatus) => {
     setCashRegisters((prev) =>
-      prev.map((r) => (r.id === updatedRegister.id ? updatedRegister : r))
+      prev.map((r) => (r.id === updatedRegister.id ? updatedRegister : r)),
     );
     setEditingRegister(null);
   };
@@ -248,7 +242,7 @@ function CashRegisterRow({ register, onEdit, onDelete }: CashRegisterRowProps) {
             {register.sectors.map((sectorRelation) => (
               <div
                 key={sectorRelation.sectorId}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-neutral-50"
                 style={{ backgroundColor: sectorRelation.sector.color }}
               >
                 {sectorRelation.sector.name}
@@ -286,7 +280,7 @@ function CashRegisterRow({ register, onEdit, onDelete }: CashRegisterRowProps) {
             className={cn(
               "h-8 w-8 p-0",
               !register.hasOpenSession &&
-                "text-red-600 hover:text-red-700 hover:bg-red-50"
+                "text-red-600 hover:text-red-700 hover:bg-red-50",
             )}
           >
             <Trash2 className="h-4 w-4" />

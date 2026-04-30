@@ -7,7 +7,7 @@ export default function PrinterTestPage() {
   const socketRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [printers, setPrinters] = useState<{ name: string; type: string }[]>(
-    []
+    [],
   );
 
   // Estados para la selección del usuario
@@ -84,7 +84,7 @@ export default function PrinterTestPage() {
         <div className="flex flex-col gap-3">
           <button
             onClick={listarImpresoras}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 text-neutral-50 px-4 py-2 rounded hover:bg-blue-700"
           >
             1. Buscar Impresoras Instaladas
           </button>
@@ -105,7 +105,7 @@ export default function PrinterTestPage() {
             <button
               onClick={() => testImpresora("USB")}
               disabled={!selectedUsb}
-              className="bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
+              className="bg-green-600 text-neutral-50 px-4 py-2 rounded disabled:bg-gray-400"
             >
               Test USB
             </button>
@@ -128,7 +128,7 @@ export default function PrinterTestPage() {
           />
           <button
             onClick={() => testImpresora("Network")}
-            className="bg-green-600 text-white px-4 py-2 rounded"
+            className="bg-green-600 text-neutral-50 px-4 py-2 rounded"
           >
             Test IP
           </button>

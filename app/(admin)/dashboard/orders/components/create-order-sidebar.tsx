@@ -25,10 +25,12 @@ import {
 import { ClientPicker } from "@/components/dashboard/client-picker";
 import { WaiterPicker } from "@/components/dashboard/waiter-picker";
 import { CreateClientDialog } from "@/components/dashboard/create-client-dialog";
+import { ModifierSelectionDialog } from "@/components/dashboard/modifier-selection-dialog";
 import { ProductPicker } from "@/components/dashboard/product-picker";
 import { PreOrderItemsList, type PreOrderItem } from "@/components/dashboard/pre-order-items-list";
 import { type ClientData } from "@/actions/clients";
 import { type OrderProduct } from "@/types/products";
+import { convertLinkQuantityToBase } from "@/lib/unit-conversions";
 
 interface CreateOrderSidebarProps {
   branchId: string;
@@ -43,6 +45,64 @@ interface CreateOrderSidebarProps {
   initialOrderType?: OrderType | null;
 }
 
+
+function applyIngredientDeductions(
+  products: OrderProduct[],
+  item: PreOrderItem,
+): OrderProduct[] {
+  if (!item.modifiers || item.modifiers.length === 0) return products;
+
+  const consumed: Record<string, number> = {};
+
+  for (const mod of item.modifiers) {
+    for (const product of products) {
+      for (const group of product.modifierGroups ?? []) {
+        const option = group.options.find((o) => o.id === mod.modifierOptionId);
+        if (!option) continue;
+        for (const link of option.ingredientLinks) {
+          const perUnit = convertLinkQuantityToBase(
+            link.quantity,
+            link.ingredientUnitType,
+            link.weightUnit,
+            link.volumeUnit,
+            link.ingredientWeightUnit,
+            link.ingredientVolumeUnit,
+          );
+          const total = perUnit * (mod.quantity ?? 1) * item.quantity;
+          consumed[link.ingredientId] = (consumed[link.ingredientId] ?? 0) + total;
+        }
+      }
+    }
+  }
+
+  if (Object.keys(consumed).length === 0) return products;
+
+  return products.map((product) => ({
+    ...product,
+    modifierGroups: product.modifierGroups?.map((group) => ({
+      ...group,
+      options: group.options.map((option) => {
+        const updatedLinks = option.ingredientLinks.map((link) =>
+          consumed[link.ingredientId] !== undefined
+            ? { ...link, stock: Math.max(0, link.stock - consumed[link.ingredientId]) }
+            : link,
+        );
+        const isOutOfStock = updatedLinks.some((link) => {
+          const required = convertLinkQuantityToBase(
+            link.quantity,
+            link.ingredientUnitType,
+            link.weightUnit,
+            link.volumeUnit,
+            link.ingredientWeightUnit,
+            link.ingredientVolumeUnit,
+          );
+          return link.stock < required;
+        });
+        return { ...option, ingredientLinks: updatedLinks, isOutOfStock };
+      }),
+    })),
+  }));
+}
 
 export function CreateOrderSidebar({
   branchId,
@@ -74,6 +134,7 @@ export function CreateOrderSidebar({
 
   // Local items state - unified for all order types
   const [localItems, setLocalItems] = useState<PreOrderItem[]>([]);
+  const [pendingProduct, setPendingProduct] = useState<OrderProduct | null>(null);
 
   // Create client dialog state
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
@@ -103,28 +164,38 @@ export function CreateOrderSidebar({
   // ==================== PRODUCT MANAGEMENT (Local State) ====================
 
   const handleSelectProduct = (product: OrderProduct) => {
-    const existingIndex = localItems.findIndex(
-      (item) => item.productId === product.id,
-    );
-    if (existingIndex >= 0) {
-      setLocalItems(
-        localItems.map((item, i) =>
-          i === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
-        ),
-      );
+    if (product.modifierGroups && product.modifierGroups.length > 0) {
+      setPendingProduct(product);
     } else {
-      setLocalItems([
-        ...localItems,
-        {
-          productId: product.id,
-          itemName: product.name,
-          quantity: 1,
-          price: Number(product.price),
-          originalPrice: Number(product.price),
-          categoryId: product.categoryId,
-        },
-      ]);
+      const existingIndex = localItems.findIndex(
+        (item) => item.productId === product.id,
+      );
+      if (existingIndex >= 0) {
+        setLocalItems(
+          localItems.map((item, i) =>
+            i === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
+          ),
+        );
+      } else {
+        setLocalItems([
+          ...localItems,
+          {
+            productId: product.id,
+            itemName: product.name,
+            quantity: 1,
+            price: Number(product.price),
+            originalPrice: Number(product.price),
+            categoryId: product.categoryId,
+          },
+        ]);
+      }
     }
+  };
+
+  const handleModifierConfirm = (item: PreOrderItem) => {
+    setLocalItems((prev) => [...prev, item]);
+    setProducts((prev) => applyIngredientDeductions(prev, item));
+    setPendingProduct(null);
   };
 
   const handleUpdateItem = (index: number, item: PreOrderItem) => {
@@ -177,6 +248,7 @@ export function CreateOrderSidebar({
         price: item.price,
         originalPrice: item.originalPrice,
         notes: item.notes,
+        modifiers: item.modifiers,
       })),
     });
 
@@ -553,6 +625,16 @@ export function CreateOrderSidebar({
           onSuccess={handleClientCreated}
           initialName={clientSearchQuery}
         />
+
+      {/* Modifier Selection Dialog */}
+      {pendingProduct && (
+        <ModifierSelectionDialog
+          product={pendingProduct}
+          open={!!pendingProduct}
+          onConfirm={handleModifierConfirm}
+          onCancel={() => setPendingProduct(null)}
+        />
+      )}
       </div>
     </>
   );
