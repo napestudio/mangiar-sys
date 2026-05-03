@@ -77,16 +77,16 @@ export default async function Home() {
               </div>
               <div className="col-span-7 relative p-2">
                 <Image
-                  src="/images/laptop.png"
+                  src="https://res.cloudinary.com/dztzomvin/image/upload/v1777850260/800_kytskn.png"
                   alt="Laptop con la pantalla abierta mostrando las funcionalidades de la plataforma."
-                  width={1800}
-                  height={1435}
-                  className="w-full h-auto rounded-lg "
+                  width={800}
+                  height={642}
+                  className="w-full `md:w-100 2xl:w-175 mx-auto h-auto rounded-lg"
                 />
               </div>
             </div>
           </div>
-          <div className="absolute lg:-top-10 bottom-[-85%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
+          <div className="absolute lg:-top-10 bottom-[-65%] lg:bottom-0 -right-[45vh] bg-red h-[120vh] aspect-square rounded-full z-0"></div>
         </section>
         <Features />
         {/*<Pricing />
