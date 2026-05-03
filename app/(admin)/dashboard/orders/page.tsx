@@ -35,7 +35,7 @@ export default async function OrdersPage({
   const sortOrderParam = params.sortOrder;
 
   // Validate and set order type (default to DINE_IN)
-  const validTypes = ["DINE_IN", "TAKE_AWAY", "DELIVERY", "ALL"];
+  const validTypes = ["DINE_IN", "TAKE_AWAY", "DELIVERY", "COUNTER", "ALL"];
   const orderType =
     typeParam && validTypes.includes(typeParam)
       ? typeParam === "ALL"

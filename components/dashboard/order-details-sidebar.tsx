@@ -50,6 +50,7 @@ import {
   Percent,
   Printer,
   Save,
+  ShoppingBag,
   Truck,
   User,
   UtensilsCrossed,
@@ -145,12 +146,14 @@ const typeIcons = {
   [OrderType.DINE_IN]: UtensilsCrossed,
   [OrderType.TAKE_AWAY]: Package,
   [OrderType.DELIVERY]: Truck,
+  [OrderType.COUNTER]: ShoppingBag,
 };
 
 const typeLabels = {
   [OrderType.DINE_IN]: "Para Comer Aquí",
   [OrderType.TAKE_AWAY]: "Para Llevar",
   [OrderType.DELIVERY]: "Delivery",
+  [OrderType.COUNTER]: "Mostrador",
 };
 
 const paymentMethodLabels: Record<string, string> = {
