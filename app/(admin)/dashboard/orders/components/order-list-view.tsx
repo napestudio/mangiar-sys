@@ -15,6 +15,7 @@ import {
   Download,
   Package,
   Printer,
+  ShoppingBag,
   Truck,
   UtensilsCrossed,
 } from "lucide-react";
@@ -89,12 +90,14 @@ const typeIcons = {
   [OrderType.DINE_IN]: UtensilsCrossed,
   [OrderType.TAKE_AWAY]: Package,
   [OrderType.DELIVERY]: Truck,
+  [OrderType.COUNTER]: ShoppingBag,
 };
 
 const typeLabels = {
   [OrderType.DINE_IN]: "Para Comer Aquí",
   [OrderType.TAKE_AWAY]: "Para Llevar",
   [OrderType.DELIVERY]: "Delivery",
+  [OrderType.COUNTER]: "Mostrador",
 };
 
 export function OrderListView({

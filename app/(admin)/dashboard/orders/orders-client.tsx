@@ -39,6 +39,7 @@ import {
   RefreshCw,
   Search,
   ShoppingBag,
+  Store,
   Truck,
   UtensilsCrossed,
   X,
@@ -70,6 +71,7 @@ interface OrdersClientProps {
     DINE_IN: number;
     TAKE_AWAY: number;
     DELIVERY: number;
+    COUNTER?: number;
   };
   canChangeOrderType: boolean;
   notificationWhatsapp?: string | null;
@@ -700,6 +702,10 @@ export function OrdersClient({
                 {activeOrderCounts.DELIVERY}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="COUNTER">
+            <Store className="h-3.5 w-3.5 mr-1" />
+            <span>Mostrador</span>
           </TabsTrigger>
           <TabsTrigger className="cursor-pointer" value="ALL">
             Todas

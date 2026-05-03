@@ -8,6 +8,7 @@ import { getUserRoleAndBranchId } from "@/lib/permissions/roles";
 import prisma from "@/lib/prisma";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+import "./dashboard.css";
 
 export const metadata: Metadata = {
   title: "Mangi.ar - Panel de Administración",

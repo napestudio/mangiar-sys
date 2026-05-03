@@ -19,6 +19,12 @@
       "minimumRole": "WAITER"
     },
     {
+      "label": "Mostrador",
+      "href": "/dashboard/quick-sale",
+      "icon": "MostradorIcon",
+      "minimumRole": "WAITER"
+    },
+    {
       "label": "Reservas",
       "href": "/dashboard/reservations",
       "icon": "CalendarDays",
