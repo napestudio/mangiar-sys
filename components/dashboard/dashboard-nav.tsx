@@ -20,6 +20,7 @@ import ArqueosIcon from "@/components/ui/icons/ArqueosIcon";
 import CartasIcon from "@/components/ui/icons/CartasIcon";
 import TableIcon from "@/components/ui/icons/TableIcon";
 import Link from "next/link";
+import MostradorIcon from "../ui/icons/Mostrador";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   House,
@@ -29,6 +30,7 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   ArqueosIcon,
   BarChart2,
   CartasIcon,
+  MostradorIcon,
   Package,
   Archive,
   Receipt,

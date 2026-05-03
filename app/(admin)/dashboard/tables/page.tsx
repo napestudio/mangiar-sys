@@ -53,13 +53,6 @@ export default async function TablesPage({
 
   return (
     <div className="min-h-svh pt-19">
-      {/* <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Mesas</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Gestiona el estado de las mesas de tu restaurante
-        </p>
-      </div> */}
-
       <TablesClientWrapper
         branchId={branchId}
         initialTables={serializedTables}

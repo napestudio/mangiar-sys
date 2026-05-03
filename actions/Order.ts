@@ -5,6 +5,7 @@ import {
   OrderStatus,
   OrderType,
   PaymentMethod,
+  PriceType,
   UserRole,
   InvoiceStatus,
   type Product,
@@ -18,6 +19,7 @@ import {
   dateStringToTimestampBoundsAR,
 } from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
+import { revalidatePath } from "next/cache";
 import { unstable_cache } from "next/cache";
 import type {
   DeliverySection,
@@ -1457,11 +1459,23 @@ async function _getAvailableProductsForOrder(
   orderType: OrderType = OrderType.DINE_IN,
 ) {
   try {
+    // COUNTER orders use TAKE_AWAY pricing
+    const effectiveOrderType =
+      orderType === OrderType.COUNTER ? OrderType.TAKE_AWAY : orderType;
+
+    // Map OrderType to PriceType (PriceType has no COUNTER value)
+    const effectivePriceType =
+      effectiveOrderType === OrderType.TAKE_AWAY
+        ? PriceType.TAKE_AWAY
+        : effectiveOrderType === OrderType.DELIVERY
+          ? PriceType.DELIVERY
+          : PriceType.DINE_IN;
+
     // Build price type filter: fetch requested type + DINE_IN for fallback
-    const priceTypes =
-      orderType === OrderType.DINE_IN
-        ? [OrderType.DINE_IN]
-        : [orderType, OrderType.DINE_IN];
+    const priceTypes: PriceType[] =
+      effectivePriceType === PriceType.DINE_IN
+        ? [PriceType.DINE_IN]
+        : [effectivePriceType, PriceType.DINE_IN];
 
     const products = await prisma.product.findMany({
       where: {
@@ -1590,12 +1604,12 @@ async function _getAvailableProductsForOrder(
       .map((product) => {
         const branchPrices = product.branches[0]?.prices || [];
 
-        // Try to find price matching orderType
-        let priceObj = branchPrices.find((p) => p.type === orderType);
+        // Try to find price matching effectivePriceType (COUNTER maps to TAKE_AWAY)
+        let priceObj = branchPrices.find((p) => p.type === effectivePriceType);
 
-        // Fallback to DINE_IN if orderType price not found
-        if (!priceObj && orderType !== OrderType.DINE_IN) {
-          priceObj = branchPrices.find((p) => p.type === OrderType.DINE_IN);
+        // Fallback to DINE_IN if effectivePriceType price not found
+        if (!priceObj && effectivePriceType !== PriceType.DINE_IN) {
+          priceObj = branchPrices.find((p) => p.type === PriceType.DINE_IN);
         }
 
         // For combos, compute availability from component stocks
@@ -1713,10 +1727,12 @@ export async function getProductsForDeliveryMenu(
   orderType: OrderType = OrderType.DELIVERY,
 ): Promise<{ sections: DeliverySection[]; products: OrderProduct[] }> {
   try {
-    const priceTypes =
+    const priceTypes: PriceType[] =
       orderType === OrderType.DINE_IN
-        ? [OrderType.DINE_IN]
-        : [orderType, OrderType.DINE_IN];
+        ? [PriceType.DINE_IN]
+        : orderType === OrderType.TAKE_AWAY
+          ? [PriceType.TAKE_AWAY, PriceType.DINE_IN]
+          : [PriceType.DELIVERY, PriceType.DINE_IN];
 
     const productSelect = {
       id: true,
@@ -3000,6 +3016,217 @@ export async function getActiveOrderCounts(branchId: string) {
       DINE_IN: 0,
       TAKE_AWAY: 0,
       DELIVERY: 0,
+    };
+  }
+}
+
+// Create a completed counter sale (Venta por Mostrador) in one step.
+// Orders are type=COUNTER, status=COMPLETED with the chosen payment method.
+export async function createCounterSaleOrder(data: {
+  branchId: string;
+  items: OrderItemInput[];
+  paymentMethod: PaymentMethod;
+  description?: string | null;
+  sessionId?: string;
+}) {
+  try {
+    const { userId } = await authorizeAction(UserRole.WAITER);
+    const { branchId, items, paymentMethod, description, sessionId } = data;
+
+    if (!items || items.length === 0) {
+      return { success: false, error: "Se requiere al menos un producto" };
+    }
+
+    const publicCode = `C${Date.now().toString().slice(-8)}`;
+
+    const order = await prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
+        data: {
+          branchId,
+          type: OrderType.COUNTER,
+          publicCode,
+          status: OrderStatus.COMPLETED,
+          paymentMethod,
+          discountPercentage: 0,
+          discountType: "PERCENTAGE",
+          deliveryFee: 0,
+          description: description || null,
+        },
+      });
+
+      const hasModifiers = items.some(
+        (item) => item.modifiers && item.modifiers.length > 0,
+      );
+
+      if (hasModifiers) {
+        for (const item of items) {
+          await tx.orderItem.create({
+            data: {
+              orderId: newOrder.id,
+              productId: item.productId,
+              itemName: item.itemName,
+              quantity: item.quantity,
+              price: item.price,
+              originalPrice: item.originalPrice,
+              notes: item.notes || null,
+              ...(item.modifiers && item.modifiers.length > 0
+                ? {
+                    modifiers: {
+                      create: item.modifiers.map((mod) => ({
+                        modifierOptionId: mod.modifierOptionId,
+                        optionName: mod.optionName,
+                        groupName: mod.groupName,
+                        priceAdjustment: mod.priceAdjustment,
+                        quantity: mod.quantity ?? 1,
+                      })),
+                    },
+                  }
+                : {}),
+            },
+          });
+        }
+      } else {
+        await tx.orderItem.createMany({
+          data: items.map((item) => ({
+            orderId: newOrder.id,
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
+            price: item.price,
+            originalPrice: item.originalPrice,
+            notes: item.notes || null,
+          })),
+        });
+      }
+
+      for (const item of items) {
+        await _deductIngredientStock(
+          tx,
+          branchId,
+          item.productId,
+          item.quantity,
+          item.modifiers ?? [],
+        );
+      }
+
+      // Auto-decrement combo component stocks
+      for (const item of items) {
+        if (!item.productId) continue;
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: {
+            isCombo: true,
+            comboComponents: {
+              select: {
+                componentId: true,
+                quantity: true,
+                component: {
+                  select: {
+                    trackStock: true,
+                    branches: {
+                      where: { branchId },
+                      select: { id: true, stock: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!product?.isCombo) continue;
+        for (const comp of product.comboComponents) {
+          if (!comp.component.trackStock) continue;
+          const pob = comp.component.branches[0];
+          if (!pob) continue;
+          const decrementQty = Number(comp.quantity) * item.quantity;
+          const previousStock = Number(pob.stock);
+          const newStock = previousStock - decrementQty;
+          if (newStock < 0) {
+            throw new Error(
+              `Stock insuficiente para el componente del combo "${item.itemName}"`,
+            );
+          }
+          await tx.productOnBranch.update({
+            where: { id: pob.id },
+            data: { stock: newStock },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productOnBranchId: pob.id,
+              quantity: -decrementQty,
+              previousStock,
+              newStock,
+              reason: "Venta combo",
+              reference: `COMBO:${item.productId}`,
+              notes: `Componente de combo vendido x${item.quantity}`,
+            },
+          });
+        }
+      }
+
+      // Record cash movement if an open session is provided
+      if (sessionId) {
+        const session = await tx.cashRegisterSession.findFirst({
+          where: {
+            id: sessionId,
+            status: "OPEN",
+            cashRegister: { branchId },
+          },
+        });
+
+        if (session) {
+          const totalAmount = items.reduce(
+            (sum, item) => sum + Number(item.price) * item.quantity,
+            0,
+          );
+          const pmExtended =
+            paymentMethod === PaymentMethod.CARD
+              ? ("CARD_DEBIT" as PaymentMethodExtended)
+              : (paymentMethod as unknown as PaymentMethodExtended);
+
+          await tx.cashMovement.create({
+            data: {
+              sessionId,
+              branchId,
+              type: "SALE",
+              paymentMethod: pmExtended,
+              amount: totalAmount,
+              description: `Mostrador - ${publicCode}`,
+              orderId: newOrder.id,
+              createdBy: userId,
+            },
+          });
+        }
+      }
+
+      const completeOrder = await tx.order.findUnique({
+        where: { id: newOrder.id },
+        include: {
+          items: {
+            include: { product: true, modifiers: true },
+            orderBy: { id: "asc" },
+          },
+        },
+      });
+
+      return completeOrder;
+    });
+
+    if (!order) {
+      return { success: false, error: "Error al crear la venta" };
+    }
+
+    if (sessionId) {
+      revalidatePath("/dashboard/cash-registers");
+    }
+
+    return { success: true, data: serializeForClient(order) };
+  } catch (error) {
+    console.error("Error creating counter sale:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Error al crear la venta",
     };
   }
 }

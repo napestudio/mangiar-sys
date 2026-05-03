@@ -501,7 +501,7 @@ export const FloorPlanCanvas = memo(function FloorPlanCanvas({
 
   return (
     <div>
-      <div className="relative">
+      <div className="relative  no-scrollbar">
         {/* Floating toolbar in top right - fixed position */}
         <div className="absolute top-4 right-12 z-5 flex items-center space-x-2 bg-white rounded-lg shadow-lg p-2 opacity-45 hover:opacity-100 transition-opacity pointer-events-auto">
           <Button

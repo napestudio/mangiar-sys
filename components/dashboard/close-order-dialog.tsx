@@ -96,6 +96,7 @@ const typeLabels: Record<OrderType, string> = {
   [OrderType.DINE_IN]: "Para Comer Aquí",
   [OrderType.TAKE_AWAY]: "Para Llevar",
   [OrderType.DELIVERY]: "Delivery",
+  [OrderType.COUNTER]: "Mostrador",
 };
 
 export function CloseOrderDialog({

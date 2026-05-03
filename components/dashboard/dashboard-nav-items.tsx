@@ -23,6 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import MostradorIcon from "../ui/icons/Mostrador";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   House,
@@ -32,6 +33,7 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   ArqueosIcon,
   BarChart2,
   CartasIcon,
+  MostradorIcon,
   Package,
   Archive,
   Receipt,
