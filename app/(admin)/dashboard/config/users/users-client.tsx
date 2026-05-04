@@ -5,6 +5,7 @@ import {
   CreateUserDialog,
   DeleteUserDialog,
   EditUserDialog,
+  ResetPasswordDialog,
 } from "@/components/dashboard/users";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { USER_ROLE_LABELS, UserWithBranches } from "@/types/user";
 import { UserRole } from "@/app/generated/prisma";
-import { Pencil, Search, Trash2, User, UserPlus, X } from "lucide-react";
+import { KeyRound, Pencil, Search, Trash2, User, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 
 interface UsersClientProps {
@@ -34,6 +35,7 @@ export function UsersClient({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithBranches | null>(
     null,
   );
@@ -108,6 +110,11 @@ export function UsersClient({
   const handleDelete = (user: UserWithBranches) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
+  };
+
+  const handleResetPassword = (user: UserWithBranches) => {
+    setSelectedUser(user);
+    setResetPasswordDialogOpen(true);
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -347,6 +354,14 @@ export function UsersClient({
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleResetPassword(user)}
+                            title="Restablecer contraseña"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDelete(user)}
                             disabled={isCurrentUser}
                             title={
@@ -386,6 +401,12 @@ export function UsersClient({
             user={selectedUser}
             onUpdated={refreshUsers}
             canManagePermissions={isAdminOrHigher}
+          />
+
+          <ResetPasswordDialog
+            open={resetPasswordDialogOpen}
+            onOpenChange={setResetPasswordDialogOpen}
+            user={{ id: selectedUser.id, username: selectedUser.username }}
           />
 
           <DeleteUserDialog
