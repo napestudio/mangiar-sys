@@ -2,7 +2,7 @@ import { getOrders, getActiveOrderCounts } from "@/actions/Order";
 import { getDeliveryConfig } from "@/actions/DeliveryConfig";
 import { getActiveTables } from "@/actions/Table";
 import { OrdersClient } from "./orders-client";
-import { OrderType, UserRole } from "@/app/generated/prisma";
+import { OrderStatus, OrderType, UserRole } from "@/app/generated/prisma";
 import { requireRole } from "@/lib/permissions/middleware";
 import { isManagerOrHigher } from "@/lib/permissions/role-utils";
 
@@ -14,6 +14,7 @@ type SearchParams = Promise<{
   endDate?: string;
   paymentMethod?: string;
   sortOrder?: string;
+  status?: string;
 }>;
 
 export default async function OrdersPage({
@@ -33,6 +34,7 @@ export default async function OrdersPage({
   const endDateParam = params.endDate;
   const paymentMethodParam = params.paymentMethod;
   const sortOrderParam = params.sortOrder;
+  const statusParam = params.status;
 
   // Validate and set order type (default to DINE_IN)
   const validTypes = ["DINE_IN", "TAKE_AWAY", "DELIVERY", "COUNTER", "ALL"];
@@ -55,6 +57,12 @@ export default async function OrdersPage({
       ? (sortOrderParam as "asc" | "desc")
       : "desc";
 
+  const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELED"];
+  const statusFilter =
+    statusParam && validStatuses.includes(statusParam)
+      ? (statusParam as OrderStatus)
+      : undefined;
+
   const [ordersResult, tables, orderCounts, deliveryConfigResult] = await Promise.all([
     getOrders({
       branchId,
@@ -66,6 +74,7 @@ export default async function OrdersPage({
       endDate: endDateParam ? new Date(endDateParam) : undefined,
       paymentMethod: paymentMethodParam || undefined,
       sortOrder,
+      status: statusFilter,
     }),
     getActiveTables(branchId),
     getActiveOrderCounts(branchId),
@@ -120,6 +129,7 @@ export default async function OrdersPage({
           initialEndDate={endDateParam || ""}
           initialPaymentMethod={paymentMethodParam || ""}
           initialSortOrder={sortOrder}
+          initialStatus={statusParam || ""}
           activeOrderCounts={orderCounts}
           canChangeOrderType={isManagerOrHigher(userRole)}
           notificationWhatsapp={notificationWhatsapp}

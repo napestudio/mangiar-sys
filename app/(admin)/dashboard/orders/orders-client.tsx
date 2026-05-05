@@ -67,6 +67,7 @@ interface OrdersClientProps {
   initialEndDate: string;
   initialPaymentMethod: string;
   initialSortOrder: "asc" | "desc";
+  initialStatus: string;
   activeOrderCounts: {
     DINE_IN: number;
     TAKE_AWAY: number;
@@ -105,6 +106,7 @@ export function OrdersClient({
   initialEndDate,
   initialPaymentMethod,
   initialSortOrder,
+  initialStatus,
   activeOrderCounts,
   canChangeOrderType,
   notificationWhatsapp,
@@ -132,6 +134,7 @@ export function OrdersClient({
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
   const [paymentMethod, setPaymentMethod] = useState(initialPaymentMethod);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc">(
     initialSortOrder,
   );
@@ -159,6 +162,7 @@ export function OrdersClient({
     ed: string,
     pm: string,
     so: "asc" | "desc",
+    st: string,
   ) => ({
     branchId,
     type: type === "ALL" ? undefined : (type as OrderType),
@@ -169,6 +173,7 @@ export function OrdersClient({
     endDate: ed ? new Date(ed) : undefined,
     paymentMethod: pm || undefined,
     sortOrder: so,
+    status: st ? (st as OrderStatus) : undefined,
   });
 
   // Update URL and fetch orders
@@ -180,6 +185,7 @@ export function OrdersClient({
     ed?: string,
     pm?: string,
     so?: "asc" | "desc",
+    st?: string,
   ) => {
     const params = new URLSearchParams();
     params.set("type", type);
@@ -189,6 +195,7 @@ export function OrdersClient({
     if (ed) params.set("endDate", ed);
     if (pm) params.set("paymentMethod", pm);
     if (so && so !== "desc") params.set("sortOrder", so);
+    if (st) params.set("status", st);
     startTransition(() => {
       router.replace(`/dashboard/orders?${params.toString()}`);
     });
@@ -203,6 +210,7 @@ export function OrdersClient({
       endDate,
       paymentMethod,
       dateSortOrder,
+      statusFilter,
     );
   };
 
@@ -215,6 +223,7 @@ export function OrdersClient({
       endDate,
       paymentMethod,
       dateSortOrder,
+      statusFilter,
     );
   };
 
@@ -228,6 +237,7 @@ export function OrdersClient({
         endDate,
         paymentMethod,
         dateSortOrder,
+        statusFilter,
       );
     }
   };
@@ -242,6 +252,7 @@ export function OrdersClient({
       endDate,
       paymentMethod,
       dateSortOrder,
+      statusFilter,
     );
   };
 
@@ -261,6 +272,7 @@ export function OrdersClient({
       endDate,
       paymentMethod,
       dateSortOrder,
+      statusFilter,
     );
   };
 
@@ -274,6 +286,7 @@ export function OrdersClient({
       value,
       paymentMethod,
       dateSortOrder,
+      statusFilter,
     );
   };
 
@@ -288,6 +301,22 @@ export function OrdersClient({
       endDate,
       pm,
       dateSortOrder,
+      statusFilter,
+    );
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    const st = value === "ALL" ? "" : value;
+    setStatusFilter(st);
+    updateUrlAndFetch(
+      currentTab,
+      1,
+      currentSearch,
+      startDate,
+      endDate,
+      paymentMethod,
+      dateSortOrder,
+      st,
     );
   };
 
@@ -303,6 +332,7 @@ export function OrdersClient({
         endDate,
         paymentMethod,
         "asc",
+        statusFilter,
       );
     } else if (value === "date_desc") {
       setDateSortOrder("desc");
@@ -315,6 +345,7 @@ export function OrdersClient({
         endDate,
         paymentMethod,
         "desc",
+        statusFilter,
       );
     } else if (value === "total_asc") {
       setTotalSortOrder("asc");
@@ -336,13 +367,14 @@ export function OrdersClient({
     setStartDate("");
     setEndDate("");
     setPaymentMethod("");
+    setStatusFilter("");
     setDateSortOrder("desc");
     setTotalSortOrder("none");
-    updateUrlAndFetch(currentTab, 1, currentSearch, "", "", "", "desc");
+    updateUrlAndFetch(currentTab, 1, currentSearch, "", "", "", "desc", "");
   };
 
   const hasActiveFilters =
-    startDate || endDate || paymentMethod || dateSortOrder !== "desc";
+    startDate || endDate || paymentMethod || statusFilter || dateSortOrder !== "desc";
 
   // Refresh orders for current filters
   const refreshOrders = () => {
@@ -356,6 +388,7 @@ export function OrdersClient({
           endDate,
           paymentMethod,
           dateSortOrder,
+          statusFilter,
         ),
       );
       if (result.success && result.data) {
@@ -400,6 +433,7 @@ export function OrdersClient({
           endDate,
           paymentMethod,
           dateSortOrder,
+          statusFilter,
         ),
       );
       if (result.success && result.data) {
@@ -426,6 +460,7 @@ export function OrdersClient({
         endDate,
         paymentMethod,
         dateSortOrder,
+        statusFilter,
       );
     } else {
       handleOrderUpdated();
@@ -457,6 +492,7 @@ export function OrdersClient({
       if (endDate) params.set("endDate", endDate);
       if (paymentMethod) params.set("paymentMethod", paymentMethod);
       if (dateSortOrder !== "desc") params.set("sortOrder", dateSortOrder);
+      if (statusFilter) params.set("status", statusFilter);
       startTransition(() => {
         router.replace(`/dashboard/orders?${params.toString()}`);
       });
@@ -471,6 +507,7 @@ export function OrdersClient({
             endDate,
             paymentMethod,
             dateSortOrder,
+            statusFilter,
           ),
         );
 
@@ -644,6 +681,22 @@ export function OrdersClient({
                 {label}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={statusFilter || "ALL"}
+          onValueChange={handleStatusFilterChange}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos los estados</SelectItem>
+            <SelectItem value="PENDING">Pendiente</SelectItem>
+            <SelectItem value="IN_PROGRESS">En Progreso</SelectItem>
+            <SelectItem value="COMPLETED">Completada</SelectItem>
+            <SelectItem value="CANCELED">Cancelada</SelectItem>
           </SelectContent>
         </Select>
 

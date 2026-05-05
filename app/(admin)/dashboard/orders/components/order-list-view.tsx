@@ -3,11 +3,18 @@
 import { OrderStatus, OrderType } from "@/app/generated/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { downloadInvoicePDF } from "@/actions/Invoice";
 import { usePrint } from "@/hooks/use-print";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
 import { calculateDiscountAmount } from "@/lib/discount";
+import { formatDateTimeShortAR } from "@/lib/date-utils";
 import { Order } from "@/types/orders";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -367,12 +374,47 @@ export function OrderListView({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge
-                      className={statusColors[order.status]}
-                      variant="outline"
-                    >
-                      {statusLabels[order.status]}
-                    </Badge>
+                    {order.status === OrderStatus.CANCELED &&
+                    (order.cancelReason || order.canceledBy?.name) ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              className={statusColors[order.status]}
+                              variant="outline"
+                            >
+                              {statusLabels[order.status]}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs space-y-1 text-xs">
+                            {order.canceledAt && (
+                              <p>
+                                Fecha:{" "}
+                                {formatDateTimeShortAR(
+                                  order.canceledAt instanceof Date
+                                    ? order.canceledAt.toISOString()
+                                    : String(order.canceledAt),
+                                )}{" "}
+                                hs
+                              </p>
+                            )}
+                            {order.cancelReason && (
+                              <p>Motivo: {order.cancelReason}</p>
+                            )}
+                            {order.canceledBy?.name && (
+                              <p>Por: {order.canceledBy.name}</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <Badge
+                        className={statusColors[order.status]}
+                        variant="outline"
+                      >
+                        {statusLabels[order.status]}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
