@@ -47,6 +47,8 @@ export interface UsePrintReturn {
       quantity: number;
       notes?: string | null;
       categoryId?: string | null;
+      modifiers?: Array<{ optionName: string; quantity?: number }>;
+      removals?: Array<{ ingredientName: string }>;
     }>,
   ) => Promise<boolean>;
   printControlTicket: (ticketInfo: {
@@ -366,6 +368,8 @@ export function usePrint(): UsePrintReturn {
         quantity: number;
         notes?: string | null;
         categoryId?: string | null;
+        modifiers?: Array<{ optionName: string; quantity?: number }>;
+        removals?: Array<{ ingredientName: string }>;
       }>,
     ): Promise<boolean> => {
       // Don't show preparing status for auto-prints (happens in background)
@@ -511,6 +515,8 @@ export function usePrint(): UsePrintReturn {
         quantity: number;
         notes?: string | null;
         categoryId?: string | null;
+        modifiers?: Array<{ optionName: string; quantity?: number }>;
+        removals?: Array<{ ingredientName: string }>;
       }>;
     }): Promise<boolean> => {
       setPrintStatus({

@@ -363,6 +363,8 @@ export function OrderDetailsSidebar({
           quantity: item.quantity,
           notes: item.notes ?? null,
           categoryId: item.categoryId,
+          modifiers: item.modifiers?.map((m) => ({ optionName: m.optionName, quantity: m.quantity })),
+          removals: item.removals?.map((r) => ({ ingredientName: r.ingredientName })),
         })),
       );
     } else {

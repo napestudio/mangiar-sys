@@ -246,6 +246,8 @@ export async function prepareOrderItemsPrint(
           name: item.itemName,
           quantity: item.quantity,
           notes: item.notes || undefined,
+          modifiers: item.modifiers,
+          removals: item.removals,
         })),
       };
 
@@ -419,6 +421,8 @@ export async function preparePreOrderTicketPrint(
     itemName: string;
     quantity: number;
     notes?: string | null;
+    modifiers?: Array<{ optionName: string; quantity?: number }>;
+    removals?: Array<{ ingredientName: string }>;
   }>,
 ): Promise<PreparedPrintResult> {
   try {
@@ -448,6 +452,8 @@ export async function preparePreOrderTicketPrint(
           name: item.itemName,
           quantity: item.quantity,
           notes: item.notes || undefined,
+          modifiers: item.modifiers,
+          removals: item.removals,
         })),
       };
 

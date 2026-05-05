@@ -49,6 +49,11 @@ export function CartItemRow({ item, onUpdate, onRemove }: CartItemRowProps) {
                 .join(", ")}
             </p>
           )}
+          {item.removals && item.removals.length > 0 && (
+            <p className="text-xs text-red-500 mt-0.5">
+              Sin: {item.removals.map((r) => r.ingredientName).join(", ")}
+            </p>
+          )}
           {item.notes && !editingNotes && (
             <p className="text-xs text-gray-500 italic mt-0.5">{item.notes}</p>
           )}

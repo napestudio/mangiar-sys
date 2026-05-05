@@ -983,6 +983,7 @@ export async function getMenuItemsPaginated(params: {
         linkWeightUnit: pi.weightUnit,
         linkVolumeUnit: pi.volumeUnit,
         costPerUnit: Number(pi.ingredient.costPerUnit),
+        canBeRemoved: pi.canBeRemoved,
       })),
       modifierGroups: product.modifierGroups.map((pmg) => ({
         ...pmg,

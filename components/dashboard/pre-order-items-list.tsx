@@ -7,7 +7,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, MessageSquare, Minus, Plus } from "lucide-react";
-import type { SelectedModifier } from "@/types/orders";
+import type { SelectedModifier, RemovedIngredient } from "@/types/orders";
 
 export type PreOrderItem = {
   productId: string;
@@ -18,6 +18,7 @@ export type PreOrderItem = {
   notes?: string;
   categoryId?: string | null;
   modifiers?: SelectedModifier[];
+  removals?: RemovedIngredient[];
 };
 
 interface PreOrderItemsListProps {

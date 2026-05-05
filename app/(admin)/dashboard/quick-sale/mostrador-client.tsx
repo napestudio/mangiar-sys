@@ -109,7 +109,9 @@ export function MostradorClient({
   }, [cart, initialProducts]);
 
   function handleProductTap(product: OrderProduct) {
-    if (product.modifierGroups && product.modifierGroups.length > 0) {
+    const hasModifiers = (product.modifierGroups?.length ?? 0) > 0;
+    const hasRemovals = (product.removableIngredients?.length ?? 0) > 0;
+    if (hasModifiers || hasRemovals) {
       setPendingProduct(product);
     } else {
       addSimpleProductToCart(product);

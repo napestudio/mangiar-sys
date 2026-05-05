@@ -48,6 +48,11 @@ export type DeliverySection = {
  * This is the single source of truth for product types in order flows.
  * All components should import this type instead of defining their own.
  */
+export type RemovableIngredient = {
+  ingredientId: string;
+  ingredientName: string;
+};
+
 export type OrderProduct = {
   id: string;
   name: string;
@@ -65,6 +70,7 @@ export type OrderProduct = {
   comboAvailability?: number; // computed for combos (min units possible from component stocks)
   modifierGroups?: ResolvedModifierGroup[];
   recipe?: ProductIngredientEntry[];
+  removableIngredients?: RemovableIngredient[];
 };
 
 export type CreateMenuItemInput = {

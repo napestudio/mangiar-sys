@@ -248,7 +248,9 @@ export function TableOrderSidebar({
   };
 
   const handleSelectProduct = (product: OrderProduct) => {
-    if (product.modifierGroups && product.modifierGroups.length > 0) {
+    const hasModifiers = (product.modifierGroups?.length ?? 0) > 0;
+    const hasRemovals = (product.removableIngredients?.length ?? 0) > 0;
+    if (hasModifiers || hasRemovals) {
       setPendingProduct(product);
     } else {
       setPreOrderItems((prev) => [
@@ -327,6 +329,8 @@ export function TableOrderSidebar({
         quantity: item.quantity,
         notes: item.notes,
         categoryId: item.categoryId,
+        modifiers: item.modifiers?.map((m) => ({ optionName: m.optionName, quantity: m.quantity })),
+        removals: item.removals?.map((r) => ({ ingredientName: r.ingredientName })),
       })),
     );
     setTablesOccupied([tableId]);
@@ -730,6 +734,7 @@ export function TableOrderSidebar({
                       originalPrice: item.originalPrice,
                       notes: item.notes,
                       modifiers: item.modifiers,
+                      removals: item.removals,
                     })) || []
                   }
                   onRemoveItem={handleRemoveItem}

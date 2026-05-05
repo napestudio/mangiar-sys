@@ -62,6 +62,11 @@ export type Order = {
       priceAdjustment: number;
       quantity?: number;
     }>;
+    removals?: Array<{
+      id: string;
+      ingredientId: string;
+      ingredientName: string;
+    }>;
 
     product: {
       name: string;
@@ -95,6 +100,11 @@ export type SelectedModifier = {
   quantity?: number;
 };
 
+export type RemovedIngredient = {
+  ingredientId: string;
+  ingredientName: string;
+};
+
 export type OrderItemInput = {
   productId: string;
   itemName: string;
@@ -103,6 +113,7 @@ export type OrderItemInput = {
   originalPrice: number;
   notes?: string;
   modifiers?: SelectedModifier[];
+  removals?: RemovedIngredient[];
 };
 
 export type OrderFilters = {

@@ -52,4 +52,5 @@ export type ProductIngredientEntry = {
   linkWeightUnit: WeightUnit | null;
   linkVolumeUnit: VolumeUnit | null;
   costPerUnit: number;
+  canBeRemoved: boolean;
 };

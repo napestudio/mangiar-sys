@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Minus, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { convertLinkQuantityToBase } from "@/lib/unit-conversions";
-import type { OrderProduct } from "@/types/products";
+import type { OrderProduct, RemovableIngredient } from "@/types/products";
 import type { ModifierOptionData, ResolvedModifierGroup } from "@/types/modifiers";
 import type { SelectedModifier } from "@/types/orders";
 import type { PreOrderItem } from "./pre-order-items-list";
@@ -71,6 +71,7 @@ export function ModifierSelectionDialog({
   consumedIngredients = {},
 }: ModifierSelectionDialogProps) {
   const groups: ResolvedModifierGroup[] = product.modifierGroups ?? [];
+  const removableIngredients: RemovableIngredient[] = product.removableIngredients ?? [];
 
   // Map from groupId → selected option IDs
   const [selections, setSelections] = useState<Record<string, string[]>>(
@@ -79,6 +80,21 @@ export function ModifierSelectionDialog({
 
   // Map from optionId → quantity (defaults to 1 via ?? 1)
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  // Set of ingredientIds that the customer wants removed (empty = all included)
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+
+  const toggleRemoval = (ingredientId: string) => {
+    setRemovedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ingredientId)) {
+        next.delete(ingredientId);
+      } else {
+        next.add(ingredientId);
+      }
+      return next;
+    });
+  };
 
   const handleRadioSelect = (groupId: string, optionId: string) => {
     setSelections((prev) => ({ ...prev, [groupId]: [optionId] }));
@@ -161,6 +177,8 @@ export function ModifierSelectionDialog({
       }
     }
 
+    const removals = removableIngredients.filter((i) => removedIds.has(i.ingredientId));
+
     onConfirm({
       productId: product.id,
       itemName: product.name,
@@ -169,6 +187,7 @@ export function ModifierSelectionDialog({
       originalPrice: basePrice,
       categoryId: product.categoryId,
       modifiers: modifiers.length > 0 ? modifiers : undefined,
+      removals: removals.length > 0 ? removals : undefined,
     });
 
     resetState();
@@ -182,6 +201,7 @@ export function ModifierSelectionDialog({
   const resetState = () => {
     setSelections(buildDefaultSelections(groups));
     setQuantities({});
+    setRemovedIds(new Set());
   };
 
   return (
@@ -359,6 +379,37 @@ export function ModifierSelectionDialog({
               </div>
             );
           })}
+
+          {removableIngredients.length > 0 && (
+            <div className="space-y-2 pt-1 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Quitar ingredientes</p>
+                <span className="text-xs text-gray-400">Opcional</span>
+              </div>
+              <div className="space-y-1 pl-1">
+                {removableIngredients.map((ingredient) => {
+                  const isRemoved = removedIds.has(ingredient.ingredientId);
+                  return (
+                    <label
+                      key={ingredient.ingredientId}
+                      className="flex items-center gap-2 rounded px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-50"
+                    >
+                      <Checkbox
+                        checked={!isRemoved}
+                        onCheckedChange={() => toggleRemoval(ingredient.ingredientId)}
+                      />
+                      <span className={isRemoved ? "line-through text-gray-400" : ""}>
+                        {ingredient.ingredientName}
+                      </span>
+                      {isRemoved && (
+                        <span className="text-xs text-red-500 ml-auto">Sin</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {validationErrors.length > 0 && (

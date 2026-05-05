@@ -76,21 +76,26 @@ async function validateTableForOrder(
 /**
  * Deduct ingredient stock for a single order item, including modifier option ingredients.
  * Must be called inside a Prisma transaction (tx).
+ * Removed ingredients (via removals) are skipped — their stock is preserved.
  */
 async function _deductIngredientStock(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   branchId: string,
   productId: string | null | undefined,
   itemQuantity: number,
-  modifiers: SelectedModifier[]
+  modifiers: SelectedModifier[],
+  removals: RemovedIngredient[] = []
 ): Promise<void> {
-  // Deduct base product recipe ingredients
+  const removedIngredientIds = new Set(removals.map((r) => r.ingredientId));
+
+  // Deduct base product recipe ingredients (skip removed ones)
   if (productId) {
     const recipeRows = await tx.productIngredient.findMany({
       where: { productId },
       include: { ingredient: { select: { name: true } } },
     });
     for (const row of recipeRows) {
+      if (removedIngredientIds.has(row.ingredientId)) continue; // ingredient was removed by customer
       const deductQty = Number(row.quantity) * itemQuantity;
       const stockRow = await tx.ingredientStock.findUnique({
         where: {
@@ -210,6 +215,7 @@ import type {
   PaymentEntry,
   OrderWithoutInvoice,
   SelectedModifier,
+  RemovedIngredient,
 } from "@/types/orders";
 export type {
   OrderItemInput,
@@ -434,13 +440,15 @@ export async function createOrderWithItems(data: {
         },
       });
 
-      // Create order items — use individual creates when any item has modifiers
-      const hasModifiers = items.some(
-        (item) => item.modifiers && item.modifiers.length > 0
+      // Create order items — use individual creates when any item has modifiers or removals
+      const needsIndividualCreate = items.some(
+        (item) =>
+          (item.modifiers && item.modifiers.length > 0) ||
+          (item.removals && item.removals.length > 0)
       );
-      if (hasModifiers) {
+      if (needsIndividualCreate) {
         for (const item of items) {
-          await tx.orderItem.create({
+          const createdItem = await tx.orderItem.create({
             data: {
               orderId: newOrder.id,
               productId: item.productId,
@@ -464,6 +472,15 @@ export async function createOrderWithItems(data: {
                 : {}),
             },
           });
+          if (item.removals && item.removals.length > 0) {
+            await tx.orderItemRemoval.createMany({
+              data: item.removals.map((r) => ({
+                orderItemId: createdItem.id,
+                ingredientId: r.ingredientId,
+                ingredientName: r.ingredientName,
+              })),
+            });
+          }
         }
       } else {
         await tx.orderItem.createMany({
@@ -486,7 +503,8 @@ export async function createOrderWithItems(data: {
           branchId,
           item.productId,
           item.quantity,
-          item.modifiers ?? []
+          item.modifiers ?? [],
+          item.removals ?? []
         );
       }
 
@@ -810,6 +828,7 @@ export async function getTableOrders(tableId: string) {
           include: {
             product: true,
             modifiers: true,
+            removals: true,
           },
           orderBy: {
             id: "asc",
@@ -850,6 +869,11 @@ export async function getTableOrders(tableId: string) {
           optionName: m.optionName,
           groupName: m.groupName,
           priceAdjustment: Number(m.priceAdjustment),
+        })),
+        removals: item.removals.map((r) => ({
+          id: r.id,
+          ingredientId: r.ingredientId,
+          ingredientName: r.ingredientName,
         })),
       })),
       invoices: order.invoices || [],
@@ -918,8 +942,18 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
               }
             : {}),
         },
-        include: { product: true, modifiers: true },
+        include: { product: true, modifiers: true, removals: true },
       });
+
+      if (item.removals && item.removals.length > 0) {
+        await tx.orderItemRemoval.createMany({
+          data: item.removals.map((r) => ({
+            orderItemId: created.id,
+            ingredientId: r.ingredientId,
+            ingredientName: r.ingredientName,
+          })),
+        });
+      }
 
       // Deduct ingredient stock
       await _deductIngredientStock(
@@ -927,7 +961,8 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
         branchId,
         item.productId,
         item.quantity,
-        item.modifiers ?? []
+        item.modifiers ?? [],
+        item.removals ?? []
       );
 
       // Auto-decrement component stocks for combo products
@@ -1031,12 +1066,14 @@ export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
     const branchId = order.branchId;
 
     const updatedItems = await prisma.$transaction(async (tx) => {
-      const hasModifiers = items.some(
-        (item) => item.modifiers && item.modifiers.length > 0
+      const needsIndividualCreate = items.some(
+        (item) =>
+          (item.modifiers && item.modifiers.length > 0) ||
+          (item.removals && item.removals.length > 0)
       );
-      if (hasModifiers) {
+      if (needsIndividualCreate) {
         for (const item of items) {
-          await tx.orderItem.create({
+          const createdItem = await tx.orderItem.create({
             data: {
               orderId,
               productId: item.productId,
@@ -1060,6 +1097,15 @@ export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
                 : {}),
             },
           });
+          if (item.removals && item.removals.length > 0) {
+            await tx.orderItemRemoval.createMany({
+              data: item.removals.map((r) => ({
+                orderItemId: createdItem.id,
+                ingredientId: r.ingredientId,
+                ingredientName: r.ingredientName,
+              })),
+            });
+          }
         }
       } else {
         await tx.orderItem.createMany({
@@ -1082,13 +1128,14 @@ export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
           branchId,
           item.productId,
           item.quantity,
-          item.modifiers ?? []
+          item.modifiers ?? [],
+          item.removals ?? []
         );
       }
 
       const allItems = await tx.orderItem.findMany({
         where: { orderId },
-        include: { product: true, modifiers: true },
+        include: { product: true, modifiers: true, removals: true },
         orderBy: { id: "asc" },
       });
 
@@ -1586,6 +1633,13 @@ async function _getAvailableProductsForOrder(
             },
           },
         },
+        ingredients: {
+          where: { canBeRemoved: true },
+          select: {
+            ingredientId: true,
+            ingredient: { select: { name: true } },
+          },
+        },
       },
       orderBy: [
         {
@@ -1697,6 +1751,10 @@ async function _getAvailableProductsForOrder(
               mg.minSelectionsOverride ?? mg.group.minSelections,
             effectiveMax:
               mg.maxSelectionsOverride ?? mg.group.maxSelections,
+          })),
+          removableIngredients: product.ingredients.map((pi) => ({
+            ingredientId: pi.ingredientId,
+            ingredientName: pi.ingredient.name,
           })),
         };
       })
@@ -3097,13 +3155,15 @@ export async function createCounterSaleOrder(data: {
         },
       });
 
-      const hasModifiers = items.some(
-        (item) => item.modifiers && item.modifiers.length > 0,
+      const needsIndividualCreate = items.some(
+        (item) =>
+          (item.modifiers && item.modifiers.length > 0) ||
+          (item.removals && item.removals.length > 0),
       );
 
-      if (hasModifiers) {
+      if (needsIndividualCreate) {
         for (const item of items) {
-          await tx.orderItem.create({
+          const createdItem = await tx.orderItem.create({
             data: {
               orderId: newOrder.id,
               productId: item.productId,
@@ -3127,6 +3187,15 @@ export async function createCounterSaleOrder(data: {
                 : {}),
             },
           });
+          if (item.removals && item.removals.length > 0) {
+            await tx.orderItemRemoval.createMany({
+              data: item.removals.map((r) => ({
+                orderItemId: createdItem.id,
+                ingredientId: r.ingredientId,
+                ingredientName: r.ingredientName,
+              })),
+            });
+          }
         }
       } else {
         await tx.orderItem.createMany({
@@ -3149,6 +3218,7 @@ export async function createCounterSaleOrder(data: {
           item.productId,
           item.quantity,
           item.modifiers ?? [],
+          item.removals ?? [],
         );
       }
 
@@ -3246,7 +3316,7 @@ export async function createCounterSaleOrder(data: {
         where: { id: newOrder.id },
         include: {
           items: {
-            include: { product: true, modifiers: true },
+            include: { product: true, modifiers: true, removals: true },
             orderBy: { id: "asc" },
           },
         },

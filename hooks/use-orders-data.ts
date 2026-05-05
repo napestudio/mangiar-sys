@@ -24,6 +24,11 @@ type OrderWithItems = Order & {
       groupName: string;
       priceAdjustment: number;
     }>;
+    removals?: Array<{
+      id: string;
+      ingredientId: string;
+      ingredientName: string;
+    }>;
   }>;
   client?: {
     id: string;

@@ -936,8 +936,20 @@ model OrderItem {
   originalPrice Decimal? @db.Decimal(10, 2) // Original price from product
   notes         String? // Special instructions (e.g., "no sugar", "extra spicy")
   modifiers     OrderItemModifier[]
+  removals      OrderItemRemoval[]
 
   @@index([orderId])
+}
+
+model OrderItemRemoval {
+  id             String    @id @default(cuid())
+  orderItem      OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId    String
+  ingredientId   String
+  ingredientName String    // denormalized for kitchen/history display
+  createdAt      DateTime  @default(now())
+
+  @@index([orderItemId])
 }
 
 //
@@ -1364,6 +1376,7 @@ model ProductIngredient {
   quantity     Decimal     @db.Decimal(10, 4)
   weightUnit   WeightUnit? // unit override (only when ingredient is WEIGHT type)
   volumeUnit   VolumeUnit? // unit override (only when ingredient is VOLUME type)
+  canBeRemoved Boolean     @default(false) // if true, customer can request removal at order time
 
   @@unique([productId, ingredientId])
   @@index([productId])

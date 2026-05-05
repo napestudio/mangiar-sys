@@ -6,6 +6,8 @@ export interface OrderItemForPrint {
   quantity: number;
   notes?: string | null;
   categoryId?: string | null;
+  modifiers?: Array<{ optionName: string; quantity?: number }>;
+  removals?: Array<{ ingredientName: string }>;
 }
 
 export interface OrderInfoForPrint {

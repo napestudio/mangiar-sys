@@ -544,6 +544,8 @@ export interface OrderItem {
   name: string;
   quantity: number;
   notes?: string;
+  modifiers?: Array<{ optionName: string; quantity?: number }>;
+  removals?: Array<{ ingredientName: string }>;
 }
 
 export interface OrderData {
@@ -618,6 +620,15 @@ export async function printOrder(
     content += `${item.quantity}x ${item.name}\n`;
     content += Commands.NORMAL_SIZE;
 
+    if (item.modifiers && item.modifiers.length > 0) {
+      for (const mod of item.modifiers) {
+        const qty = mod.quantity && mod.quantity > 1 ? `${mod.quantity}x ` : "";
+        content += `   + ${qty}${mod.optionName}\n`;
+      }
+    }
+    if (item.removals && item.removals.length > 0) {
+      content += `   Sin: ${item.removals.map((r) => r.ingredientName).join(", ")}\n`;
+    }
     if (item.notes) {
       content += `   Nota: ${item.notes}\n`;
     }
@@ -1076,6 +1087,15 @@ export function generateOrderData(
     content += `${item.quantity}x ${item.name}\n`;
     content += Commands.NORMAL_SIZE;
 
+    if (item.modifiers && item.modifiers.length > 0) {
+      for (const mod of item.modifiers) {
+        const qty = mod.quantity && mod.quantity > 1 ? `${mod.quantity}x ` : "";
+        content += `   + ${qty}${mod.optionName}\n`;
+      }
+    }
+    if (item.removals && item.removals.length > 0) {
+      content += `   Sin: ${item.removals.map((r) => r.ingredientName).join(", ")}\n`;
+    }
     if (item.notes) {
       content += `   Nota: ${item.notes}\n`;
     }

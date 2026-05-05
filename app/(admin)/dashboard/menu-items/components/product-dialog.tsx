@@ -120,6 +120,7 @@ type ProductWithRelations = {
     volumeUnit: string | null;
     linkWeightUnit: string | null;
     linkVolumeUnit: string | null;
+    canBeRemoved: boolean;
   }>;
   modifierGroups?: Array<{
     groupId: string;
@@ -213,6 +214,7 @@ type RecipeRow = {
   quantity: string;
   weightUnit: string;
   volumeUnit: string;
+  canBeRemoved: boolean;
 };
 
 type ModifierGroupRow = {
@@ -273,6 +275,7 @@ export function ProductDialog({
       quantity: String(ing.quantity),
       weightUnit: ing.linkWeightUnit ?? ing.weightUnit ?? "",
       volumeUnit: ing.linkVolumeUnit ?? ing.volumeUnit ?? "",
+      canBeRemoved: ing.canBeRemoved ?? false,
     })) ?? [],
   );
 
@@ -574,6 +577,7 @@ export function ProductDialog({
               quantity: parseFloat(r.quantity),
               weightUnit: r.weightUnit || null,
               volumeUnit: r.volumeUnit || null,
+              canBeRemoved: r.canBeRemoved,
             })),
         );
       }
@@ -1435,6 +1439,25 @@ export function ProductDialog({
                       <span className="px-2 text-sm text-gray-500">u</span>
                     )}
 
+                    <label
+                      className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none shrink-0"
+                      title="Si está marcado, los clientes podrán pedir que se retire este ingrediente al hacer un pedido"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={row.canBeRemoved}
+                        onChange={(e) =>
+                          setRecipeRows((prev) =>
+                            prev.map((r, i) =>
+                              i === idx ? { ...r, canBeRemoved: e.target.checked } : r,
+                            ),
+                          )
+                        }
+                        className="accent-green-600"
+                      />
+                      Removible
+                    </label>
+
                     <button
                       type="button"
                       onClick={() =>
@@ -1459,7 +1482,7 @@ export function ProductDialog({
                 onClick={() =>
                   setRecipeRows((prev) => [
                     ...prev,
-                    { ingredientId: "", quantity: "1", weightUnit: "", volumeUnit: "" },
+                    { ingredientId: "", quantity: "1", weightUnit: "", volumeUnit: "", canBeRemoved: false },
                   ])
                 }
                 className="flex items-center gap-2 px-4 py-2 text-sm text-green-700 border border-green-300 rounded-lg hover:bg-green-50"

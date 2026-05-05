@@ -290,6 +290,7 @@ export async function setProductRecipe(
     quantity: number;
     weightUnit?: string | null;
     volumeUnit?: string | null;
+    canBeRemoved?: boolean;
   }>
 ): Promise<ActionResult<void>> {
   try {
@@ -306,6 +307,7 @@ export async function setProductRecipe(
                 quantity: new Prisma.Decimal(ing.quantity.toString()),
                 weightUnit: (ing.weightUnit as WeightUnit) ?? null,
                 volumeUnit: (ing.volumeUnit as VolumeUnit) ?? null,
+                canBeRemoved: ing.canBeRemoved ?? false,
               })),
             }),
           ]
@@ -345,6 +347,7 @@ export async function getProductRecipe(
         linkWeightUnit: row.weightUnit,
         linkVolumeUnit: row.volumeUnit,
         costPerUnit: Number(row.ingredient.costPerUnit),
+        canBeRemoved: row.canBeRemoved,
       })),
     };
   } catch (error) {

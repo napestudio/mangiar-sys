@@ -17,6 +17,11 @@ export type CommittedOrderItem = {
     groupName: string;
     priceAdjustment: number;
   }>;
+  removals?: Array<{
+    id: string;
+    ingredientId: string;
+    ingredientName: string;
+  }>;
 };
 
 interface CommittedOrderItemsListProps {
@@ -55,6 +60,11 @@ export function CommittedOrderItemsList({
               {item.modifiers && item.modifiers.length > 0 && (
                 <div className="text-xs text-gray-500 mt-0.5">
                   {item.modifiers.map((m) => m.optionName).join(", ")}
+                </div>
+              )}
+              {item.removals && item.removals.length > 0 && (
+                <div className="text-xs text-red-500 mt-0.5">
+                  Sin: {item.removals.map((r) => r.ingredientName).join(", ")}
                 </div>
               )}
               <div className="text-sm text-gray-600 mt-1">
