@@ -80,6 +80,11 @@ export type Order = {
     paymentMethod: string;
     amount: number;
   }>;
+
+  // Cancellation details
+  canceledAt?: Date | null;
+  cancelReason?: string | null;
+  canceledBy?: { name: string | null } | null;
 };
 
 export type SelectedModifier = {

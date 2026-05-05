@@ -188,6 +188,7 @@ model User {
 
   userOnBranches   UserOnBranch[]
   assignedOrders   Order[]             @relation("StaffAssignment")
+  canceledOrders   Order[]             @relation("OrderCancellations")
   permissionGrants UserPermissionGrant[]
 }
 
@@ -900,6 +901,12 @@ model Order {
   createdAt DateTime    @default(now())
   createdBy String?
   updatedBy String?
+
+  // Cancellation details
+  canceledAt   DateTime?
+  cancelReason String?
+  canceledById String?
+  canceledBy   User?     @relation("OrderCancellations", fields: [canceledById], references: [id])
 
   items         OrderItem[]
   invoices      Invoice[]

@@ -2257,6 +2257,11 @@ export async function getOrders(filters: OrderFilters) {
               amount: true,
             },
           },
+          canceledBy: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: sortOrder,
@@ -2494,6 +2499,44 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       success: false,
       error: "Error al actualizar el estado de la orden",
     };
+  }
+}
+
+// Cancel order with reason and audit info
+export async function cancelOrder(orderId: string, reason: string) {
+  try {
+    if (!reason.trim()) {
+      return { success: false, error: "El motivo de cancelación es obligatorio" };
+    }
+
+    const { userId } = await authorizeAction(UserRole.EMPLOYEE);
+
+    const order = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: OrderStatus.CANCELED,
+        canceledAt: new Date(),
+        cancelReason: reason.trim(),
+        canceledById: userId,
+      },
+      include: {
+        canceledBy: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        ...order,
+        discountPercentage: Number(order.discountPercentage),
+        deliveryFee: Number(order.deliveryFee),
+      },
+    };
+  } catch (error) {
+    console.error("Error canceling order:", error);
+    return { success: false, error: "Error al cancelar la orden" };
   }
 }
 

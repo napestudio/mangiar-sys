@@ -6,6 +6,7 @@ import {
   addOrderItems,
   assignClientToOrder,
   assignStaffToOrder,
+  cancelOrder,
   getAvailableProductsForOrder,
   updateDeliveryFee,
   updateDiscount,
@@ -59,6 +60,7 @@ import {
 import React, { useState } from "react";
 import TableIcon from "../ui/icons/TableIcon";
 import { ClientPicker } from "./client-picker";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 import { CloseOrderDialog } from "./close-order-dialog";
 import { CreateClientDialog } from "./create-client-dialog";
 import { GenerateInvoiceDialog } from "./generate-invoice-dialog";
@@ -116,6 +118,11 @@ type Order = {
     paymentMethod: string;
     amount: number;
   }>;
+
+  // Cancellation details
+  canceledAt?: Date | string | null;
+  cancelReason?: string | null;
+  canceledBy?: { name: string | null } | null;
 };
 
 interface OrderDetailsSidebarProps {
@@ -191,6 +198,10 @@ export function OrderDetailsSidebar({
   const [currentDeliveryFee, setCurrentDeliveryFee] = useState(
     order?.deliveryFee ?? 0,
   );
+
+  // Cancel order state
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   // Type change state
   const [typeChangeConfirmOpen, setTypeChangeConfirmOpen] = useState(false);
@@ -444,8 +455,39 @@ export function OrderDetailsSidebar({
     }
   };
 
+  const handleCancelConfirm = async (reason: string) => {
+    setIsCanceling(true);
+    try {
+      const result = await cancelOrder(order.id, reason);
+      if (result.success) {
+        setShowCancelDialog(false);
+        toast({ title: "Orden cancelada" });
+        onOrderUpdated?.({ id: order.id, status: OrderStatus.CANCELED });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "No se pudo cancelar la orden",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Error al cancelar la orden",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
   const handleStatusChange = async (newStatus: OrderStatus) => {
     if (!order) return;
+
+    if (newStatus === OrderStatus.CANCELED) {
+      setShowCancelDialog(true);
+      return;
+    }
 
     setIsUpdatingStatus(true);
 
@@ -810,6 +852,33 @@ export function OrderDetailsSidebar({
               </div>
             </div>
           )}
+
+          {/* Cancellation Info */}
+          {order.status === OrderStatus.CANCELED &&
+            (order.canceledAt || order.cancelReason || order.canceledBy) && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm space-y-1">
+                <p className="font-medium text-red-800">
+                  Información de cancelación
+                </p>
+                {order.canceledAt && (
+                  <p className="text-red-700">
+                    Fecha:{" "}
+                    {formatDateTimeShortAR(
+                      order.canceledAt instanceof Date
+                        ? order.canceledAt.toISOString()
+                        : String(order.canceledAt),
+                    )}{" "}
+                    hs
+                  </p>
+                )}
+                {order.cancelReason && (
+                  <p className="text-red-700">Motivo: {order.cancelReason}</p>
+                )}
+                {order.canceledBy?.name && (
+                  <p className="text-red-700">Por: {order.canceledBy.name}</p>
+                )}
+              </div>
+            )}
 
           {/* Table Info */}
           {order.table && (
@@ -1283,6 +1352,14 @@ export function OrderDetailsSidebar({
           });
           onOrderUpdated?.();
         }}
+      />
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        onConfirm={handleCancelConfirm}
+        isLoading={isCanceling}
       />
 
       {/* Change Order Type Confirmation Dialog */}
