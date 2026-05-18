@@ -2480,6 +2480,19 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       };
     }
 
+    // Prevent reverting a COMPLETED order — doing so would allow re-closing it
+    // with a different payment method, creating duplicate cash movements.
+    const current = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+    if (current?.status === OrderStatus.COMPLETED) {
+      return {
+        success: false,
+        error: "No se puede modificar el estado de una orden ya completada.",
+      };
+    }
+
     const order = await prisma.order.update({
       where: { id: orderId },
       data: { status },

@@ -793,7 +793,7 @@ export function OrderDetailsSidebar({
                 onValueChange={(value) =>
                   handleStatusChange(value as OrderStatus)
                 }
-                disabled={isUpdatingStatus}
+                disabled={isUpdatingStatus || order.status === OrderStatus.COMPLETED}
               >
                 <SelectTrigger
                   className={cn("w-45", statusColors[order.status])}
