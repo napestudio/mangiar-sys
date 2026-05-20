@@ -188,6 +188,7 @@ model User {
 
   userOnBranches   UserOnBranch[]
   assignedOrders   Order[]             @relation("StaffAssignment")
+  canceledOrders   Order[]             @relation("OrderCancellations")
   permissionGrants UserPermissionGrant[]
 }
 
@@ -901,6 +902,12 @@ model Order {
   createdBy String?
   updatedBy String?
 
+  // Cancellation details
+  canceledAt   DateTime?
+  cancelReason String?
+  canceledById String?
+  canceledBy   User?     @relation("OrderCancellations", fields: [canceledById], references: [id])
+
   items         OrderItem[]
   invoices      Invoice[]
   cashMovements CashMovement[]
@@ -912,6 +919,7 @@ model Order {
   @@index([deliveryWindowId]) // Performance: Query orders by delivery window
   @@index([branchId, status])
   @@index([branchId, createdAt])
+  @@index([branchId, status, createdAt]) // Performance: Statistics queries filtering by branch + status + date range
   @@index([branchId, type]) // Performance: Filter orders by branch and type
   @@index([type, status]) // Performance: Filter delivery orders by status
   @@index([branchId, scheduledAt]) // Performance: Query scheduled orders by branch
@@ -931,6 +939,7 @@ model OrderItem {
   modifiers     OrderItemModifier[]
 
   @@index([orderId])
+  @@index([productId]) // Performance: Top-products statistics query joining on productId
 }
 
 //
@@ -1301,6 +1310,7 @@ model CashMovement {
   @@index([branchId])
   @@index([type])
   @@index([orderId])
+  @@index([branchId, createdAt]) // Performance: Revenue-by-day query filtering by branch + date range
 }
 
 //

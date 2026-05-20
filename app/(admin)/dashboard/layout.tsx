@@ -79,6 +79,7 @@ export default async function DashboardLayout({
           navItems={navItems}
           userImage={userRecord?.image ?? null}
           restaurantName={restaurantName}
+          userId={session.user.id}
         />
         <main className="mx-auto">{children}</main>
       </div>

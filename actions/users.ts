@@ -5,8 +5,12 @@ import prisma from "@/lib/prisma";
 import {
   userRegistrationSchema,
   userUpdateSchema,
+  changePasswordSchema,
+  resetPasswordSchema,
   UserRegistrationInput,
   UserUpdateInput,
+  ChangePasswordInput,
+  ResetPasswordInput,
 } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -585,6 +589,115 @@ export async function getWaitersForBranch(branchId: string): Promise<{
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await auth();
   return session?.user?.id ?? null;
+}
+
+export async function updateOwnPassword(
+  data: ChangePasswordInput,
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "No estás autenticado" };
+    }
+
+    const validation = changePasswordSchema.safeParse(data);
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0].message };
+    }
+
+    const { currentPassword, newPassword } = validation.data;
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { password: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuario no encontrado" };
+    }
+
+    if (!user.password) {
+      return {
+        success: false,
+        error:
+          "Tu cuenta usa Google para iniciar sesión y no tiene contraseña configurada",
+      };
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return { success: false, error: "La contraseña actual es incorrecta" };
+    }
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { password: await bcrypt.hash(newPassword, 10) },
+    });
+
+    return { success: true, message: "Contraseña actualizada correctamente" };
+  } catch (error) {
+    console.error("Error updating own password:", error);
+    return { success: false, error: "Error al actualizar la contraseña" };
+  }
+}
+
+export async function resetUserPassword(
+  userId: string,
+  data: ResetPasswordInput,
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    const { userRole, branchId: sessionBranchId } = await authorizeAction(
+      UserRole.ADMIN,
+    );
+
+    const validation = resetPasswordSchema.safeParse(data);
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0].message };
+    }
+
+    const { newPassword } = validation.data;
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userOnBranches: {
+          include: { branch: { select: { restaurantId: true } } },
+        },
+      },
+    });
+
+    if (!existingUser) {
+      return { success: false, error: "Usuario no encontrado" };
+    }
+
+    if (userRole !== UserRole.SUPERADMIN) {
+      const sessionBranch = await prisma.branch.findUnique({
+        where: { id: sessionBranchId },
+        select: { restaurantId: true },
+      });
+      const userRestaurantIds = existingUser.userOnBranches.map(
+        (ub) => ub.branch.restaurantId,
+      );
+      if (!userRestaurantIds.includes(sessionBranch?.restaurantId ?? "")) {
+        return {
+          success: false,
+          error: "No tienes permisos para modificar este usuario",
+        };
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: await bcrypt.hash(newPassword, 10) },
+    });
+
+    revalidateTag("user-role-and-branch");
+
+    return { success: true, message: "Contraseña restablecida correctamente" };
+  } catch (error) {
+    console.error("Error resetting user password:", error);
+    return { success: false, error: "Error al restablecer la contraseña" };
+  }
 }
 
 export async function updateUserAvatar(

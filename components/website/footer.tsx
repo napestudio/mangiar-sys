@@ -27,7 +27,7 @@ export function Footer() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-800">
               Web
             </h4>
@@ -43,7 +43,7 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
 
           {/* Legal */}
           {/* <div className="space-y-4">

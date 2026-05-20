@@ -177,6 +177,269 @@ async function _deductIngredientStock(
   }
 }
 
+// Internal types for batch stock deduction helpers
+type IngredientDeductionItem = {
+  productId: string | null | undefined;
+  quantity: number;
+  modifiers: SelectedModifier[];
+};
+
+type ComboDeductionItem = {
+  productId: string;
+  itemName: string;
+  quantity: number;
+};
+
+/**
+ * Batch version of _deductIngredientStock. Accepts all order items at once and
+ * issues the minimum number of DB round-trips regardless of item count:
+ *   - 2 parallel findMany (recipes + modifier ingredients)
+ *   - 1 findMany for current stock
+ *   - N upserts in parallel (N = unique ingredients, not items × ingredients)
+ * Must be called inside a Prisma transaction (tx).
+ */
+async function _deductIngredientStockBatch(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  branchId: string,
+  items: IngredientDeductionItem[]
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const productIds = [
+    ...new Set(
+      items.map((i) => i.productId).filter((id): id is string => !!id)
+    ),
+  ];
+  const modifierOptionIds = [
+    ...new Set(
+      items.flatMap((i) => i.modifiers.map((m) => m.modifierOptionId))
+    ),
+  ];
+
+  // 2 parallel queries instead of N × M sequential findMany calls
+  const [recipeRows, modIngredientRows] = await Promise.all([
+    productIds.length > 0
+      ? tx.productIngredient.findMany({
+          where: { productId: { in: productIds } },
+          include: { ingredient: { select: { name: true } } },
+        })
+      : Promise.resolve([] as Awaited<ReturnType<typeof tx.productIngredient.findMany<{ include: { ingredient: { select: { name: true } } } }>>>),
+    modifierOptionIds.length > 0
+      ? tx.modifierOptionIngredient.findMany({
+          where: { optionId: { in: modifierOptionIds } },
+          include: {
+            ingredient: {
+              select: {
+                name: true,
+                unitType: true,
+                weightUnit: true,
+                volumeUnit: true,
+              },
+            },
+          },
+        })
+      : Promise.resolve([] as Awaited<ReturnType<typeof tx.modifierOptionIngredient.findMany<{ include: { ingredient: { select: { name: true; unitType: true; weightUnit: true; volumeUnit: true } } } }>>>),
+  ]);
+
+  // Build lookup maps: productId → recipe rows, optionId → modifier ingredient rows
+  const recipeByProduct = new Map<string, typeof recipeRows>();
+  for (const row of recipeRows) {
+    const list = recipeByProduct.get(row.productId) ?? [];
+    list.push(row);
+    recipeByProduct.set(row.productId, list);
+  }
+
+  const modIngByOption = new Map<string, typeof modIngredientRows>();
+  for (const row of modIngredientRows) {
+    const list = modIngByOption.get(row.optionId) ?? [];
+    list.push(row);
+    modIngByOption.set(row.optionId, list);
+  }
+
+  // Accumulate total deduction per ingredient across all items
+  const deductions = new Map<string, { total: number; name: string }>();
+  const accrue = (ingredientId: string, name: string, qty: number) => {
+    const existing = deductions.get(ingredientId);
+    if (existing) {
+      existing.total += qty;
+    } else {
+      deductions.set(ingredientId, { total: qty, name });
+    }
+  };
+
+  for (const item of items) {
+    if (item.productId) {
+      for (const row of recipeByProduct.get(item.productId) ?? []) {
+        accrue(
+          row.ingredientId,
+          row.ingredient.name,
+          Number(row.quantity) * item.quantity
+        );
+      }
+    }
+    for (const mod of item.modifiers) {
+      for (const row of modIngByOption.get(mod.modifierOptionId) ?? []) {
+        const quantityInBase = convertLinkQuantityToBase(
+          Number(row.quantity),
+          row.ingredient.unitType,
+          row.weightUnit,
+          row.volumeUnit,
+          row.ingredient.weightUnit,
+          row.ingredient.volumeUnit
+        );
+        accrue(
+          row.ingredientId,
+          row.ingredient.name,
+          quantityInBase * item.quantity * (mod.quantity ?? 1)
+        );
+      }
+    }
+  }
+
+  if (deductions.size === 0) return;
+
+  // 1 query to load all relevant stock rows
+  const ingredientIds = [...deductions.keys()];
+  const stockRows = await tx.ingredientStock.findMany({
+    where: { ingredientId: { in: ingredientIds }, branchId },
+  });
+  const stockByIngredient = new Map<string, number>(
+    stockRows.map((r) => [r.ingredientId, Number(r.stock)])
+  );
+
+  // Fail-fast validation before any write
+  for (const [ingredientId, { total, name }] of deductions) {
+    const current = stockByIngredient.get(ingredientId) ?? 0;
+    if (current - total < 0) {
+      throw new Error(`Stock insuficiente del ingrediente "${name}"`);
+    }
+  }
+
+  // Parallel upserts — distinct rows, safe inside a transaction
+  await Promise.all(
+    [...deductions.entries()].map(([ingredientId, { total }]) =>
+      tx.ingredientStock.upsert({
+        where: { ingredientId_branchId: { ingredientId, branchId } },
+        create: { ingredientId, branchId, stock: Math.max(0, -total) },
+        update: { stock: { decrement: total } },
+      })
+    )
+  );
+}
+
+/**
+ * Handles stock deduction for combo product components in bulk.
+ * Fetches all combo products in a single query instead of one findUnique per item,
+ * deduplicates component deductions, then writes in parallel.
+ * Must be called inside a Prisma transaction (tx).
+ */
+async function _deductComboComponentStock(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  branchId: string,
+  items: ComboDeductionItem[]
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const productIds = [...new Set(items.map((i) => i.productId))];
+
+  // 1 findMany instead of N findUnique calls
+  const comboProducts = await tx.product.findMany({
+    where: { id: { in: productIds }, isCombo: true },
+    select: {
+      id: true,
+      comboComponents: {
+        select: {
+          componentId: true,
+          quantity: true,
+          component: {
+            select: {
+              trackStock: true,
+              branches: {
+                where: { branchId },
+                select: { id: true, stock: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (comboProducts.length === 0) return;
+
+  const comboMap = new Map(comboProducts.map((p) => [p.id, p]));
+
+  // Accumulate deductions per productOnBranch ID (deduplicates across items)
+  const pobDeductions = new Map<
+    string,
+    {
+      pobId: string;
+      decrementQty: number;
+      previousStock: number;
+      comboProductId: string;
+      itemName: string;
+    }
+  >();
+
+  for (const item of items) {
+    const combo = comboMap.get(item.productId);
+    if (!combo) continue;
+    for (const comp of combo.comboComponents) {
+      if (!comp.component.trackStock) continue;
+      const pob = comp.component.branches[0];
+      if (!pob) continue;
+      const decrementQty = Number(comp.quantity) * item.quantity;
+      const existing = pobDeductions.get(pob.id);
+      if (existing) {
+        existing.decrementQty += decrementQty;
+      } else {
+        pobDeductions.set(pob.id, {
+          pobId: pob.id,
+          decrementQty,
+          previousStock: Number(pob.stock),
+          comboProductId: item.productId,
+          itemName: item.itemName,
+        });
+      }
+    }
+  }
+
+  // Fail-fast validation before any write
+  for (const { previousStock, decrementQty, itemName } of pobDeductions.values()) {
+    if (previousStock - decrementQty < 0) {
+      throw new Error(
+        `Stock insuficiente para el componente del combo "${itemName}"`
+      );
+    }
+  }
+
+  // Parallel writes per unique component
+  await Promise.all(
+    [...pobDeductions.values()].map(
+      ({ pobId, decrementQty, previousStock, comboProductId }) => {
+        const newStock = previousStock - decrementQty;
+        return Promise.all([
+          tx.productOnBranch.update({
+            where: { id: pobId },
+            data: { stock: newStock },
+          }),
+          tx.stockMovement.create({
+            data: {
+              productOnBranchId: pobId,
+              quantity: -decrementQty,
+              previousStock,
+              newStock,
+              reason: "Venta combo",
+              reference: `COMBO:${comboProductId}`,
+              notes: `Componente de combo vendido x${decrementQty}`,
+            },
+          }),
+        ]);
+      }
+    )
+  );
+}
+
 /**
  * Get client discount percentage and type
  * Returns 0 / PERCENTAGE defaults if client not found or no discount set
@@ -480,70 +743,31 @@ export async function createOrderWithItems(data: {
       }
 
       // Deduct ingredient stock for product recipes and modifier options
-      for (const item of items) {
-        await _deductIngredientStock(
-          tx,
-          branchId,
-          item.productId,
-          item.quantity,
-          item.modifiers ?? []
-        );
-      }
+      await _deductIngredientStockBatch(
+        tx,
+        branchId,
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modifiers: item.modifiers ?? [],
+        }))
+      );
 
       // Auto-decrement component stocks for combo products
-      for (const item of items) {
-        if (!item.productId) continue;
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          select: {
-            isCombo: true,
-            comboComponents: {
-              select: {
-                componentId: true,
-                quantity: true,
-                component: {
-                  select: {
-                    trackStock: true,
-                    branches: {
-                      where: { branchId },
-                      select: { id: true, stock: true },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-        if (!product?.isCombo) continue;
-        for (const comp of product.comboComponents) {
-          if (!comp.component.trackStock) continue;
-          const pob = comp.component.branches[0];
-          if (!pob) continue;
-          const decrementQty = Number(comp.quantity) * item.quantity;
-          const previousStock = Number(pob.stock);
-          const newStock = previousStock - decrementQty;
-          if (newStock < 0) {
-            throw new Error(
-              `Stock insuficiente para el componente del combo "${item.itemName}"`,
-            );
-          }
-          await tx.productOnBranch.update({
-            where: { id: pob.id },
-            data: { stock: newStock },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productOnBranchId: pob.id,
-              quantity: -decrementQty,
-              previousStock,
-              newStock,
-              reason: "Venta combo",
-              reference: `COMBO:${item.productId}`,
-              notes: `Componente de combo vendido x${item.quantity}`,
-            },
-          });
-        }
-      }
+      await _deductComboComponentStock(
+        tx,
+        branchId,
+        items
+          .filter(
+            (item): item is typeof item & { productId: string } =>
+              !!item.productId
+          )
+          .map((item) => ({
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
+          }))
+      );
 
       // Update table status to OCCUPIED if it's a dine-in order
       if (tableId && type === OrderType.DINE_IN) {
@@ -932,57 +1156,13 @@ export async function addOrderItem(orderId: string, item: OrderItemInput) {
 
       // Auto-decrement component stocks for combo products
       if (item.productId) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          select: {
-            isCombo: true,
-            comboComponents: {
-              select: {
-                componentId: true,
-                quantity: true,
-                component: {
-                  select: {
-                    trackStock: true,
-                    branches: {
-                      where: { branchId },
-                      select: { id: true, stock: true },
-                    },
-                  },
-                },
-              },
-            },
+        await _deductComboComponentStock(tx, branchId, [
+          {
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
           },
-        });
-        if (product?.isCombo) {
-          for (const comp of product.comboComponents) {
-            if (!comp.component.trackStock) continue;
-            const pob = comp.component.branches[0];
-            if (!pob) continue;
-            const decrementQty = Number(comp.quantity) * item.quantity;
-            const previousStock = Number(pob.stock);
-            const newStock = previousStock - decrementQty;
-            if (newStock < 0) {
-              throw new Error(
-                `Stock insuficiente para el componente del combo "${item.itemName}"`,
-              );
-            }
-            await tx.productOnBranch.update({
-              where: { id: pob.id },
-              data: { stock: newStock },
-            });
-            await tx.stockMovement.create({
-              data: {
-                productOnBranchId: pob.id,
-                quantity: -decrementQty,
-                previousStock,
-                newStock,
-                reason: "Venta combo",
-                reference: `COMBO:${item.productId}`,
-                notes: `Componente de combo vendido x${item.quantity}`,
-              },
-            });
-          }
-        }
+        ]);
       }
 
       return created;
@@ -1076,15 +1256,15 @@ export async function addOrderItems(orderId: string, items: OrderItemInput[]) {
       }
 
       // Deduct ingredient stock for each item
-      for (const item of items) {
-        await _deductIngredientStock(
-          tx,
-          branchId,
-          item.productId,
-          item.quantity,
-          item.modifiers ?? []
-        );
-      }
+      await _deductIngredientStockBatch(
+        tx,
+        branchId,
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modifiers: item.modifiers ?? [],
+        }))
+      );
 
       const allItems = await tx.orderItem.findMany({
         where: { orderId },
@@ -2257,6 +2437,11 @@ export async function getOrders(filters: OrderFilters) {
               amount: true,
             },
           },
+          canceledBy: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: sortOrder,
@@ -2475,6 +2660,19 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       };
     }
 
+    // Prevent reverting a COMPLETED order — doing so would allow re-closing it
+    // with a different payment method, creating duplicate cash movements.
+    const current = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+    if (current?.status === OrderStatus.COMPLETED) {
+      return {
+        success: false,
+        error: "No se puede modificar el estado de una orden ya completada.",
+      };
+    }
+
     const order = await prisma.order.update({
       where: { id: orderId },
       data: { status },
@@ -2494,6 +2692,44 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       success: false,
       error: "Error al actualizar el estado de la orden",
     };
+  }
+}
+
+// Cancel order with reason and audit info
+export async function cancelOrder(orderId: string, reason: string) {
+  try {
+    if (!reason.trim()) {
+      return { success: false, error: "El motivo de cancelación es obligatorio" };
+    }
+
+    const { userId } = await authorizeAction(UserRole.EMPLOYEE);
+
+    const order = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: OrderStatus.CANCELED,
+        canceledAt: new Date(),
+        cancelReason: reason.trim(),
+        canceledById: userId,
+      },
+      include: {
+        canceledBy: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        ...order,
+        discountPercentage: Number(order.discountPercentage),
+        deliveryFee: Number(order.deliveryFee),
+      },
+    };
+  } catch (error) {
+    console.error("Error canceling order:", error);
+    return { success: false, error: "Error al cancelar la orden" };
   }
 }
 
@@ -3099,70 +3335,31 @@ export async function createCounterSaleOrder(data: {
         });
       }
 
-      for (const item of items) {
-        await _deductIngredientStock(
-          tx,
-          branchId,
-          item.productId,
-          item.quantity,
-          item.modifiers ?? [],
-        );
-      }
+      await _deductIngredientStockBatch(
+        tx,
+        branchId,
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modifiers: item.modifiers ?? [],
+        }))
+      );
 
       // Auto-decrement combo component stocks
-      for (const item of items) {
-        if (!item.productId) continue;
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          select: {
-            isCombo: true,
-            comboComponents: {
-              select: {
-                componentId: true,
-                quantity: true,
-                component: {
-                  select: {
-                    trackStock: true,
-                    branches: {
-                      where: { branchId },
-                      select: { id: true, stock: true },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-        if (!product?.isCombo) continue;
-        for (const comp of product.comboComponents) {
-          if (!comp.component.trackStock) continue;
-          const pob = comp.component.branches[0];
-          if (!pob) continue;
-          const decrementQty = Number(comp.quantity) * item.quantity;
-          const previousStock = Number(pob.stock);
-          const newStock = previousStock - decrementQty;
-          if (newStock < 0) {
-            throw new Error(
-              `Stock insuficiente para el componente del combo "${item.itemName}"`,
-            );
-          }
-          await tx.productOnBranch.update({
-            where: { id: pob.id },
-            data: { stock: newStock },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productOnBranchId: pob.id,
-              quantity: -decrementQty,
-              previousStock,
-              newStock,
-              reason: "Venta combo",
-              reference: `COMBO:${item.productId}`,
-              notes: `Componente de combo vendido x${item.quantity}`,
-            },
-          });
-        }
-      }
+      await _deductComboComponentStock(
+        tx,
+        branchId,
+        items
+          .filter(
+            (item): item is typeof item & { productId: string } =>
+              !!item.productId
+          )
+          .map((item) => ({
+            productId: item.productId,
+            itemName: item.itemName,
+            quantity: item.quantity,
+          }))
+      );
 
       // Record cash movement if an open session is provided
       if (sessionId) {

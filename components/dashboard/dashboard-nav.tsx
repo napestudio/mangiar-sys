@@ -58,6 +58,7 @@ interface DashboardNavProps {
   navItems: NavItem[];
   userImage?: string | null;
   restaurantName?: string | null;
+  userId: string;
 }
 
 export function DashboardNav({
@@ -66,6 +67,7 @@ export function DashboardNav({
   navItems,
   userImage,
   restaurantName,
+  userId,
 }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const currentPath = usePathname();
@@ -89,6 +91,7 @@ export function DashboardNav({
               userRole={userRole}
               userImage={userImage}
               restaurantName={restaurantName}
+              userId={userId}
             />
 
             {/* Mobile menu button */}
