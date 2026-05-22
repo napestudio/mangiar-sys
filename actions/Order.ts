@@ -2413,7 +2413,28 @@ export async function getOrders(filters: OrderFilters) {
               id: "asc",
             },
           },
-          client: true,
+          client: {
+            select: {
+              id: true,
+              branchId: true,
+              name: true,
+              phone: true,
+              email: true,
+              birthDate: true,
+              taxId: true,
+              notes: true,
+              addressStreet: true,
+              addressNumber: true,
+              addressApartment: true,
+              addressCity: true,
+              discountPercentage: true,
+              discountType: true,
+              preferredPaymentMethod: true,
+              hasCurrentAccount: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
           assignedTo: {
             select: {
               id: true,
@@ -3226,26 +3247,33 @@ export async function updateOrderType(
 
 export async function getActiveOrderCounts(branchId: string) {
   try {
-    const counts = await prisma.order.groupBy({
-      by: ["type"],
-      where: {
-        branchId,
-        status: {
-          in: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS],
-        },
-      },
-      _count: {
-        id: true,
-      },
-    });
+    return await unstable_cache(
+      async () => {
+        const counts = await prisma.order.groupBy({
+          by: ["type"],
+          where: {
+            branchId,
+            status: {
+              in: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS],
+            },
+          },
+          _count: {
+            id: true,
+          },
+        });
 
-    return {
-      DINE_IN: counts.find((c) => c.type === OrderType.DINE_IN)?._count.id ?? 0,
-      TAKE_AWAY:
-        counts.find((c) => c.type === OrderType.TAKE_AWAY)?._count.id ?? 0,
-      DELIVERY:
-        counts.find((c) => c.type === OrderType.DELIVERY)?._count.id ?? 0,
-    };
+        return {
+          DINE_IN:
+            counts.find((c) => c.type === OrderType.DINE_IN)?._count.id ?? 0,
+          TAKE_AWAY:
+            counts.find((c) => c.type === OrderType.TAKE_AWAY)?._count.id ?? 0,
+          DELIVERY:
+            counts.find((c) => c.type === OrderType.DELIVERY)?._count.id ?? 0,
+        };
+      },
+      [`active-order-counts-${branchId}`],
+      { revalidate: 30 }
+    )();
   } catch (error) {
     console.error("Error getting active order counts:", error);
     return {
