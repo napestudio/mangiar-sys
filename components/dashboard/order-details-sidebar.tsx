@@ -63,6 +63,7 @@ import { ClientPicker } from "./client-picker";
 import { CancelOrderDialog } from "./cancel-order-dialog";
 import { CloseOrderDialog } from "./close-order-dialog";
 import { CreateClientDialog } from "./create-client-dialog";
+import { EditPaymentDialog } from "./edit-payment-dialog";
 import { GenerateInvoiceDialog } from "./generate-invoice-dialog";
 import { PreOrderItemsList, type PreOrderItem } from "./pre-order-items-list";
 import { ProductPicker } from "./product-picker";
@@ -193,6 +194,7 @@ export function OrderDetailsSidebar({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isCloseOrderDialogOpen, setIsCloseOrderDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isEditPaymentDialogOpen, setIsEditPaymentDialogOpen] = useState(false);
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [currentDeliveryFee, setCurrentDeliveryFee] = useState(
@@ -1299,6 +1301,16 @@ export function OrderDetailsSidebar({
                 Generar Factura
               </Button>
             )}
+          {order.status === OrderStatus.COMPLETED && (
+            <Button
+              onClick={() => setIsEditPaymentDialogOpen(true)}
+              variant="outline"
+              className="w-full"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Editar método de pago
+            </Button>
+          )}
           <Button
             onClick={handlePrintControlTicket}
             disabled={isPrinting || order.items.length === 0}
@@ -1352,6 +1364,16 @@ export function OrderDetailsSidebar({
           });
           onOrderUpdated?.();
         }}
+      />
+
+      {/* Edit Payment Dialog */}
+      <EditPaymentDialog
+        open={isEditPaymentDialogOpen}
+        onOpenChange={setIsEditPaymentDialogOpen}
+        orderId={order.id}
+        orderTotal={total}
+        currentPayments={order.cashMovements ?? []}
+        onSuccess={() => onOrderUpdated?.()}
       />
 
       {/* Cancel Order Dialog */}
