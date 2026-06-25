@@ -86,19 +86,9 @@ export default async function OrdersPage({
       ? deliveryConfigResult.data.notificationWhatsapp
       : null;
 
-  const rawOrders =
+  // getOrders() already serializes all Decimal fields — use data directly
+  const orders =
     ordersResult.success && ordersResult.data ? ordersResult.data : [];
-
-  // Serialize Decimal fields for client components
-  const orders = rawOrders.map((order) => ({
-    ...order,
-    discountPercentage: Number(order.discountPercentage),
-    deliveryFee: Number(order.deliveryFee),
-    cashMovements: order.cashMovements?.map((m) => ({
-      paymentMethod: m.paymentMethod,
-      amount: Number(m.amount),
-    })),
-  }));
 
   const pagination = ordersResult.pagination || {
     page: 1,

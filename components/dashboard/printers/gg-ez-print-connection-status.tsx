@@ -3,7 +3,14 @@
 import { useGgEzPrintOptional } from "@/contexts/gg-ez-print-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wifi, WifiOff, RefreshCw, Loader2, X, ExternalLink } from "lucide-react";
+import {
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Loader2,
+  X,
+  ExternalLink,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function GgEzPrintConnectionStatus() {
@@ -110,17 +117,17 @@ export function GgEzPrintConnectionStatus() {
       {certUrl && (
         <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
           <span className="font-medium">¿Primera vez en este dispositivo?</span>{" "}
-          Visitá{" "}
+          Ingresa a{" "}
           <a
-            href={certUrl}
+            href={`${certUrl}/ws`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-0.5 font-mono underline underline-offset-2 hover:text-amber-600"
           >
-            {certUrl}
+            Este enlace
             <ExternalLink className="h-2.5 w-2.5" />
           </a>{" "}
-          y aceptá el certificado (solo una vez).
+          y aceptá el certificado por única vez.
         </div>
       )}
     </div>

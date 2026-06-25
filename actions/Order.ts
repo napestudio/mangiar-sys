@@ -2413,7 +2413,28 @@ export async function getOrders(filters: OrderFilters) {
               id: "asc",
             },
           },
-          client: true,
+          client: {
+            select: {
+              id: true,
+              branchId: true,
+              name: true,
+              phone: true,
+              email: true,
+              birthDate: true,
+              taxId: true,
+              notes: true,
+              addressStreet: true,
+              addressNumber: true,
+              addressApartment: true,
+              addressCity: true,
+              discountPercentage: true,
+              discountType: true,
+              preferredPaymentMethod: true,
+              hasCurrentAccount: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
           assignedTo: {
             select: {
               id: true,
@@ -2522,6 +2543,131 @@ export async function updatePaymentMethod(
       success: false,
       error: "Error al actualizar el método de pago",
     };
+  }
+}
+
+// Update payment method of a closed (COMPLETED) order without creating duplicate cash movements.
+// Deletes existing SALE movements linked to the order and recreates them with the new payment breakdown.
+export async function updateClosedOrderPayment(data: {
+  orderId: string;
+  newPayments: PaymentEntry[];
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId } = await authorizeAction(UserRole.MANAGER);
+    const { orderId, newPayments } = data;
+
+    await prisma.$transaction(async (tx) => {
+      // Verify the order exists and is COMPLETED
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: true,
+          cashMovements: {
+            where: { type: "SALE" },
+          },
+        },
+      });
+
+      if (!order) throw new Error("Orden no encontrada");
+      if (order.status !== OrderStatus.COMPLETED)
+        throw new Error("Solo se puede editar el pago de órdenes completadas");
+      if (!newPayments || newPayments.length === 0)
+        throw new Error("Debe ingresar al menos un método de pago");
+
+      // Calculate order total
+      const subtotal = order.items.reduce(
+        (sum, item) => sum + Number(item.price) * item.quantity,
+        0,
+      );
+      const discountAmount = calculateDiscountAmount(
+        subtotal,
+        Number(order.discountPercentage),
+        String(order.discountType) as "PERCENTAGE" | "FIXED",
+      );
+      const total = subtotal - discountAmount + Number(order.deliveryFee);
+
+      // Validate new payments cover the total
+      const totalNewPayment = newPayments.reduce((sum, p) => sum + p.amount, 0);
+      if (totalNewPayment < total - 0.01) {
+        throw new Error(
+          `El pago ($${totalNewPayment.toFixed(2)}) es menor al total de la orden ($${total.toFixed(2)})`,
+        );
+      }
+
+      // Get the sessionId from existing SALE movements (to keep movements in the same session)
+      const existingSessionId =
+        order.cashMovements.length > 0
+          ? order.cashMovements[0].sessionId
+          : null;
+
+      // Build a description matching the original format
+      const description = `Orden ${order.publicCode}`;
+
+      // Delete existing SALE movements for this order
+      await tx.cashMovement.deleteMany({
+        where: { orderId, type: "SALE" },
+      });
+
+      // Create new SALE movements with the updated payment breakdown
+      for (const payment of newPayments) {
+        await tx.cashMovement.create({
+          data: {
+            ...(existingSessionId ? { sessionId: existingSessionId } : {}),
+            branchId: order.branchId,
+            type: "SALE",
+            paymentMethod: payment.method,
+            amount: payment.amount,
+            description,
+            orderId: order.id,
+            createdBy: userId,
+          },
+        });
+      }
+
+      // Determine primary payment method (highest amount) and map to Order's PaymentMethod enum
+      const primaryPayment = newPayments.reduce((max, p) =>
+        p.amount > max.amount ? p : max,
+      );
+
+      let orderPaymentMethod: PaymentMethod;
+      switch (primaryPayment.method) {
+        case "CASH":
+          orderPaymentMethod = PaymentMethod.CASH;
+          break;
+        case "CARD_DEBIT":
+        case "CARD_CREDIT":
+          orderPaymentMethod = PaymentMethod.CARD;
+          break;
+        case "TRANSFER":
+        case "ACCOUNT":
+          orderPaymentMethod = PaymentMethod.TRANSFER;
+          break;
+        case "PAYMENT_LINK":
+          orderPaymentMethod = PaymentMethod.PAYMENT_LINK;
+          break;
+        case "QR_CODE":
+          orderPaymentMethod = PaymentMethod.QR_CODE;
+          break;
+        default:
+          orderPaymentMethod = PaymentMethod.CASH;
+      }
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { paymentMethod: orderPaymentMethod, updatedBy: userId },
+      });
+    });
+
+    revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/cash-registers");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating closed order payment:", error);
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Error al actualizar el método de pago" };
   }
 }
 
@@ -3226,26 +3372,33 @@ export async function updateOrderType(
 
 export async function getActiveOrderCounts(branchId: string) {
   try {
-    const counts = await prisma.order.groupBy({
-      by: ["type"],
-      where: {
-        branchId,
-        status: {
-          in: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS],
-        },
-      },
-      _count: {
-        id: true,
-      },
-    });
+    return await unstable_cache(
+      async () => {
+        const counts = await prisma.order.groupBy({
+          by: ["type"],
+          where: {
+            branchId,
+            status: {
+              in: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS],
+            },
+          },
+          _count: {
+            id: true,
+          },
+        });
 
-    return {
-      DINE_IN: counts.find((c) => c.type === OrderType.DINE_IN)?._count.id ?? 0,
-      TAKE_AWAY:
-        counts.find((c) => c.type === OrderType.TAKE_AWAY)?._count.id ?? 0,
-      DELIVERY:
-        counts.find((c) => c.type === OrderType.DELIVERY)?._count.id ?? 0,
-    };
+        return {
+          DINE_IN:
+            counts.find((c) => c.type === OrderType.DINE_IN)?._count.id ?? 0,
+          TAKE_AWAY:
+            counts.find((c) => c.type === OrderType.TAKE_AWAY)?._count.id ?? 0,
+          DELIVERY:
+            counts.find((c) => c.type === OrderType.DELIVERY)?._count.id ?? 0,
+        };
+      },
+      [`active-order-counts-${branchId}`],
+      { revalidate: 30 }
+    )();
   } catch (error) {
     console.error("Error getting active order counts:", error);
     return {
