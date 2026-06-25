@@ -63,8 +63,8 @@ export function BranchPrinterServerForm({
           URL del servidor de impresión
         </Label>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Dirección wss:// del equipo con gg-ez-print en la red local.
-          Ejemplo: <span className="font-mono">wss://192.168.1.100:8443/ws</span>
+          Dirección wss:// del equipo con gg-ez-print en la red local. Ejemplo:{" "}
+          <span className="font-mono">wss://192.168.1.100:8443/ws</span>
         </p>
       </div>
 
@@ -90,12 +90,12 @@ export function BranchPrinterServerForm({
             imprimir. Compartí este enlace con el personal:
           </p>
           <a
-            href={certUrl}
+            href={`${certUrl}/ws`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 mt-1.5 text-xs font-mono text-amber-900 underline underline-offset-2 hover:text-amber-700"
           >
-            {certUrl}
+            Descargar certificado
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
