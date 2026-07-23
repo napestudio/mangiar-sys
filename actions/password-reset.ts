@@ -26,7 +26,7 @@ export async function requestPasswordReset(
   if (!validation.success) {
     return {
       success: false,
-      error: validation.error.errors[0]?.message ?? "Email inválido",
+      error: validation.error.issues[0]?.message ?? "Email inválido",
     };
   }
 
@@ -121,7 +121,7 @@ export async function resetPassword(
   if (!validation.success) {
     return {
       success: false,
-      error: validation.error.errors[0]?.message ?? "Datos inválidos",
+      error: validation.error.issues[0]?.message ?? "Datos inválidos",
     };
   }
 
