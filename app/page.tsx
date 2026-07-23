@@ -1,15 +1,13 @@
-import Logo from "@/components/dashboard/logo";
-import { HomeLoader } from "@/components/home/home-loader";
 import HomeHero from "@/components/home/home-hero";
+import { HomeLoader } from "@/components/home/home-loader";
 import { Navbar } from "@/components/home/navbar";
 import RestaurantLandingPage from "@/components/landing/restaurant-landing";
 import { Features } from "@/components/website/features";
 import { Footer } from "@/components/website/footer";
-import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
 import { LoaderProvider } from "@/lib/loader-context";
+import { getPublicRestaurantAndBranch } from "@/lib/public-branch";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Image from "next/image";
 
 export async function generateMetadata(): Promise<Metadata> {
   const subdomain = (await headers()).get("x-subdomain");
