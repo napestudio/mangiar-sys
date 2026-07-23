@@ -1,4 +1,11 @@
+"use client";
+
+import useIsomorphicLayoutEffect from "@/hooks/use-isomorphic-layout-effect";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRef } from "react";
 
 const features = [
   {
@@ -57,13 +64,58 @@ const features = [
 ];
 
 export function Features() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+
+  useIsomorphicLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      const headerTl = gsap
+        .timeline({ paused: true })
+        .from(headerRef.current!.children, { y: 30, opacity: 0, stagger: 0.12 });
+
+      ScrollTrigger.create({
+        animation: headerTl,
+        trigger: headerRef.current,
+        start: "top 85%",
+        toggleActions: "play none none none",
+      });
+
+      const cardsTl = gsap
+        .timeline({ paused: true })
+        .from(gridRef.current!.children, { y: 40, opacity: 0, stagger: 0.07 });
+
+      ScrollTrigger.create({
+        animation: cardsTl,
+        trigger: gridRef.current,
+        start: "top 85%",
+        toggleActions: "play none none none",
+      });
+
+      const ctaTl = gsap
+        .timeline({ paused: true })
+        .from(ctaRef.current, { y: 24, opacity: 0 });
+
+      ScrollTrigger.create({
+        animation: ctaTl,
+        trigger: ctaRef.current,
+        start: "top 90%",
+        toggleActions: "play none none none",
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="funcionalidades"
       className="font-sans bg-neutral-50 py-24 px-6 lg:px-28"
     >
       <div className="mx-auto">
-        <div className="mb-16 space-y-4">
+        <div ref={headerRef} className="mb-16 space-y-4">
           <div className="inline-block py-4 bg-white rounded-full leading-none px-5 shadow-md text-sm font-semibold uppercase text-red">
             Funcionalidades
           </div>
@@ -77,7 +129,10 @@ export function Features() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          ref={gridRef}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
           {features.map((feature) => {
             return (
               <div
@@ -101,6 +156,19 @@ export function Features() {
               </div>
             );
           })}
+        </div>
+
+        <div ref={ctaRef} className="mt-16 text-center">
+          <p className="text-gray-500 text-sm mb-6 font-light">
+            ¿Listo para llevar tu negocio al siguiente nivel?
+          </p>
+          <Link
+            href="/registro"
+            className="inline-flex items-center gap-2 group rounded-full bg-red text-white px-8 py-3.5 font-semibold text-base transition-transform hover:scale-105 duration-300"
+          >
+            Comenzá a gestionar hoy
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+          </Link>
         </div>
       </div>
     </section>

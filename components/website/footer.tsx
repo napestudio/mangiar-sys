@@ -1,6 +1,11 @@
+"use client";
+
 import Logo from "@/components/dashboard/logo";
 import { navItems } from "@/components/website/nav-items";
+import useIsomorphicLayoutEffect from "@/hooks/use-isomorphic-layout-effect";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 import Link from "next/link";
+import { useRef } from "react";
 
 const extraLinks = [
   { label: "Ingresar", href: "/ingresar" },
@@ -14,9 +19,32 @@ const legal = [
 ];
 
 export function Footer() {
+  const footerRef = useRef<HTMLElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useIsomorphicLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap
+        .timeline({ paused: true })
+        .from(innerRef.current!.children, { y: 30, opacity: 0, stagger: 0.15 });
+
+      ScrollTrigger.create({
+        animation: tl,
+        trigger: footerRef.current,
+        start: "top 90%",
+        toggleActions: "play none none none",
+      });
+    }, footerRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <footer className="font-sans bg-neutral-100 text-neutral-900 py-16 px-6 lg:px-28">
-      <div className="mx-auto">
+    <footer
+      ref={footerRef}
+      className="font-sans bg-neutral-100 text-neutral-900 py-16 px-6 lg:px-28"
+    >
+      <div ref={innerRef} className="mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           {/* Brand */}
           <div className="space-y-4">
@@ -27,12 +55,12 @@ export function Footer() {
             </p>
           </div>
 
-          {/* <div className="space-y-4">
+          <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-800">
-              Web
+              Acceso
             </h4>
             <ul className="space-y-3">
-              {[...navItems, ...extraLinks].map((link) => (
+              {extraLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -43,7 +71,7 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div> */}
+          </div>
 
           {/* Legal */}
           {/* <div className="space-y-4">
