@@ -15,19 +15,6 @@ export interface TableWithReservations {
   isShared: boolean;
   sectorId: string | null;
   name?: string | null;
-  reservations: Array<{
-    reservation: {
-      customerName: string;
-      people: number;
-      status: string;
-      date: string;
-      exactTime: Date | string | null;
-      timeSlot: {
-        startTime: string;
-        endTime: string;
-      } | null;
-    };
-  }>;
   orders?: Array<{
     id: string;
     partySize: number | null;

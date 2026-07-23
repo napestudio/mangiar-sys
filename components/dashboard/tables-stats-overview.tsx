@@ -1,38 +1,21 @@
 "use client";
 
-interface TableWithReservations {
+interface TableWithStatus {
   id: string;
   number: number;
   capacity: number;
   isActive: boolean;
   status: string | null;
-  reservations: Array<{
-    reservation: {
-      customerName: string;
-      people: number;
-      status: string;
-      date: string;
-      timeSlot: {
-        startTime: string;
-        endTime: string;
-      } | null;
-    };
-  }>;
 }
 
 interface TablesStatsOverviewProps {
-  tables: TableWithReservations[];
+  tables: TableWithStatus[];
 }
 
 export function TablesStatsOverview({ tables }: TablesStatsOverviewProps) {
   // Helper function to determine if table is occupied
-  const isTableOccupied = (table: TableWithReservations): boolean => {
-    // If manual status is set, use it
-    if (table.status) {
-      return table.status === "OCCUPIED" || table.status === "RESERVED";
-    }
-    // Otherwise, check reservations
-    return table.reservations.length > 0;
+  const isTableOccupied = (table: TableWithStatus): boolean => {
+    return table.status === "OCCUPIED" || table.status === "RESERVED";
   };
 
   const occupiedTables = tables.filter(

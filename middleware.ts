@@ -43,7 +43,7 @@ export async function middleware(req: NextRequest) {
       // which would cause stale redirects after logout.
       if (pathname === "/ingresar" && isLoggedIn) {
         const response = NextResponse.redirect(
-          new URL("/api/auth-redirect", req.url)
+          new URL("/dashboard", req.url)
         );
         response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
         response.headers.set("Pragma", "no-cache");

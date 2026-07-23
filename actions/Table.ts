@@ -242,77 +242,47 @@ export const getActiveTables = unstable_cache(_getActiveTables, ["active-tables"
 });
 
 /**
- * Get all tables for a branch with their current reservation status
- * Shows which tables are occupied, by whom, and how many people
+ * Get all tables for a branch with their current order status.
+ * Cached for 30 seconds — invalidate with revalidateTag("tables-status")
+ * when orders or table status change.
  */
-export async function getTablesWithStatus(branchId: string) {
-  try {
-    const { start: today, end: tomorrow } = todayBoundsARDate();
-
-    const tables = await prisma.table.findMany({
-      where: {
-        branchId,
-      },
-      include: {
-        reservations: {
-          where: {
-            reservation: {
-              date: {
-                gte: today,
-                lt: tomorrow,
-              },
+export const getTablesWithStatus = unstable_cache(
+  async (branchId: string) => {
+    try {
+      const tables = await prisma.table.findMany({
+        where: { branchId },
+        include: {
+          orders: {
+            where: {
               status: {
-                in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+                in: ["PENDING", "IN_PROGRESS"],
               },
             },
-          },
-          include: {
-            reservation: {
-              select: {
-                id: true,
-                customerName: true,
-                people: true,
-                status: true,
-                date: true,
-                exactTime: true,
-                timeSlot: {
-                  select: {
-                    startTime: true,
-                    endTime: true,
-                  },
+            select: {
+              id: true,
+              partySize: true,
+              status: true,
+              assignedTo: {
+                select: {
+                  id: true,
+                  name: true,
                 },
               },
             },
           },
         },
-        orders: {
-          where: {
-            status: {
-              in: ["PENDING", "IN_PROGRESS"],
-            },
-          },
-          select: {
-            id: true,
-            partySize: true,
-            status: true,
-            assignedTo: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [{ number: "asc" }],
-    });
+        orderBy: [{ number: "asc" }],
+      });
 
-    return { success: true, data: tables };
-  } catch (error) {
-    console.error("Error fetching tables with status:", error);
-    return { success: false, error: "Failed to fetch tables with status" };
-  }
-}
+      return { success: true, data: tables };
+    } catch (error) {
+      console.error("Error fetching tables with status:", error);
+      return { success: false, error: "Failed to fetch tables with status" };
+    }
+  },
+  ["tables-with-status"],
+  { revalidate: 30, tags: ["tables-status"] }
+);
 
 /**
  * Get a single table by ID
@@ -338,78 +308,49 @@ export async function getTableById(id: string) {
 }
 
 /**
- * Get a single table with its current reservation status
- * More efficient than fetching all tables when only one needs updating
+ * Get a single table with its current order status.
+ * Cached for 30 seconds — invalidate with revalidateTag("tables-status").
  */
-export async function getTableWithStatus(tableId: string) {
-  try {
-    const { start: today, end: tomorrow } = todayBoundsARDate();
-
-    const table = await prisma.table.findUnique({
-      where: { id: tableId },
-      include: {
-        reservations: {
-          where: {
-            reservation: {
-              date: {
-                gte: today,
-                lt: tomorrow,
-              },
+export const getTableWithStatus = unstable_cache(
+  async (tableId: string) => {
+    try {
+      const table = await prisma.table.findUnique({
+        where: { id: tableId },
+        include: {
+          orders: {
+            where: {
               status: {
-                in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+                in: ["PENDING", "IN_PROGRESS"],
               },
             },
-          },
-          include: {
-            reservation: {
-              select: {
-                id: true,
-                customerName: true,
-                people: true,
-                status: true,
-                date: true,
-                exactTime: true,
-                timeSlot: {
-                  select: {
-                    startTime: true,
-                    endTime: true,
-                  },
+            select: {
+              id: true,
+              partySize: true,
+              status: true,
+              assignedTo: {
+                select: {
+                  id: true,
+                  name: true,
                 },
               },
             },
           },
         },
-        orders: {
-          where: {
-            status: {
-              in: ["PENDING", "IN_PROGRESS"],
-            },
-          },
-          select: {
-            id: true,
-            partySize: true,
-            status: true,
-            assignedTo: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
+      });
 
-    if (!table) {
-      return { success: false, error: "Table not found" };
+      if (!table) {
+        return { success: false, error: "Table not found" };
+      }
+
+      return { success: true, data: table };
+    } catch (error) {
+      console.error("Error fetching table with status:", error);
+      return { success: false, error: "Failed to fetch table with status" };
     }
-
-    return { success: true, data: table };
-  } catch (error) {
-    console.error("Error fetching table with status:", error);
-    return { success: false, error: "Failed to fetch table with status" };
-  }
-}
+  },
+  ["table-with-status"],
+  { revalidate: 30, tags: ["tables-status"] }
+);
 
 /**
  * Get remaining capacity for a table (handles both shared and regular tables)
@@ -941,6 +882,7 @@ export async function createTable(data: {
 
     revalidatePath("/(admin)/dashboard/tables", "page");
     revalidateTag("tables-list");
+    revalidateTag("tables-status");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error creating table:", error);
@@ -1013,6 +955,7 @@ export async function updateTable(
     }
 
     revalidatePath("/(admin)/dashboard/tables", "page");
+    revalidateTag("tables-status");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error updating table:", error);
@@ -1038,6 +981,7 @@ export async function toggleTableActive(id: string) {
 
     revalidatePath("/(admin)/dashboard/tables", "page");
     revalidateTag("tables-list");
+    revalidateTag("tables-status");
     return { success: true, data: updated };
   } catch (error) {
     console.error("Error toggling table status:", error);
@@ -1067,6 +1011,7 @@ export async function deleteTable(id: string) {
 
     revalidatePath("/(admin)/dashboard/tables", "page");
     revalidateTag("tables-list");
+    revalidateTag("tables-status");
     return { success: true, data: null };
   } catch (error) {
     console.error("Error deleting table:", error);
@@ -1096,6 +1041,7 @@ export async function updateTableFloorPlan(
     });
 
     revalidatePath("/(admin)/dashboard/tables", "page");
+    revalidateTag("tables-status");
     return { success: true, data: table };
   } catch (error) {
     console.error("Error updating table floor plan:", error);
@@ -1325,6 +1271,7 @@ export async function recalculateTableStatus(tableIds: string[]) {
         }),
     ]);
 
+    revalidateTag("tables-status");
     return { success: true };
   } catch (error) {
     console.error("Error recalculating table status:", error);

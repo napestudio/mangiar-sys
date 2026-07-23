@@ -19,7 +19,7 @@ import {
   dateStringToTimestampBoundsAR,
 } from "@/lib/date-utils";
 import { authorizeAction } from "@/lib/permissions/middleware";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { unstable_cache } from "next/cache";
 import type {
   DeliverySection,
@@ -599,6 +599,7 @@ export async function createOrder(data: {
       return newOrder;
     });
 
+    revalidateTag("tables-status");
     return {
       success: true,
       data: serializeForClient(order),
@@ -818,6 +819,7 @@ export async function createOrderWithItems(data: {
       };
     }
 
+    revalidateTag("tables-status");
     return {
       success: true,
       data: serializeForClient(order),
@@ -2865,6 +2867,7 @@ export async function cancelOrder(orderId: string, reason: string) {
       },
     });
 
+    revalidateTag("tables-status");
     return {
       success: true,
       data: {
@@ -3141,6 +3144,7 @@ export async function closeTableWithPayment(data: {
       })),
     };
 
+    revalidateTag("tables-status");
     return {
       success: true,
       data: serializedOrder,

@@ -784,7 +784,7 @@ export function TableOrderSidebar({
                 </Button>
 
                 {/* Discount Button/Editor */}
-                {isEditingDiscount ? (
+                {/* {isEditingDiscount ? (
                   <div className="flex items-center gap-1 bg-white rounded px-2">
                     <Button
                       type="button"
@@ -870,11 +870,11 @@ export function TableOrderSidebar({
                       </span>
                     )}
                   </Button>
-                )}
+                )} */}
 
                 <Button
                   onClick={handleCloseTable}
-                  className="bg-red-500"
+                  className="bg-red-500 flex-1"
                   disabled={isLoading}
                 >
                   {!order.items || order.items.length === 0

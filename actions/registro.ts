@@ -1,6 +1,6 @@
 "use server";
 
-import bcrypt from "bcryptjs";
+import { hash } from "@node-rs/bcrypt";
 import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -79,7 +79,7 @@ export async function registerRestaurant(
   const adminEmail = buildAdminEmail(slug);
 
   // 3. Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await hash(password, 10);
 
   // 4. Get type-specific sample data
   const sampleData = getSampleData(restaurantType);
@@ -259,7 +259,7 @@ export async function registerRestaurant(
     await signIn("credentials", {
       email: adminEmail,
       password,
-      redirectTo: "/api/auth-redirect",
+      redirectTo: "/dashboard",
     });
   } catch (error) {
     if (error instanceof AuthError) {

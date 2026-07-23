@@ -18,42 +18,6 @@ import { OrderType } from "@/app/generated/prisma";
 // Re-export for backward compatibility
 export type { TableWithReservations };
 
-type RawReservationEntry = {
-  reservation: {
-    date: Date | string;
-    timeSlot: { startTime: Date | string; endTime: Date | string } | null;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-};
-
-function serializeReservations(
-  reservations: RawReservationEntry[]
-): TableWithReservations["reservations"] {
-  return reservations.map((res) => ({
-    ...res,
-    reservation: {
-      ...res.reservation,
-      date:
-        res.reservation.date instanceof Date
-          ? res.reservation.date.toISOString()
-          : String(res.reservation.date),
-      timeSlot: res.reservation.timeSlot
-        ? {
-            startTime:
-              res.reservation.timeSlot.startTime instanceof Date
-                ? res.reservation.timeSlot.startTime.toISOString()
-                : String(res.reservation.timeSlot.startTime),
-            endTime:
-              res.reservation.timeSlot.endTime instanceof Date
-                ? res.reservation.timeSlot.endTime.toISOString()
-                : String(res.reservation.timeSlot.endTime),
-          }
-        : null,
-    },
-  })) as TableWithReservations["reservations"];
-}
-
 interface TablesClientWrapperProps {
   branchId: string;
   initialTables: TableWithReservations[];
@@ -106,11 +70,7 @@ export function TablesClientWrapper({
   const refreshTables = useCallback(async () => {
     const tablesResult = await getTablesWithStatus(branchId);
     if (tablesResult.success && tablesResult.data) {
-      const serializedTables = tablesResult.data.map((table) => ({
-        ...table,
-        reservations: serializeReservations(table.reservations),
-      })) as TableWithReservations[];
-      setTables(serializedTables);
+      setTables(tablesResult.data as TableWithReservations[]);
     }
   }, [branchId]);
 
@@ -118,15 +78,10 @@ export function TablesClientWrapper({
   const refreshSingleTable = useCallback(async (tableId: string) => {
     const tableResult = await getTableWithStatus(tableId);
     if (tableResult.success && tableResult.data) {
-      const updatedTable = tableResult.data;
-      const serializedTable = {
-        ...updatedTable,
-        reservations: serializeReservations(updatedTable.reservations),
-      } as TableWithReservations;
-
-      // Update only the specific table in state
       setTables((prevTables) =>
-        prevTables.map((t) => (t.id === tableId ? serializedTable : t))
+        prevTables.map((t) =>
+          t.id === tableId ? (tableResult.data as TableWithReservations) : t
+        )
       );
     }
   }, []);
