@@ -33,22 +33,31 @@ export async function requestPasswordReset(
   const { email } = validation.data;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Look up the restaurant by its contact email (the real email)
+    const restaurant = await prisma.restaurant.findFirst({
+      where: { contactEmail: email },
       include: {
-        userOnBranches: {
+        branches: {
           take: 1,
           include: {
-            branch: {
-              select: { notificationEmail: true, name: true },
+            userAccess: {
+              // SUPERADMIN and ADMIN come first per enum declaration order
+              orderBy: { role: "asc" },
+              take: 1,
+              include: {
+                user: {
+                  select: { id: true, name: true, username: true },
+                },
+              },
             },
           },
         },
       },
     });
 
-    // No reveal whether user exists — always return success
-    if (!user) {
+    // No reveal whether the email exists — always return success
+    const user = restaurant?.branches[0]?.userAccess[0]?.user;
+    if (!restaurant || !user) {
       return { success: true };
     }
 
@@ -66,32 +75,25 @@ export async function requestPasswordReset(
       data: { token, userId: user.id, expiresAt },
     });
 
-    // Determine recipient: branch notificationEmail → user's own email
-    const branch = user.userOnBranches[0]?.branch;
-    const recipientEmail = branch?.notificationEmail ?? user.email;
-
-    if (recipientEmail && process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
       const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
       const protocol = rootDomain.startsWith("localhost") ? "http" : "https";
       const resetUrl = `${protocol}://${rootDomain}/recuperar-contrasena/${token}`;
 
-      const restaurantName = branch?.name ?? "Mangiar";
-      const userName = user.name ?? user.username;
-
       const html = generatePasswordResetEmail({
-        userName,
-        restaurantName,
+        userName: user.name ?? user.username,
+        restaurantName: restaurant.name,
         resetUrl,
         expiresInMinutes: EXPIRES_IN_MINUTES,
       });
 
       const resend = getResendClient();
-      const from = `${restaurantName} vía Mangiar <${process.env.EMAIL_FROM}>`;
+      const from = `${restaurant.name} vía Mangiar <${process.env.EMAIL_FROM}>`;
 
       await resend.emails.send({
         from,
-        to: [recipientEmail],
-        subject: "Recuperación de contraseña",
+        to: [email],
+        subject: "Recuperación de contraseña - Mangiar",
         html,
       });
     }
