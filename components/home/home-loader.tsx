@@ -31,7 +31,7 @@ export function HomeLoader() {
   return (
     <div
       ref={loaderRef}
-      className="fixed inset-0 z-[9999] bg-white flex items-center justify-center"
+      className="fixed inset-0 z-99999 bg-white flex items-center justify-center"
     >
       <div ref={logoRef}>
         <Logo className="h-12 w-auto" />
