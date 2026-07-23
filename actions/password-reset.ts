@@ -33,20 +33,17 @@ export async function requestPasswordReset(
   const { email } = validation.data;
 
   try {
-    // Look up the restaurant by its contact email (the real email)
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { contactEmail: email },
+    // Look up the user by their login email (User.email)
+    const user = await prisma.user.findUnique({
+      where: { email },
       include: {
-        branches: {
+        userOnBranches: {
           take: 1,
           include: {
-            userAccess: {
-              // SUPERADMIN and ADMIN come first per enum declaration order
-              orderBy: { role: "asc" },
-              take: 1,
+            branch: {
               include: {
-                user: {
-                  select: { id: true, name: true, username: true },
+                restaurant: {
+                  select: { id: true, name: true, contactEmail: true },
                 },
               },
             },
@@ -55,11 +52,13 @@ export async function requestPasswordReset(
       },
     });
 
-    // No reveal whether the email exists — always return success
-    const user = restaurant?.branches[0]?.userAccess[0]?.user;
-    if (!restaurant || !user) {
+    // No reveal whether the user exists — always return success
+    if (!user) {
       return { success: true };
     }
+
+    const restaurant = user.userOnBranches[0]?.branch?.restaurant;
+    const recipientEmail = restaurant?.contactEmail;
 
     // Invalidate any existing unused tokens for this user
     await prisma.passwordResetToken.updateMany({
@@ -75,7 +74,7 @@ export async function requestPasswordReset(
       data: { token, userId: user.id, expiresAt },
     });
 
-    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+    if (recipientEmail && process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
       const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
       const protocol = rootDomain.startsWith("localhost") ? "http" : "https";
       const resetUrl = `${protocol}://${rootDomain}/recuperar-contrasena/${token}`;
@@ -92,7 +91,7 @@ export async function requestPasswordReset(
 
       await resend.emails.send({
         from,
-        to: [email],
+        to: [recipientEmail],
         subject: "Recuperación de contraseña - Mangiar",
         html,
       });
