@@ -81,7 +81,6 @@ export function useTableForm(branchId: string) {
           isActive: result.data.isActive ?? true,
           isShared: result.data.isShared ?? false,
           sectorId: result.data.sectorId ?? null,
-          reservations: [],
         };
 
         onSuccess(newDbTable);

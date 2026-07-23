@@ -2,15 +2,6 @@
 
 import { TableCard } from "./table-card";
 
-interface Reservation {
-  customerName: string;
-  people: number;
-  timeSlot: {
-    startTime: string;
-    endTime: string;
-  } | null;
-}
-
 interface TableWithStatus {
   id: string;
   number: number;
@@ -18,9 +9,6 @@ interface TableWithStatus {
   isActive: boolean;
   status: string | null;
   sectorId: string | null;
-  reservations: {
-    reservation: Reservation;
-  }[];
 }
 
 interface Sector {
@@ -38,12 +26,7 @@ interface TablesSimpleViewProps {
 export function TablesSimpleView({ tables, sectors = [] }: TablesSimpleViewProps) {
   // Helper function to determine if table is occupied
   const isTableOccupied = (table: TableWithStatus): boolean => {
-    // If manual status is set, use it
-    if (table.status) {
-      return table.status === "OCCUPIED" || table.status === "RESERVED" || table.status === "PAYING";
-    }
-    // Otherwise, check reservations
-    return table.reservations.length > 0;
+    return table.status === "OCCUPIED" || table.status === "RESERVED" || table.status === "PAYING";
   };
 
   const activeTables = tables.filter((t) => t.isActive);
@@ -102,7 +85,7 @@ export function TablesSimpleView({ tables, sectors = [] }: TablesSimpleViewProps
                   capacity={table.capacity}
                   isActive={table.isActive}
                   isOcupied={true}
-                  currentReservation={table.reservations[0]?.reservation || null}
+                  currentReservation={null}
                 />
               ))}
             </div>

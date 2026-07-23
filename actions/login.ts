@@ -14,7 +14,7 @@ export async function loginWithCredentials(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/api/auth-redirect",
+      redirectTo: "/dashboard",
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -31,5 +31,5 @@ export async function loginWithCredentials(
 }
 
 export async function loginWithGoogle() {
-  await signIn("google", { redirectTo: "/api/auth-redirect" });
+  await signIn("google", { redirectTo: "/dashboard" });
 }

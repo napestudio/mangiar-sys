@@ -12,7 +12,7 @@ import {
   ChangePasswordInput,
   ResetPasswordInput,
 } from "@/lib/validations/user";
-import bcrypt from "bcryptjs";
+import { hash, compare } from "@node-rs/bcrypt";
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { UserWithBranches } from "@/types/user";
 import { UserRole } from "@/app/generated/prisma";
@@ -90,7 +90,7 @@ export async function createUser(data: UserRegistrationInput) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hash(password, 10);
 
     // Create user and assign to branch
     const user = await prisma.user.create({
@@ -380,7 +380,7 @@ export async function updateUser(
 
     // Only update password if provided
     if (password && password.trim() !== "") {
-      updateData.password = await bcrypt.hash(password, 10);
+      updateData.password = await hash(password, 10);
     }
 
     // Update user
@@ -624,14 +624,14 @@ export async function updateOwnPassword(
       };
     }
 
-    const isValid = await bcrypt.compare(currentPassword, user.password);
+    const isValid = await compare(currentPassword, user.password);
     if (!isValid) {
       return { success: false, error: "La contraseña actual es incorrecta" };
     }
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { password: await bcrypt.hash(newPassword, 10) },
+      data: { password: await hash(newPassword, 10) },
     });
 
     return { success: true, message: "Contraseña actualizada correctamente" };
@@ -688,7 +688,7 @@ export async function resetUserPassword(
 
     await prisma.user.update({
       where: { id: userId },
-      data: { password: await bcrypt.hash(newPassword, 10) },
+      data: { password: await hash(newPassword, 10) },
     });
 
     revalidateTag("user-role-and-branch");

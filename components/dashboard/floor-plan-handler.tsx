@@ -365,7 +365,6 @@ export default function FloorPlanHandler({
         isActive: result.data.isActive ?? true,
         isShared: result.data.isShared ?? false,
         sectorId: result.data.sectorId ?? null,
-        reservations: [],
       };
 
       setDbTables((prevTables) => [...prevTables, newDbTable]);

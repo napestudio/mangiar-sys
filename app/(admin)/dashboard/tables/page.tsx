@@ -31,31 +31,11 @@ export default async function TablesPage({
     return <div>Error loading sectors</div>;
   }
 
-  const tables = tablesResult.data;
-
-  // Serialize dates for client components
-  const serializedTables = tables.map((table) => ({
-    ...table,
-    reservations: table.reservations.map((res) => ({
-      ...res,
-      reservation: {
-        ...res.reservation,
-        date: res.reservation.date.toISOString(),
-        timeSlot: res.reservation.timeSlot
-          ? {
-              startTime: res.reservation.timeSlot.startTime.toISOString(),
-              endTime: res.reservation.timeSlot.endTime.toISOString(),
-            }
-          : null,
-      },
-    })),
-  }));
-
   return (
     <div className="min-h-svh pt-19">
       <TablesClientWrapper
         branchId={branchId}
-        initialTables={serializedTables}
+        initialTables={tablesResult.data}
         initialSectors={sectorsResult.data}
         initialTableId={tableId}
         initialPartySize={partySize ? Number(partySize) : undefined}

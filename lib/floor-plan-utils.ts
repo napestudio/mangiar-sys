@@ -58,48 +58,13 @@ export interface FloorTable {
 }
 
 /**
- * Extract the time-of-day in minutes from a DB Time field (stored as 1970-01-01T{time}Z)
- * and build a comparable Date for today at that time using local hours/minutes.
- */
-function toTodayLocalTime(timeString: string): Date {
-  const t = new Date(timeString);
-  const today = new Date();
-  today.setHours(t.getUTCHours(), t.getUTCMinutes(), 0, 0);
-  return today;
-}
-
-/**
- * Get minutes from now until a reservation reference time.
- * Positive = reservation is in the future. Negative = reservation is in the past.
- * Uses exactTime when available; falls back to timeSlot.startTime.
- */
-function minutesUntilReservation(
-  exactTime: Date | string | null,
-  timeSlot: { startTime: string; endTime: string } | null,
-  now: Date
-): number | null {
-  if (exactTime) {
-    const refTime = exactTime instanceof Date ? exactTime : new Date(exactTime);
-    return (refTime.getTime() - now.getTime()) / 60000;
-  }
-  if (timeSlot) {
-    const refTime = toTodayLocalTime(timeSlot.startTime);
-    return (refTime.getTime() - now.getTime()) / 60000;
-  }
-  return null;
-}
-
-/**
- * Calculate table status based on active orders, today's reservations (time-aware),
- * and the manual DB status override. Priority order:
- *  1. Active orders → "occupied"
- *  2. SEATED reservation → "occupied"
- *  3. PENDING reservation today → "pending_payment"
- *  4. CONFIRMED reservation: overdue (>30 min past) → "late"
- *  5. CONFIRMED reservation: window now (≤30 min past or ≤5 min away) → "reserved"
- *  6. CONFIRMED reservation: arriving soon (5–60 min away) → "upcoming"
- *  7. Manual DB status CLEANING → "cleaning"
- *  8. Default → "empty"
+ * Calculate table status based on active orders and the DB status field.
+ * Priority order:
+ *  1. Active orders → "occupied" (or "paying" if DB status is PAYING)
+ *  2. DB status "CLEANING" → "cleaning"
+ *  3. DB status "RESERVED" → "reserved"
+ *  4. DB status "PAYING" (no active orders) → "paying"
+ *  5. Default → "empty"
  */
 export function calculateTableStatus(dbTable: TableWithReservations): {
   status: FloorTableStatus;
@@ -112,7 +77,6 @@ export function calculateTableStatus(dbTable: TableWithReservations): {
   let currentGuests = 0;
   let hasWaiter = false;
   let waiterName: string | undefined;
-  let reservationInfo: FloorTable["reservationInfo"] = undefined;
 
   // Priority 1: Active orders (highest priority — customer is already there)
   if (dbTable.orders && dbTable.orders.length > 0) {
@@ -129,85 +93,14 @@ export function calculateTableStatus(dbTable: TableWithReservations): {
     return { status, currentGuests, hasWaiter, waiterName };
   }
 
-  // Priority 2–6: Check today's reservations (already filtered to today in the query)
-  if (dbTable.reservations.length > 0) {
-    const now = new Date();
-
-    // SEATED reservation → occupied (manual, no active order)
-    const seatedRes = dbTable.reservations.find(
-      (rt) => rt.reservation.status === "SEATED"
-    );
-    if (seatedRes) {
-      currentGuests = seatedRes.reservation.people;
-      return { status: "occupied", currentGuests, hasWaiter, waiterName };
-    }
-
-    // PENDING reservation today → paid reservation awaiting payment
-    const pendingRes = dbTable.reservations.find(
-      (rt) => rt.reservation.status === "PENDING"
-    );
-    if (pendingRes) {
-      reservationInfo = {
-        customerName: pendingRes.reservation.customerName,
-        people: pendingRes.reservation.people,
-        minutesUntil:
-          minutesUntilReservation(
-            pendingRes.reservation.exactTime,
-            pendingRes.reservation.timeSlot,
-            now
-          ) ?? 0,
-      };
-      return { status: "pending_payment", currentGuests, hasWaiter, waiterName, reservationInfo };
-    }
-
-    // CONFIRMED reservations: find the most relevant one by time proximity
-    const confirmedReservations = dbTable.reservations
-      .filter((rt) => rt.reservation.status === "CONFIRMED")
-      .map((rt) => ({
-        rt,
-        mins: minutesUntilReservation(
-          rt.reservation.exactTime,
-          rt.reservation.timeSlot,
-          now
-        ),
-      }))
-      .filter((r) => r.mins !== null) as {
-        rt: (typeof dbTable.reservations)[0];
-        mins: number;
-      }[];
-
-    if (confirmedReservations.length > 0) {
-      // Pick the one closest to now (smallest absolute distance)
-      const closest = confirmedReservations.reduce((a, b) =>
-        Math.abs(a.mins) <= Math.abs(b.mins) ? a : b
-      );
-
-      reservationInfo = {
-        customerName: closest.rt.reservation.customerName,
-        people: closest.rt.reservation.people,
-        minutesUntil: closest.mins,
-      };
-
-      if (closest.mins < -30) {
-        // More than 30 min past the reservation time — customer hasn't shown up
-        status = "late";
-      } else if (closest.mins <= 5) {
-        // Arriving imminently (≤5 min away) or just past the start (≤30 min ago)
-        status = "reserved";
-      } else if (closest.mins <= 60) {
-        // Arriving in the next 5–60 minutes
-        status = "upcoming";
-      }
-      // > 60 min away: leave as "empty" (too far in the future to block the table visually)
-    }
-  }
-
-  // Priority 7: Manual CLEANING override (only if no reservations drove the status)
-  if (status === "empty" && dbTable.status === "CLEANING") {
+  // Priority 2–3: Use DB status field (RESERVED is ignored — reservation-per-table no longer used)
+  if (dbTable.status === "CLEANING") {
     status = "cleaning";
+  } else if (dbTable.status === "PAYING") {
+    status = "paying";
   }
 
-  return { status, currentGuests, hasWaiter, waiterName, reservationInfo };
+  return { status, currentGuests, hasWaiter, waiterName };
 }
 
 /**

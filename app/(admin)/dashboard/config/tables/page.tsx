@@ -13,28 +13,11 @@ export default async function ConfigTables() {
   const tables =
     tablesResult.success && tablesResult.data ? tablesResult.data : [];
 
-  // Serialize dates for client components
-  const serializedTables = tables.map((table) => ({
-    ...table,
-    reservations: table.reservations.map((res) => ({
-      ...res,
-      reservation: {
-        ...res.reservation,
-        date: res.reservation.date.toISOString(),
-        timeSlot: res.reservation.timeSlot
-          ? {
-              startTime: res.reservation.timeSlot.startTime.toISOString(),
-              endTime: res.reservation.timeSlot.endTime.toISOString(),
-            }
-          : null,
-      },
-    })),
-  }));
   return (
     <div className="pt-3">
       <TablesClientWrapper
         branchId={branchId}
-        initialTables={serializedTables}
+        initialTables={tables}
         editModeOnly={true}
         initialSectors={sectorsResult.data}
       />

@@ -11,11 +11,8 @@ const statusConfig: Array<{
   color: string;
 }> = [
   { key: "empty", label: "Libres", color: "#22c55e" },
-  { key: "upcoming", label: "Próxima", color: "#f59e0b" },
-  { key: "reserved", label: "Llegando", color: "#8b5cf6" },
-  { key: "late", label: "Demorada", color: "#f97316" },
   { key: "occupied", label: "Ocupadas", color: "#ef4444" },
-  { key: "pending_payment", label: "Pago pendiente", color: "#06b6d4" },
+  { key: "paying", label: "Pagando", color: "#3b82f6" },
   { key: "cleaning", label: "Limpieza", color: "#eab308" },
 ];
 

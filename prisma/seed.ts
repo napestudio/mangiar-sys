@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { hash } from "@node-rs/bcrypt";
 import {
   PrismaClient,
   UserRole,
@@ -176,7 +176,7 @@ async function seedTablesAndSlots(branchId: string) {
 async function main() {
   console.log("🌱 Iniciando seed de la base de datos...\n");
 
-  const adminPassword = await bcrypt.hash("Admin@123", 10);
+  const adminPassword = await hash("Admin@123", 10);
 
   // ══════════════════════════════════════════════
   // 1. LA TORTILLERÍA
