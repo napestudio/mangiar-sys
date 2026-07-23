@@ -23,7 +23,7 @@ const tableStatuses = [
 
 export default function SalonDocsPage() {
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
+    <>
       <DocPageHeader
         title="Guía de uso: Salón y Mesas"
         description="Aprendé a gestionar el salón, crear órdenes, agregar productos y cerrar mesas paso a paso."
@@ -36,9 +36,9 @@ export default function SalonDocsPage() {
           mesa en tiempo real y gestionar las órdenes.
         </p>
         <p className="text-gray-700 mb-4">
-          En la parte superior encontrarás los{" "}
-          <strong>tabs de sectores</strong> (por ejemplo: Salón principal,
-          Terraza, Barra). Hacé click en cada uno para navegar entre ellos.
+          En la parte superior encontrarás los <strong>tabs de sectores</strong>{" "}
+          (por ejemplo: Salón principal, Terraza, Barra). Hacé click en cada uno
+          para navegar entre ellos.
         </p>
         <h3 className="font-semibold mb-3">Estado de las mesas</h3>
         <StatusTable rows={tableStatuses} />
@@ -137,11 +137,6 @@ export default function SalonDocsPage() {
             automáticamente.
           </li>
         </DocSteps>
-        <Callout type="warning">
-          Los items pendientes que no fueron confirmados{" "}
-          <strong>no llegan a cocina</strong>. Siempre confirmá antes de
-          alejarte de la mesa.
-        </Callout>
       </StepCard>
 
       <StepCard step={5} title="Cerrar la mesa">
@@ -169,9 +164,8 @@ export default function SalonDocsPage() {
             <strong>&quot;Confirmar&quot;</strong>.
           </li>
           <li>
-            La mesa vuelve automáticamente al estado{" "}
-            <strong>Disponible</strong> (verde) y queda lista para la próxima
-            ocupación.
+            La mesa vuelve automáticamente al estado <strong>Disponible</strong>{" "}
+            (verde) y queda lista para la próxima ocupación.
           </li>
         </DocSteps>
         <Callout type="tip">
@@ -179,6 +173,6 @@ export default function SalonDocsPage() {
           el monto entre varios métodos de pago desde el mismo diálogo.
         </Callout>
       </StepCard>
-    </div>
+    </>
   );
 }
