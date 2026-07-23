@@ -32,8 +32,7 @@ const navSections: NavSection[] = [
 
 function NavSection({ section }: { section: NavSection }) {
   const pathname = usePathname();
-  const isAnyActive = section.items.some((item) => pathname === item.href);
-  const [open, setOpen] = useState(isAnyActive || true);
+  const [open, setOpen] = useState<boolean>(true);
 
   return (
     <div className="mb-1">
