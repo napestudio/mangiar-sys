@@ -2,16 +2,31 @@
 
 import Logo from "@/components/dashboard/logo";
 import { navItems } from "@/components/website/nav-items";
+import useIsomorphicLayoutEffect from "@/hooks/use-isomorphic-layout-effect";
+import { gsap } from "@/lib/gsap";
+import { useLoader } from "@/lib/loader-context";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import ChefHatIcon from "../ui/icons/ChefHat";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const { ready } = useLoader();
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
+    if (!ready) return;
+
+    const ctx = gsap.context(() => {
+      gsap.from(navRef.current, { y: -60, opacity: 0, duration: 0.7 });
+    }, navRef);
+
+    return () => ctx.revert();
+  }, [ready]);
+
+  useIsomorphicLayoutEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 250);
     };
@@ -22,6 +37,7 @@ export function Navbar() {
 
   return (
     <nav
+      ref={navRef}
       className={cn(
         "bg-transparent border-0 fixed inset-x-0 z-50 font-sans transition-colors duration-300",
         scrolled && "bg-white shadow-md",
@@ -46,8 +62,14 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           <Link
+            href="/registro"
+            className="cursor-pointer hidden sm:flex items-center rounded-full bg-red text-white border border-white transition-transform hover:scale-102 duration-500 px-6 py-2 font-medium"
+          >
+            Registrarse
+          </Link>
+          <Link
             href="/ingresar"
-            className="cursor-pointer hidden sm:flex items-center rounded-full bg-white text-red border-2 border-red transition-transform hover:scale-105 px-6 py-2 font-medium"
+            className="cursor-pointer hidden sm:flex items-center rounded-full bg-white text-red border-2 border-red transition-transform hover:scale-102 duration-500 px-6 py-2 font-medium"
           >
             <span className="w-5 h-5 inline-flex mr-2">
               <ChefHatIcon />
@@ -78,7 +100,14 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
-            <div className="border-t border-gray-100 mt-2 pt-3">
+            <div className="border-t border-gray-100 mt-2 pt-3 flex flex-col gap-2">
+              <Link
+                href="/registro"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 rounded-full bg-red text-white border-2 border-white px-6 py-2.5 font-medium text-sm"
+              >
+                Registrarse
+              </Link>
               <Link
                 href="/ingresar"
                 onClick={() => setOpen(false)}
