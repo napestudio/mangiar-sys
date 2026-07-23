@@ -9,7 +9,7 @@ import {
 
 export default function MostradorDocsPage() {
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
+    <>
       <DocPageHeader
         title="Venta por Mostrador"
         description="Registrá pedidos rápidos para llevar o consumir en el momento, sin necesidad de asignar una mesa."
@@ -17,9 +17,9 @@ export default function MostradorDocsPage() {
 
       <DocSection title="Vista del Mostrador">
         <p className="text-gray-700 mb-4">
-          La sección <strong>Mostrador</strong> está pensada para ventas rápidas:
-          pedidos para llevar, de barra o cualquier situación donde no se utiliza
-          una mesa del salón.
+          La sección <strong>Mostrador</strong> está pensada para ventas
+          rápidas: pedidos para llevar, de barra o cualquier situación donde no
+          se utiliza una mesa del salón.
         </p>
         <p className="text-gray-700 mb-2">
           La pantalla está dividida en dos áreas:
@@ -145,16 +145,12 @@ export default function MostradorDocsPage() {
             una nueva transacción.
           </li>
         </DocSteps>
-        <Callout type="warning">
-          El botón de confirmar está deshabilitado si el pedido está vacío.
-          Asegurate de agregar al menos un producto antes de confirmar.
-        </Callout>
       </StepCard>
 
       <DocSection title="Caja / Arqueo">
         <p className="text-gray-700 mb-3">
-          Las ventas por mostrador se asocian automáticamente a la caja
-          (arqueo) abierta del turno.
+          Las ventas por mostrador se asocian automáticamente a la caja (arqueo)
+          abierta del turno.
         </p>
         <DocList>
           <li>
@@ -171,6 +167,6 @@ export default function MostradorDocsPage() {
           </li>
         </DocList>
       </DocSection>
-    </div>
+    </>
   );
 }

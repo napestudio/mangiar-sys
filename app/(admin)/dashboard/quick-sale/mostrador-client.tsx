@@ -2,7 +2,15 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ArqueosIcon from "@/components/ui/icons/ArqueosIcon";
 import { PaymentMethod } from "@/app/generated/prisma";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createCounterSaleOrder } from "@/actions/Order";
 import { convertLinkQuantityToBase } from "@/lib/unit-conversions";
 import { ModifierSelectionDialog } from "@/components/dashboard/modifier-selection-dialog";
@@ -46,6 +54,7 @@ export function MostradorClient({
     PaymentMethod.CASH,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   );
@@ -54,6 +63,11 @@ export function MostradorClient({
     const firstSession = openRegisters.find((r) => r.session)?.session ?? null;
     setSelectedSessionId(firstSession?.id ?? null);
   }, [openRegisters]);
+
+  const registersWithSession = useMemo(
+    () => openRegisters.filter((r) => r.session),
+    [openRegisters],
+  );
 
   const categories = useMemo(() => {
     const seen = new Map<string, string>();
@@ -160,6 +174,10 @@ export function MostradorClient({
     setCart((prev) => prev.filter((item) => item.cartId !== cartId));
   }
 
+  function handleCancelOrder() {
+    setCart([]);
+  }
+
   async function handleConfirmOrder() {
     if (cart.length === 0 || isSubmitting) return;
 
@@ -189,12 +207,9 @@ export function MostradorClient({
         return;
       }
 
-      toast({
-        title: "Venta confirmada",
-        description: `Venta por mostrador registrada correctamente`,
-      });
-
       setCart([]);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 600);
       router.refresh();
     } finally {
       setIsSubmitting(false);
@@ -203,15 +218,35 @@ export function MostradorClient({
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mostrador</h1>
-          <p className="text-sm text-gray-500">Venta por mostrador</p>
-        </div>
-      </div>
-
       <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
         <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Mostrador</h1>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <ArqueosIcon className="h-4 w-4 text-gray-400 shrink-0" />
+              {registersWithSession.length === 0 ? (
+                <span className="text-gray-400">Sin caja abierta</span>
+              ) : registersWithSession.length === 1 ? (
+                <span>{registersWithSession[0].name}</span>
+              ) : (
+                <Select
+                  value={selectedSessionId ?? ""}
+                  onValueChange={(val) => setSelectedSessionId(val || null)}
+                >
+                  <SelectTrigger className="h-7 text-sm border-0 shadow-none p-0 focus:ring-0">
+                    <SelectValue placeholder="Seleccionar caja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {registersWithSession.map((r) => (
+                      <SelectItem key={r.session!.id} value={r.session!.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
           <CategorySelector
             categories={categories}
             selectedCategoryId={selectedCategoryId}
@@ -233,11 +268,10 @@ export function MostradorClient({
             onPaymentMethodChange={setPaymentMethod}
             onUpdateItem={handleUpdateCartItem}
             onRemoveItem={handleRemoveCartItem}
+            onCancelOrder={handleCancelOrder}
             onConfirmOrder={handleConfirmOrder}
+            orderConfirmed={showSuccess}
             isSubmitting={isSubmitting}
-            openRegisters={openRegisters}
-            selectedSessionId={selectedSessionId}
-            onSessionChange={setSelectedSessionId}
           />
         </div>
       </div>

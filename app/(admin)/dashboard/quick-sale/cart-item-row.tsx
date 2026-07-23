@@ -68,10 +68,21 @@ export function CartItemRow({ item, onUpdate, onRemove }: CartItemRowProps) {
 
           <div className="flex items-center gap-1">
             <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-gray-400 hover:text-gray-700"
+              onClick={handleNotesOpen}
+              aria-label="Agregar nota"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </Button>
+            <Button
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => onUpdate({ ...item, quantity: Math.max(1, item.quantity - 1) })}
+              onClick={() =>
+                onUpdate({ ...item, quantity: Math.max(1, item.quantity - 1) })
+              }
               disabled={item.quantity <= 1}
             >
               <Minus className="h-3 w-3" />
@@ -88,16 +99,6 @@ export function CartItemRow({ item, onUpdate, onRemove }: CartItemRowProps) {
               <Plus className="h-3 w-3" />
             </Button>
           </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-gray-400 hover:text-gray-700"
-            onClick={handleNotesOpen}
-            aria-label="Agregar nota"
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-          </Button>
         </div>
       </div>
 

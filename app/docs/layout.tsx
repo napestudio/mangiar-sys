@@ -38,7 +38,9 @@ export default function DocsLayout({
       </aside>
 
       {/* Main content */}
-      <main className="ml-64 flex-1 min-w-0">{children}</main>
+      <main className="ml-64 flex-1 min-w-0">
+        <div className="container mr-auto py-8 px-4 max-w-4xl">{children}</div>
+      </main>
     </div>
   );
 }
