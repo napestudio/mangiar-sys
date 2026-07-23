@@ -83,7 +83,12 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email("Ingresa un email válido"),
+});
+
 export type UserRegistrationInput = z.infer<typeof userRegistrationSchema>;
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;

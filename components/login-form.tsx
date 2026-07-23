@@ -3,6 +3,7 @@
 import { loginWithCredentials } from "@/actions/login";
 import { hideLogoutOverlay } from "@/contexts/logout-context";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
 const LOADING_MESSAGES = [
@@ -32,7 +33,7 @@ export default function LoginForm() {
   return (
     <div className="w-full">
       <div>
-        <h2 className="text-center text-3xl font-extrabold">Ingresar</h2>
+        <h2 className="text-center text-3xl text-neutral-700">INGRESAR</h2>
       </div>
 
       <form action={action} className="space-y-6">
@@ -109,6 +110,15 @@ export default function LoginForm() {
               "Ingresar"
             )}
           </button>
+        </div>
+
+        <div className="text-center text-sm">
+          <Link
+            href="/recuperar-contrasena"
+            className="text-neutral-500 hover:text-red-700"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
       </form>
     </div>
