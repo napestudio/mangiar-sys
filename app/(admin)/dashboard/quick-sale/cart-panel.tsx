@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   ShoppingBag,
   Loader2,
@@ -9,29 +10,22 @@ import {
   ArrowLeftRight,
   Link,
   QrCode,
-  Store,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
 import { PaymentMethod } from "@/app/generated/prisma";
 import { CartItemRow } from "./cart-item-row";
 import type { CartItem } from "@/types/mostrador";
-
-type OpenRegister = {
-  id: string;
-  name: string;
-  sectors: { id: string; name: string; color: string | null }[];
-  session: { id: string; openedAt: string; openingAmount: number } | null;
-};
 
 const PAYMENT_OPTIONS: {
   value: PaymentMethod;
@@ -73,10 +67,9 @@ interface CartPanelProps {
   onUpdateItem: (cartId: string, updated: CartItem) => void;
   onRemoveItem: (cartId: string) => void;
   onConfirmOrder: () => void;
+  onCancelOrder: () => void;
+  orderConfirmed: boolean;
   isSubmitting: boolean;
-  openRegisters: OpenRegister[];
-  selectedSessionId: string | null;
-  onSessionChange: (sessionId: string | null) => void;
 }
 
 export function CartPanel({
@@ -87,44 +80,67 @@ export function CartPanel({
   onUpdateItem,
   onRemoveItem,
   onConfirmOrder,
+  onCancelOrder,
+  orderConfirmed,
   isSubmitting,
-  openRegisters,
-  selectedSessionId,
-  onSessionChange,
 }: CartPanelProps) {
-  const registersWithSession = openRegisters.filter((r) => r.session);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successLeaving, setSuccessLeaving] = useState(false);
+
+  useEffect(() => {
+    if (orderConfirmed) {
+      setSuccessVisible(true);
+      setSuccessLeaving(false);
+    } else if (successVisible) {
+      setSuccessLeaving(true);
+      const t = setTimeout(() => {
+        setSuccessVisible(false);
+        setSuccessLeaving(false);
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [orderConfirmed, successVisible]);
+
+  const selectedOption =
+    PAYMENT_OPTIONS.find((o) => o.value === paymentMethod) ??
+    PAYMENT_OPTIONS[0];
 
   return (
-    <div className="rounded-xl border bg-white shadow-sm flex flex-col h-full">
+    <div className="rounded-xl border bg-white shadow-sm flex flex-col h-full relative overflow-hidden">
+      <style>{`
+        @keyframes circle-expand {
+          from { clip-path: circle(0% at 50% 50%); }
+          to   { clip-path: circle(150% at 50% 50%); }
+        }
+        @keyframes circle-collapse {
+          from { clip-path: circle(150% at 50% 50%); }
+          to   { clip-path: circle(0% at 50% 50%); }
+        }
+      `}</style>
+
+      {successVisible && (
+        <div
+          className="absolute inset-0 z-20 rounded-xl bg-green-500 flex flex-col items-center justify-center gap-4"
+          style={{
+            animation: successLeaving
+              ? "circle-collapse 0.5s ease-in forwards"
+              : "circle-expand 0.5s ease-out forwards",
+          }}
+        >
+          <Check className="h-16 w-16 text-white" strokeWidth={2.5} />
+          <p className="text-xl font-bold text-white">¡Venta confirmada!</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="font-semibold text-lg">Pedido</h2>
-        {cart.length > 0 && <Badge variant="secondary">{cart.length}</Badge>}
-      </div>
-
-      <div className="flex items-center gap-2 px-4 py-2 border-b bg-gray-50 text-sm">
-        <Store className="h-4 w-4 text-gray-400 shrink-0" />
-        {registersWithSession.length === 0 ? (
-          <span className="text-gray-400">Sin caja abierta — venta sin arqueo</span>
-        ) : registersWithSession.length === 1 ? (
-          <span className="text-gray-600">{registersWithSession[0].name}</span>
-        ) : (
-          <Select
-            value={selectedSessionId ?? ""}
-            onValueChange={(val) => onSessionChange(val || null)}
-          >
-            <SelectTrigger className="h-7 text-sm border-0 bg-transparent shadow-none p-0 focus:ring-0">
-              <SelectValue placeholder="Seleccionar caja" />
-            </SelectTrigger>
-            <SelectContent>
-              {registersWithSession.map((r) => (
-                <SelectItem key={r.session!.id} value={r.session!.id}>
-                  {r.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {cart.length > 0 && (
+          <Badge variant="secondary">Productos {cart.length}</Badge>
         )}
       </div>
+
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
         {cart.length === 0 ? (
@@ -155,28 +171,52 @@ export function CartPanel({
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
               Método de pago
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => onPaymentMethodChange(opt.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border text-xs font-medium transition-colors min-h-14",
-                    paymentMethod === opt.value
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-400",
-                  )}
-                >
-                  {opt.icon}
-                  <span>{opt.label}</span>
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setPaymentDialogOpen(true)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border bg-gray-900 text-white border-gray-900 text-sm font-medium transition-colors hover:bg-gray-800"
+            >
+              <span className="flex items-center gap-2">
+                {selectedOption.icon}
+                {selectedOption.label}
+              </span>
+              <ChevronDown className="h-4 w-4 opacity-70" />
+            </button>
+
+            <Dialog
+              open={paymentDialogOpen}
+              onOpenChange={setPaymentDialogOpen}
+            >
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Método de pago</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {PAYMENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        onPaymentMethodChange(opt.value);
+                        setPaymentDialogOpen(false);
+                      }}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 px-2 py-3 rounded-lg border text-sm font-medium transition-colors",
+                        paymentMethod === opt.value
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-gray-400",
+                      )}
+                    >
+                      {opt.icon}
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <Button
             size="lg"
-            className="w-full min-h-13 text-base font-bold"
+            className="w-full min-h-13 bg-red-700 hover:bg-red-800 text-base font-bold"
             onClick={onConfirmOrder}
             disabled={isSubmitting || cart.length === 0}
           >
@@ -192,6 +232,44 @@ export function CartPanel({
               </>
             )}
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-gray-500"
+            onClick={() => setCancelDialogOpen(true)}
+            disabled={isSubmitting}
+          >
+            Cancelar pedido
+          </Button>
+
+          <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+            <DialogContent className="max-w-xs">
+              <DialogHeader>
+                <DialogTitle>¿Cancelar pedido?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-gray-500">
+                Se eliminarán todos los productos del pedido actual.
+              </p>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setCancelDialogOpen(false)}
+                >
+                  Volver
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    onCancelOrder();
+                    setCancelDialogOpen(false);
+                  }}
+                >
+                  Cancelar pedido
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>

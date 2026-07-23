@@ -21,9 +21,19 @@ export function ProductGrid({ products, onProductTap }: ProductGridProps) {
     );
   }
 
+  const sorted = [...products].sort((a, b) => {
+    const aOut = a.isCombo
+      ? (a.comboAvailability ?? 0) <= 0
+      : a.trackStock && a.stock <= 0;
+    const bOut = b.isCombo
+      ? (b.comboAvailability ?? 0) <= 0
+      : b.trackStock && b.stock <= 0;
+    return Number(aOut) - Number(bOut);
+  });
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {products.map((product) => {
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-1">
+      {sorted.map((product) => {
         const outOfStock = product.isCombo
           ? (product.comboAvailability ?? 0) <= 0
           : product.trackStock && product.stock <= 0;
@@ -36,29 +46,28 @@ export function ProductGrid({ products, onProductTap }: ProductGridProps) {
             className={cn(
               "flex items-start rounded-xl border bg-white shadow-sm p-3 gap-2",
               "text-left transition-all",
-              "focus:outline-none focus:ring-2 focus:ring-gray-900",
+              "focus:outline-none focus:ring-2 focus:ring-red-600",
               outOfStock
                 ? "opacity-40 cursor-not-allowed"
                 : "hover:shadow-md hover:border-gray-400 cursor-pointer active:scale-95",
             )}
           >
             {product.imageUrl ? (
-              <div className="relative w-12 aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <div className="relative w-22 aspect-square rounded-lg overflow-hidden bg-gray-100">
                 <Image
                   src={product.imageUrl}
                   alt={product.name}
-                  fill
-                  className="object-cover"
-                  width={30}
-                  height={30}
+                  className="object-cover w-full h-full"
+                  width={200}
+                  height={200}
                 />
               </div>
             ) : (
-              <div className="w-32 aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
+              <div className="w-22 aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
                 <Package className="h-8 w-8 text-gray-300" />
               </div>
             )}
-            <div className="w-2/3">
+            <div className="w-2/3 py-1">
               <p className="text-sm font-semibold leading-tight line-clamp-2">
                 {product.name}
               </p>
