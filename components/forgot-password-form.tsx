@@ -36,15 +36,15 @@ export default function ForgotPasswordForm() {
           RECUPERAR CONTRASEÑA
         </h2>
         <p className="text-center text-sm text-neutral-500 mt-2">
-          Ingresá el email de contacto de tu restaurante y te enviaremos un
-          enlace para restablecer tu contraseña.
+          Ingresá el email con el que iniciás sesión y enviaremos un enlace de
+          recuperación al correo del restaurante.
         </p>
       </div>
 
       <form action={action} className="space-y-6 mt-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium mb-1">
-            Email del restaurante
+            Email
           </label>
           <input
             id="email"
@@ -53,7 +53,7 @@ export default function ForgotPasswordForm() {
             autoComplete="email"
             required
             className="appearance-none relative block w-full px-3 py-3 border border-gray-300 bg-white placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="correo@turestaurante.com"
+            placeholder="Email"
           />
         </div>
 
